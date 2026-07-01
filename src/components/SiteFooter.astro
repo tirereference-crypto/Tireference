@@ -1,0 +1,90 @@
+---
+import SiteLogo from './SiteLogo.astro';
+import {
+  FOOTER_COMPANY_LINKS,
+  FOOTER_LEGAL_LINKS,
+} from '../lib/info-pages';
+import { SITE_NAME, SITE_TAGLINE } from '../lib/site-brand';
+
+const calculatorLinks = [
+  { label: 'Tire Sizes Index', href: '/tire-sizes' },
+  { label: 'Tire Size Calculator', href: '/tire-size-calculator' },
+  { label: 'Tire Size Comparison', href: '/tire-size-comparison' },
+  { label: 'Tire Diameter Calculator', href: '/tire-diameter-calculator' },
+  { label: 'Wheel Offset Calculator', href: '/wheel-offset-calculator' },
+  { label: 'Gear Ratio Calculator', href: '/calculators/gear-ratio-calculator' },
+];
+---
+
+<footer class="border-t border-white/10 bg-surface-dark">
+  <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="sm:col-span-2 lg:col-span-1">
+        <a href="/" class="site-logo-link site-logo-link--footer" aria-label="Tire Reference home">
+          <SiteLogo class="site-logo--footer" />
+        </a>
+        <p class="mt-3 max-w-sm text-sm text-slate-400">
+          Accurate tire calculators for sizing, comparison, and fitment — built for enthusiasts and everyday drivers.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          Calculators
+        </h2>
+        <ul class="mt-3 space-y-2">
+          {calculatorLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="text-sm text-slate-400 transition-colors hover:text-white"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          Company
+        </h2>
+        <ul class="mt-3 space-y-2">
+          {FOOTER_COMPANY_LINKS.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="text-sm text-slate-400 transition-colors hover:text-white"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          Legal
+        </h2>
+        <ul class="mt-3 space-y-2">
+          {FOOTER_LEGAL_LINKS.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="text-sm text-slate-400 transition-colors hover:text-white"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    <p class="mt-8 border-t border-white/10 pt-6 text-center text-xs text-slate-500 sm:text-left">
+      © {new Date().getFullYear()} {SITE_NAME}. {SITE_TAGLINE}
+    </p>
+  </div>
+</footer>

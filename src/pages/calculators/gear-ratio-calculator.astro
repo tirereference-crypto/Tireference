@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PremiumGearRatioCalculator from '../../components/calculators/PremiumGearRatioCalculator';
+import { GEAR_FAQS } from '../../lib/gear-ratio-insights';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
+import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Gear Ratio Calculator'),
+  faqs: GEAR_FAQS.map((faq) => ({ question: faq.question, answer: faq.answer })),
+});
+---
+
+<Layout
+  title="Gear Ratio Calculator"
+  description={SEO_DESCRIPTIONS.calculator}
+  canonical="/calculators/gear-ratio-calculator"
+  schema={schema}
+>
+  <PremiumGearRatioCalculator client:load />
+</Layout>

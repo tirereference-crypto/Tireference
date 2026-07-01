@@ -1,0 +1,22 @@
+---
+import HubIcon from './HubIcon.astro';
+
+interface Props {
+  insight: string;
+}
+
+const { insight } = Astro.props;
+---
+
+<aside class="hub-sidebar-insight" aria-label="Tire Reference Insight">
+  <div class="hub-sidebar-insight__header">
+    <span class="hub-sidebar-insight__icon" aria-hidden="true">
+      <HubIcon name="lightbulb" class="h-4 w-4" />
+    </span>
+    <h3 class="hub-sidebar-insight__title">Tire Reference Insight</h3>
+  </div>
+
+  <p class="hub-sidebar-insight__content">{insight}</p>
+
+  <p class="hub-sidebar-insight__footer">Expert Observation</p>
+</aside>

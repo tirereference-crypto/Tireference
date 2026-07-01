@@ -1,0 +1,305 @@
+---
+import type { TireSpecs } from '../../../lib/tire-math';
+import type { TireCategory } from '../../../data/tire-sizes';
+import type { HeroSpecCard } from '../../../lib/tire-size-premium';
+import { getTireDiagramImages } from '../../../lib/tire-diagram-images';
+import { FRONT_TIRE_WIDTH_GEOMETRY } from '../../../lib/tire-diagram-geometry';
+import Premium275SpecCard from './Premium275SpecCard.astro';
+
+interface Props {
+  category: TireCategory;
+  size: string;
+  specs: TireSpecs;
+  specCards: HeroSpecCard[];
+}
+
+const { category, size, specs, specCards } = Astro.props;
+
+const images = getTireDiagramImages(category, size, specs);
+const widthValue = `${specs.sectionWidthIn.toFixed(2)}"`;
+const diameterValue = `${specs.overallDiameterIn.toFixed(2)}"`;
+
+const tireImgClass =
+  'h-[168px] w-auto max-w-full object-contain sm:h-[180px] lg:h-[168px] xl:h-[188px]';
+const tireSvgClass =
+  'h-[168px] sm:h-[180px] lg:h-[168px] xl:h-[188px]';
+const tireColClass =
+  'relative flex h-[204px] items-end sm:h-[216px] lg:h-[204px] xl:h-[224px]';
+
+const tick = 4;
+const tireViewHeight = 235;
+
+/** Side-tire diameter callout */
+const sideTireGap = 14;
+const sideViewWidth = 218;
+const diameterLineX = 166 + sideTireGap;
+const diameterRefX = 78;
+
+/** Front-tire width callout — coords derived from asset + overlay on rendered tire */
+const frontPadTop = 40;
+const frontViewHeight = frontPadTop + tireViewHeight;
+const widthLineY = 22;
+const widthLeftX = FRONT_TIRE_WIDTH_GEOMETRY.leftPct;
+const widthRightX = FRONT_TIRE_WIDTH_GEOMETRY.rightPct;
+const leftContactY =
+  frontPadTop + FRONT_TIRE_WIDTH_GEOMETRY.leftContactRowPct * tireViewHeight;
+const rightContactY =
+  frontPadTop + FRONT_TIRE_WIDTH_GEOMETRY.rightContactRowPct * tireViewHeight;
+---
+
+<div
+  class:list={[
+    'tire-spec-diagram min-w-0 rounded-[18px] border border-border/80 bg-surface px-2.5 py-3 shadow-[0_1px_8px_-3px_rgb(15_23_42/0.07)] sm:px-3.5 sm:py-3.5',
+    images.styleClass,
+  ]}
+  role="img"
+  aria-label="Tire specification diagram with width and diameter measurements"
+>
+  <div class="tire-spec-diagram__body flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-5 xl:gap-6">
+    <!-- Tire images — left cluster (unchanged) -->
+    <div class="tire-diagram-cluster-wrap w-fit max-w-full shrink min-w-0">
+    <div class="tire-diagram-cluster flex items-end justify-center gap-3 overflow-visible sm:gap-4 lg:justify-start lg:pr-6">
+    <!-- Front tire — width lines anchored to tire left/right shoulders -->
+    <div class="relative flex justify-center lg:justify-start">
+      <div class:list={['relative inline-flex items-end', tireColClass]}>
+        <div class="relative shrink-0">
+          <img
+            src={images.front}
+            alt={images.frontAlt}
+            width="307"
+            height="842"
+            class={tireImgClass}
+            loading="eager"
+            decoding="async"
+          />
+          <svg
+            class="pointer-events-none absolute -top-10 left-0 h-[calc(100%+2.5rem)] w-full overflow-visible"
+            viewBox={`0 0 100 ${frontViewHeight}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <!-- Horizontal width dimension -->
+            <line
+              x1={widthLeftX}
+              y1={widthLineY}
+              x2={widthRightX}
+              y2={widthLineY}
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={widthLeftX}
+              y1={widthLineY - tick}
+              x2={widthLeftX}
+              y2={widthLineY + tick}
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={widthRightX}
+              y1={widthLineY - tick}
+              x2={widthRightX}
+              y2={widthLineY + tick}
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <!-- Vertical reference lines: down to left/right tire shoulders -->
+            <line
+              x1={widthLeftX}
+              y1={widthLineY}
+              x2={widthLeftX}
+              y2={leftContactY}
+              stroke="#CBD5E1"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={widthRightX}
+              y1={widthLineY}
+              x2={widthRightX}
+              y2={rightContactY}
+              stroke="#CBD5E1"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <text
+              x={(widthLeftX + widthRightX) / 2}
+              y="10"
+              text-anchor="middle"
+              fill="#64748B"
+              font-size="10"
+              font-family="ui-sans-serif, system-ui, sans-serif"
+              font-weight="600"
+            >
+              {widthValue}
+            </text>
+            <text
+              x={(widthLeftX + widthRightX) / 2}
+              y="19"
+              text-anchor="middle"
+              fill="#64748B"
+              font-size="9"
+              font-family="ui-sans-serif, system-ui, sans-serif"
+              font-weight="500"
+            >
+              Width
+            </text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side tire -->
+    <div class="relative min-w-0 overflow-visible">
+      <div class:list={['relative inline-flex items-end', tireColClass]}>
+        <div class="relative shrink-0">
+          <img
+            src={images.side}
+            alt={images.sideAlt}
+            width="1001"
+            height="998"
+            class={tireImgClass}
+            loading="eager"
+            decoding="async"
+          />
+          <svg
+            class:list={['pointer-events-none absolute inset-0 h-full w-[calc(100%+3.25rem)] overflow-visible sm:w-[calc(100%+3.5rem)]', tireSvgClass]}
+            viewBox={`0 0 ${sideViewWidth} ${tireViewHeight}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <line
+              x1={diameterLineX}
+              y1="0"
+              x2={diameterLineX}
+              y2={tireViewHeight}
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={diameterLineX - tick}
+              y1="0"
+              x2={diameterLineX + tick}
+              y2="0"
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={diameterLineX - tick}
+              y1={tireViewHeight}
+              x2={diameterLineX + tick}
+              y2={tireViewHeight}
+              stroke="#94A3B8"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={diameterRefX}
+              y1="0"
+              x2={diameterLineX}
+              y2="0"
+              stroke="#CBD5E1"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <line
+              x1={diameterRefX}
+              y1={tireViewHeight}
+              x2={diameterLineX}
+              y2={tireViewHeight}
+              stroke="#CBD5E1"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <text
+              x={diameterLineX + 10}
+              y={tireViewHeight / 2 - 2}
+              fill="#64748B"
+              font-size="10"
+              font-family="ui-sans-serif, system-ui, sans-serif"
+              font-weight="600"
+            >
+              {diameterValue}
+            </text>
+            <text
+              x={diameterLineX + 10}
+              y={tireViewHeight / 2 + 12}
+              fill="#64748B"
+              font-size="9"
+              font-family="ui-sans-serif, system-ui, sans-serif"
+              font-weight="500"
+            >
+              Diameter
+            </text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Specification grid — 2 × 3 dashboard layout -->
+    <div class="spec-cards-grid min-w-0 shrink-0 grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-x-2.5">
+      {specCards.map((card) => (
+        <Premium275SpecCard card={card} diagram />
+      ))}
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  function fitHeroDiagramLayout() {
+    const body = document.querySelector('.tire-spec-diagram__body');
+    const clusterWrap = document.querySelector('.tire-diagram-cluster-wrap');
+    const cluster = document.querySelector('.tire-diagram-cluster');
+    const grid = document.querySelector('.spec-cards-grid');
+    if (!body || !clusterWrap || !cluster || !grid) return;
+
+    const cards = grid.querySelectorAll('.spec-card-diagram');
+    if (!cards.length) return;
+
+    cluster.style.transform = '';
+    clusterWrap.style.width = '';
+
+    cards.forEach((card) => {
+      card.style.width = '';
+    });
+
+    const maxWidth = Math.max(
+      ...Array.from(cards, (card) => card.getBoundingClientRect().width),
+    );
+
+    cards.forEach((card) => {
+      card.style.width = `${Math.ceil(maxWidth)}px`;
+    });
+
+    const bodyWidth = body.clientWidth;
+    const gridWidth = grid.offsetWidth;
+    const bodyStyles = getComputedStyle(body);
+    const rowGap =
+      bodyStyles.flexDirection === 'row'
+        ? parseFloat(bodyStyles.columnGap) || 0
+        : 0;
+
+    cluster.style.transform = '';
+    const clusterWidth = cluster.offsetWidth;
+
+    const needed = clusterWidth + rowGap + gridWidth;
+    if (needed > bodyWidth && clusterWidth > 0 && bodyStyles.flexDirection === 'row') {
+      const available = bodyWidth - rowGap - gridWidth;
+      const scale = Math.min(1, Math.max(0.72, available / clusterWidth));
+      cluster.style.transform = `scale(${scale})`;
+      cluster.style.transformOrigin = 'left bottom';
+      clusterWrap.style.width = `${Math.ceil(clusterWidth * scale)}px`;
+    }
+  }
+
+  fitHeroDiagramLayout();
+  document.addEventListener('astro:page-load', fitHeroDiagramLayout);
+  window.addEventListener('resize', fitHeroDiagramLayout);
+</script>

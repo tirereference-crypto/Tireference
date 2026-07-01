@@ -1,0 +1,16 @@
+---
+import SiteHeaderNav from './SiteHeaderNav.astro';
+import SiteLogo from './SiteLogo.astro';
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="site-header sticky top-0 z-50 border-b border-white/10 bg-surface-dark">
+  <div class="site-header__bar relative mx-auto flex items-center gap-4">
+    <a href="/" class="site-logo-link" aria-label="Tire Reference home">
+      <SiteLogo />
+    </a>
+
+    <SiteHeaderNav currentPath={currentPath} />
+  </div>
+</header>

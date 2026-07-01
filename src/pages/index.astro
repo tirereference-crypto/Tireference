@@ -1,11 +1,47 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import HomeHero from '../components/home/HomeHero.astro';
+import HomeQuickActions from '../components/home/HomeQuickActions.astro';
+import HomePopularSizes from '../components/home/HomePopularSizes.astro';
+import HomePopularComparisons from '../components/home/HomePopularComparisons.astro';
+import HomeCategories from '../components/home/HomeCategories.astro';
+import HomeFindByVehicle from '../components/home/HomeFindByVehicle.astro';
+import HomeWhyTireLogic from '../components/home/HomeWhyTireLogic.astro';
+import HomeSeoContent from '../components/home/HomeSeoContent.astro';
+import HomeScrollReveal from '../components/home/HomeScrollReveal.astro';
+import {
+  buildHomePageSchema,
+  SEO_DESCRIPTIONS,
+  SEO_TITLES,
+} from '../lib/seo';
+import '../styles/home.css';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const schema = buildHomePageSchema();
 ---
 
-<Layout>
-	<Welcome />
+<Layout
+  title={SEO_TITLES.homepage}
+  description={SEO_DESCRIPTIONS.homepage}
+  canonical="/"
+  schema={schema}
+  preloadHero={true}
+  mainClass="bg-surface"
+>
+  <div class="home-page">
+    <div class="home-shell">
+      <HomeHero />
+      <HomeQuickActions />
+
+      <div class="home-sections">
+        <HomePopularSizes />
+        <HomePopularComparisons />
+        <HomeFindByVehicle />
+        <HomeCategories />
+        <HomeWhyTireLogic />
+        <HomeSeoContent />
+      </div>
+    </div>
+  </div>
+
+  <HomeScrollReveal />
 </Layout>

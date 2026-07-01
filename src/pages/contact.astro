@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ContactForm from '../components/info/ContactForm.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import { CONTACT_EMAIL, CONTACT_REASONS } from '../lib/info-pages';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = 'Contact Tire Reference';
+const description =
+  'Contact Tire Reference for questions, corrections, calculator feedback, partnerships, or technical issues.';
+
+const schema = buildInfoPageSchema(title, description, '/contact', 'Contact');
+---
+
+<Layout title={title} description={description} canonical="/contact" schema={schema}>
+  <div class="info-page">
+    <div class="info-shell">
+      <InfoPageHero
+        title="Contact Tire Reference"
+        lead="Questions, corrections, partnerships, or feedback on our calculators — we would like to hear from you. Choose a topic below or send us a message using the form."
+      />
+
+      <div class="info-contact-layout">
+        <div class="info-contact-meta">
+          <div class="info-card-grid">
+            {
+              CONTACT_REASONS.map((reason) => (
+                <article class="info-card info-card--static">
+                  <h2 class="info-card__title">{reason.title}</h2>
+                  <p class="info-card__desc">{reason.description}</p>
+                </article>
+              ))
+            }
+          </div>
+
+          <div class="info-section">
+            <h2 class="info-section__title">Email</h2>
+            <a class="info-email" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            <p class="info-note">We typically respond within 1–2 business days.</p>
+          </div>
+        </div>
+
+        <div class="info-form-panel">
+          <h2 class="info-section__title">Send a message</h2>
+          <p class="info-section__body info-section__body--intro">
+            Prefer email? Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> directly.
+          </p>
+          <ContactForm />
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

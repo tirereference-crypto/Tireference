@@ -1,0 +1,54 @@
+---
+import Premium275SpecIcon from './Premium275SpecIcon.astro';
+import type { HeroSpecCard } from '../../../lib/tire-size-275-premium';
+
+interface Props {
+  card: HeroSpecCard;
+  compact?: boolean;
+  diagram?: boolean;
+}
+
+const { card, compact = false, diagram = false } = Astro.props;
+---
+
+{diagram ? (
+  <div class="spec-card-diagram w-full rounded-md border border-border/70 bg-surface px-1.5 py-1.5">
+    <div class="flex w-fit items-center gap-1">
+      <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
+        <Premium275SpecIcon name={card.icon} class="h-3.5 w-3.5" />
+      </span>
+      <p class="whitespace-nowrap text-[9px] font-medium leading-none text-muted">{card.label}</p>
+    </div>
+    <p class="mt-0.5 flex w-fit items-baseline gap-0.5 whitespace-nowrap leading-none">
+      <span class="text-sm font-bold tabular-nums tracking-tight text-heading">{card.value}</span>
+      {card.unit && <span class="text-[9px] font-semibold text-muted">{card.unit}</span>}
+    </p>
+    <p class="mt-0.5 whitespace-nowrap text-[8px] leading-tight text-body">{card.explanation}</p>
+  </div>
+) : compact ? (
+  <div class="group flex gap-2 rounded-xl border border-border bg-surface p-2.5 shadow-[0_1px_3px_rgb(15_23_42/0.05)] transition-all hover:border-primary/15 hover:shadow-[0_4px_16px_-4px_rgb(15_23_42/0.08)] sm:p-3">
+    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+      <Premium275SpecIcon name={card.icon} class="h-3.5 w-3.5" />
+    </span>
+    <div class="min-w-0 flex-1">
+      <p class="text-[10px] font-semibold uppercase tracking-wide text-muted">{card.label}</p>
+      <p class="mt-0.5 flex items-baseline gap-1">
+        <span class="text-lg font-bold tabular-nums tracking-tight text-heading sm:text-xl">{card.value}</span>
+        {card.unit && <span class="text-xs font-medium text-muted">{card.unit}</span>}
+      </p>
+      <p class="mt-0.5 line-clamp-1 text-[10px] leading-snug text-body">{card.explanation}</p>
+    </div>
+  </div>
+) : (
+  <div class="group rounded-xl border border-border bg-surface p-3.5 shadow-[0_1px_3px_rgb(15_23_42/0.05)] transition-all hover:border-primary/15 hover:shadow-[0_4px_16px_-4px_rgb(15_23_42/0.08)] sm:p-4">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+      <Premium275SpecIcon name={card.icon} class="h-4 w-4" />
+    </span>
+    <p class="mt-3 text-xs font-medium text-muted">{card.label}</p>
+    <p class="mt-0.5 flex items-baseline gap-1.5">
+      <span class="text-2xl font-bold tabular-nums tracking-tight text-heading">{card.value}</span>
+      {card.unit && <span class="text-sm font-medium text-muted">{card.unit}</span>}
+    </p>
+    <p class="mt-1.5 text-[11px] leading-snug text-body">{card.explanation}</p>
+  </div>
+)}

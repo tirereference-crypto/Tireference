@@ -1,0 +1,33 @@
+---
+import HomeCalcIcon from './HomeCalcIcon.astro';
+import HomeSectionHeader from './HomeSectionHeader.astro';
+import { SITE_CALCULATORS } from '../../lib/calculator-links';
+---
+
+<section class="home-section home-reveal home-calculators" aria-labelledby="home-calculators-title">
+  <HomeSectionHeader
+    id="home-calculators-title"
+    title="All Calculators"
+    description="Precision tools for tire size math, comparisons, fitment, and gearing — the same calculators linked across Tire Reference."
+  />
+
+  <div class="home-calculators__grid">
+    {
+      SITE_CALCULATORS.map((calc) => (
+        <a href={calc.href} class="home-calculators__card hub-link-card">
+          <span class="home-calculators__icon-wrap">
+            <HomeCalcIcon name={calc.icon} />
+          </span>
+          <h3 class="home-calculators__title">{calc.label}</h3>
+          <p class="home-calculators__desc">{calc.description}</p>
+          <span class="home-calculators__btn tl-btn-secondary">
+            Use Calculator
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </a>
+      ))
+    }
+  </div>
+</section>

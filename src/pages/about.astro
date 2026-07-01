@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import { ABOUT_AUDIENCE, ABOUT_BUILD_CARDS } from '../lib/info-pages';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = 'About Tire Reference';
+const description =
+  'Learn about Tire Reference, our mission, and how we build accurate tire size calculators, fitment tools, and technical tire resources for enthusiasts and everyday drivers.';
+
+const schema = buildInfoPageSchema(title, description, '/about', 'About');
+---
+
+<Layout title={title} description={description} canonical="/about" schema={schema}>
+  <div class="info-page">
+    <div class="info-shell">
+      <InfoPageHero
+        title="About Tire Reference"
+        lead="Tire Reference is an independent tire and wheel resource built to turn complex sizing data into clear, actionable answers — whether you are shopping for your daily driver or planning an overland build."
+      />
+
+      <section class="info-section" aria-labelledby="about-mission-title">
+        <h2 id="about-mission-title" class="info-section__title">Our mission</h2>
+        <div class="info-section__body">
+          <p>
+            Tire sizing is full of codes, tolerances, and trade-offs that are easy to misread. Tire Reference exists to provide accurate, easy-to-understand tire calculations and fitment information so you can compare options with confidence before you buy.
+          </p>
+          <p>
+            We focus on transparent math, practical context, and tools that respect your time — no sign-up walls, no jargon for its own sake, and no guesswork where numbers should do the talking.
+          </p>
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="about-build-title">
+        <h2 id="about-build-title" class="info-section__title">What we build</h2>
+        <p class="info-section__body">
+          Tire Reference brings together calculators, comparison workflows, and educational tire size guides in one place.
+        </p>
+        <div class="info-card-grid info-card-grid--three">
+          {
+            ABOUT_BUILD_CARDS.map((card) => (
+              <a href={card.href} class="info-card hub-link-card">
+                <h3 class="info-card__title">{card.title}</h3>
+                <p class="info-card__desc">{card.description}</p>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="about-trust-title">
+        <h2 id="about-trust-title" class="info-section__title">Why trust Tire Reference</h2>
+        <div class="info-section__body">
+          <p>
+            Our calculators are built on widely used tire sizing conventions and standard geometric formulas applied to metric and flotation tire formats. Where we show specs, comparisons, or fitment context, we aim to explain how the numbers are derived — not just what they are.
+          </p>
+          <p>
+            Accuracy, clarity, and transparency guide every feature we ship. Calculator output is a strong starting point for research, but we always encourage you to confirm final fitment against your vehicle, wheels, and intended use. Read our <a href="/disclaimer">disclaimer</a> for more detail.
+          </p>
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="about-audience-title">
+        <h2 id="about-audience-title" class="info-section__title">Who it&apos;s for</h2>
+        <p class="info-section__body">
+          Tire Reference is designed for anyone who needs dependable tire math without digging through scattered forum threads.
+        </p>
+        <ul class="info-pill-list" aria-label="Who Tire Reference is for">
+          {ABOUT_AUDIENCE.map((item) => (
+            <li class="info-pill-list__item">{item}</li>
+          ))}
+        </ul>
+      </section>
+
+      <p class="info-closing">
+        We&apos;re continually expanding Tire Reference with new calculators, comparison tools, and educational resources to help drivers make informed decisions. Have a suggestion? <a href="/contact">Get in touch</a>.
+      </p>
+    </div>
+  </div>
+</Layout>

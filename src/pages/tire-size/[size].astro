@@ -1,0 +1,63 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TireSize275Premium from '../../components/hub/premium/TireSize275Premium.astro';
+import { TIRE_SIZES } from '../../data/tire-sizes';
+import { buildTireSizeHubData } from '../../lib/tire-size-hub';
+import { hubPagePath, sizeToSlug, slugToSize } from '../../lib/tire-size-url';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
+import {
+  buildArticleSchema,
+  buildDefaultPublishDate,
+} from '../../lib/seo/schema';
+import {
+  buildPageSchema,
+  hubBreadcrumbs,
+} from '../../lib/seo/page-schemas';
+
+export function getStaticPaths() {
+  return TIRE_SIZES.map((entry) => ({
+    params: { size: sizeToSlug(entry.size) },
+    props: { entry },
+  }));
+}
+
+const { size: slug } = Astro.params;
+const size = slugToSize(slug!);
+const hub = size ? buildTireSizeHubData(size) : null;
+if (!hub) throw new Error(`Unknown tire size slug: ${slug}`);
+
+const { displaySize, specs } = hub;
+const pagePath = hubPagePath(hub.entry.size);
+
+const metaDescription = `${displaySize}: ${specs.overallDiameterIn.toFixed(2)} in overall diameter, ${specs.sectionWidthIn.toFixed(2)} in width, ${Math.round(specs.revsPerMile)} revs/mile. Specs, fitment, equivalents, and comparisons.`;
+
+const compareTarget = hub.quickComparisons[0]?.size ?? hub.equivalents[0]?.size;
+const publishDate = buildDefaultPublishDate();
+
+const schema = buildPageSchema({
+  breadcrumbs: hubBreadcrumbs(displaySize, pagePath),
+  faqs: hub.faq,
+  extra: [
+    buildArticleSchema({
+      headline: `${displaySize} Tire Size — Diameter, Specs & Equivalents`,
+      description: metaDescription,
+      url: pagePath,
+      datePublished: publishDate,
+      dateModified: publishDate,
+      type: 'TechArticle',
+    }),
+  ],
+});
+---
+
+<Layout
+  title={`${displaySize} Tire Size — Diameter, Specs & Equivalents`}
+  description={metaDescription || SEO_DESCRIPTIONS.hub}
+  canonical={pagePath}
+  type="article"
+  schema={schema}
+>
+  <div class="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <TireSize275Premium hub={hub} compareTarget={compareTarget} />
+  </div>
+</Layout>

@@ -1,0 +1,24 @@
+---
+import HomeSectionHeader from './HomeSectionHeader.astro';
+import HomeVehicleLookup from './HomeVehicleLookup';
+---
+
+<section class="home-section home-reveal home-find-vehicle" aria-labelledby="home-find-vehicle-title">
+  <HomeSectionHeader
+    id="home-find-vehicle-title"
+    title="Find By Vehicle"
+    description="Select your year, make, model, and trim to jump to verified OEM tire sizes."
+  />
+
+  <div class="home-vehicle-lookup hub-link-card">
+    <div class="home-vehicle-lookup__badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <path d="M4 16l1.5-5.5h13L20 16" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="7.5" cy="18.5" r="1.5" />
+        <circle cx="16.5" cy="18.5" r="1.5" />
+      </svg>
+      OEM fitment lookup
+    </div>
+    <HomeVehicleLookup client:load />
+  </div>
+</section>

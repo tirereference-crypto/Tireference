@@ -1,0 +1,14 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  id?: string;
+}
+
+const { title, description, id } = Astro.props;
+---
+
+<header class="home-section-header">
+  <h2 id={id} class="home-section-header__title">{title}</h2>
+  {description ? <p class="home-section-header__desc">{description}</p> : null}
+</header>

@@ -1,0 +1,46 @@
+---
+import { buildPopularComparisonCards } from '../../lib/home-sections';
+
+const comparisons = buildPopularComparisonCards();
+---
+
+<section class="home-section home-section--alt home-popular-comparisons" aria-labelledby="home-popular-comparisons-title">
+  <div class="home-popular-comparisons__panel">
+    <header class="home-popular-comparisons__header">
+      <div class="home-popular-comparisons__intro">
+        <h2 id="home-popular-comparisons-title" class="home-popular-comparisons__title">
+          Popular Comparisons
+        </h2>
+        <p class="home-popular-comparisons__desc">
+          Side-by-side fitment checks for the most searched tire size upgrades.
+        </p>
+      </div>
+      <a href="/tire-size-comparison" class="home-popular-comparisons__view-all">
+        Open comparison tool
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    </header>
+
+    <div class="home-popular-comparisons__grid">
+      {
+        comparisons.map((item) => (
+          <a href={item.href} class="home-popular-comparisons__pill">
+            <span class="home-popular-comparisons__label">{item.label}</span>
+            <svg
+              class="home-popular-comparisons__arrow"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              aria-hidden="true"
+            >
+              <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</section>

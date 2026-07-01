@@ -1,0 +1,315 @@
+---
+import HubBreadcrumb from '../HubBreadcrumb.astro';
+import CompareThisSize from './CompareThisSize';
+import Premium275Hero from './Premium275Hero.astro';
+import PremiumImpactCard from './PremiumImpactCard.astro';
+import PremiumQuickTake from './PremiumQuickTake.astro';
+import { TIRE_SIZES } from '../../../data/tire-sizes';
+import HubSizeSidebar from '../HubSizeSidebar.astro';
+import HubQuickComparison from '../HubQuickComparison.astro';
+import HubFaq from '../HubFaq.astro';
+import HubIcon from '../HubIcon.astro';
+import type { TireSizeHubData } from '../../../lib/tire-size-hub';
+import {
+  buildPremiumExtras,
+  buildAftermarketUpgradeCards,
+  buildPopularComparisons,
+  buildDefaultCompareTarget,
+} from '../../../lib/tire-size-premium';
+import { getVehicleIcon } from '../../../lib/vehicle-icon';
+import { buildQuickTakeForSize } from '../../../lib/tire-size-quick-take';
+
+interface Props {
+  hub: TireSizeHubData;
+  compareTarget?: string;
+}
+
+const { hub, compareTarget } = Astro.props;
+const { displaySize, specs } = hub;
+const premium = buildPremiumExtras(hub);
+const upgrades = buildAftermarketUpgradeCards(hub);
+const quickTake = buildQuickTakeForSize(hub);
+
+const compareSizeOptions = TIRE_SIZES.map((e) => e.size).filter((s) => s !== hub.entry.size);
+const defaultCompareTarget = buildDefaultCompareTarget(hub, compareSizeOptions);
+const popularComparisons = buildPopularComparisons(hub);
+const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.model}`);
+---
+
+<div class="ref-275">
+  <HubBreadcrumb
+    crumbs={[
+      { label: 'Home', href: '/' },
+      { label: 'Tire Sizes', href: '/tire-sizes' },
+      { label: displaySize },
+    ]}
+  />
+
+  <div class="ref-layout mt-6 lg:mt-8">
+    <div class="ref-main min-w-0">
+      <!-- 1. Hero -->
+      <div class="ref-hero-wrap">
+        <Premium275Hero hub={hub} />
+      </div>
+
+      <!-- 2. Vehicle Fitment -->
+      <section id="vehicles-fitment" class="ref-section">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Vehicles Using This Size</h2>
+        <p class="ref-section__subtitle">{hub.fitmentIntro}</p>
+        <div class="ref-section__body ref-section__grid grid sm:grid-cols-2 lg:grid-cols-3">
+          {premium.vehicles.map((v) => (
+            <div class="ref-card ref-card--subtle rounded-card border border-border bg-surface p-4 transition-all hover:border-primary/20 hover:shadow-card-hover">
+              <div class="flex items-start gap-2.5">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+                  <HubIcon name={getVehicleIcon(v.manufacturer, v.model)} class="h-4 w-4" />
+                </span>
+                <div class="min-w-0">
+                  <p class="font-bold text-heading">{v.manufacturer}</p>
+                  <p class="text-sm font-semibold text-primary">{v.model}</p>
+                  <p class="mt-1.5 text-xs text-body">{v.trim}</p>
+                  <p class="mt-2 inline-flex rounded-full bg-surface-subtle px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-muted">{v.yearRange}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div class="ref-section__body">
+          <div class="ref-card ref-card--info rounded-card border border-info/20 bg-info/5 ref-card-pad">
+            <h3 class="text-base font-bold text-heading">{premium.fitmentNotes.title}</h3>
+            <ul class="mt-3 space-y-3">
+              {premium.fitmentNotes.points.map((point) => (
+                <li class="flex gap-3 text-sm leading-relaxed text-body">
+                  <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-info"></span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Real-World Impact -->
+      <section class="ref-section ref-section--impact ref-section--alt">
+        <div class="impact-section__header">
+          <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Real-World Impact</h2>
+          <p class="ref-section__subtitle">
+            Understand how this tire size changes vehicle behavior beyond the raw specifications.
+          </p>
+          {hub.realWorldImpact && (
+            <p class="ref-section__subtitle text-xs text-muted">
+              Compared with <span class="font-mono font-medium text-heading">{hub.realWorldImpact.referenceSize}</span>
+            </p>
+          )}
+        </div>
+        <div class="ref-section__body ref-section__grid grid impact-section__grid sm:grid-cols-2 lg:grid-cols-3">
+          {premium.impactMetrics.map((m) => (
+            <PremiumImpactCard metric={m} />
+          ))}
+        </div>
+        {premium.impactExplanations.length > 0 && (
+          <div class="ref-section__body">
+            <div class="impact-section__detail rounded-[1rem] border border-border/80 bg-surface-subtle/50 ref-card-pad">
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">In detail</p>
+              <ul class="mt-3 space-y-2.5">
+                {premium.impactExplanations.map((line) => (
+                  <li class="flex gap-2.5 text-sm leading-relaxed text-body">
+                    <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-primary/70"></span>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <!-- 4. Quick Take -->
+      <PremiumQuickTake data={quickTake} />
+
+      <!-- 5. Equivalent Sizes -->
+      <section class="ref-section">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Equivalent Sizes</h2>
+        <p class="ref-section__subtitle">Within ±3% overall diameter — speedometer-safe alternatives.</p>
+        <div class="ref-featured-wrap">
+          <div class="ref-card ref-featured-card overflow-hidden rounded-card border border-border bg-surface">
+            {hub.equivalents.length > 0 ? (
+              <>
+                <div class="hidden md:block">
+                  <table class="ref-table w-full text-left text-sm">
+                    <thead>
+                      <tr class="border-b border-border bg-surface-subtle text-xs font-semibold uppercase tracking-wider text-muted">
+                        <th class="py-3.5">Size</th>
+                        <th class="py-3.5">Overall Diameter</th>
+                        <th class="py-3.5">Difference</th>
+                        <th class="py-3.5">Difference (%)</th>
+                        <th class="py-3.5">Taller / Shorter</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                      {hub.equivalents.map((eq) => {
+                        const diffIn = eq.diameterIn - specs.overallDiameterIn;
+                        const pos = eq.diameterDiffPercent >= 0;
+                        return (
+                          <tr class="transition-colors hover:bg-surface-subtle/60">
+                            <td class="py-4">
+                              <a href={eq.href} class="hub-text-link font-mono font-semibold text-primary">{eq.size}</a>
+                            </td>
+                            <td class="py-4 tabular-nums text-body">{eq.diameterIn.toFixed(2)} in</td>
+                            <td class={`py-4 tabular-nums font-semibold ${pos ? 'hub-diff-positive' : 'hub-diff-negative'}`}>
+                              {pos ? '+' : ''}{diffIn.toFixed(2)} in
+                            </td>
+                            <td class="py-4">
+                              <span class={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${pos ? 'hub-diff-badge-positive' : 'hub-diff-badge-negative'}`}>
+                                {pos ? '+' : ''}{eq.diameterDiffPercent.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td class="py-4 text-sm font-medium text-body">{pos ? 'Taller' : 'Shorter'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div class="space-y-3 ref-inner-pad md:hidden">
+                  {hub.equivalents.map((eq) => {
+                    const diffIn = eq.diameterIn - specs.overallDiameterIn;
+                    const pos = eq.diameterDiffPercent >= 0;
+                    const maxPct = Math.max(...hub.equivalents.map((e) => Math.abs(e.diameterDiffPercent)), 3);
+                    const barW = Math.min(100, (Math.abs(eq.diameterDiffPercent) / maxPct) * 100);
+                    return (
+                      <a href={eq.href} class="hub-link-card block rounded-card border border-border bg-surface p-4">
+                        <div class="flex items-center justify-between">
+                          <span class="font-mono font-bold text-heading">{eq.size}</span>
+                          <span class={`rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${pos ? 'hub-diff-badge-positive' : 'hub-diff-badge-negative'}`}>
+                            {pos ? '+' : ''}{eq.diameterDiffPercent.toFixed(1)}%
+                          </span>
+                        </div>
+                        <p class="mt-1 text-sm text-muted">{eq.diameterIn.toFixed(2)} in · {pos ? '+' : ''}{diffIn.toFixed(2)} in</p>
+                        <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-subtle">
+                          <div class={`h-full rounded-full ${pos ? 'bg-success' : 'bg-danger'}`} style={`width: ${barW}%`}></div>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p class="ref-inner-pad text-sm text-muted">No other sizes in our dataset within ±3% overall diameter.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Tire Size Comparison -->
+      <section class="ref-section ref-section--alt ref-section--compare">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Compare Tire Sizes</h2>
+        <p class="ref-section__subtitle">Compare {displaySize} against common alternative tire sizes.</p>
+        <div class="ref-featured-wrap">
+          <div class="ref-card ref-featured-card ref-card--elevated overflow-hidden rounded-card border border-border bg-surface ref-inner-pad">
+            <CompareThisSize
+              client:load
+              currentSize={hub.entry.size}
+              sizeOptions={compareSizeOptions}
+              popularComparisons={popularComparisons}
+              defaultTarget={defaultCompareTarget}
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Quick Comparison -->
+      <section class="ref-section">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Quick Comparison</h2>
+        <p class="ref-section__subtitle">Diameter, width, and speedometer error at 60 mph indicated.</p>
+        <div class="ref-section__body--full overflow-hidden">
+          <HubQuickComparison rows={hub.quickComparisons} />
+        </div>
+      </section>
+
+      <!-- 8. FAQ -->
+      <section class="ref-section ref-section--alt ref-section--faq">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">FAQ</h2>
+        <div class="ref-section__body--full">
+          <HubFaq items={hub.faq} />
+        </div>
+      </section>
+
+      <!-- 9. Related Sizes -->
+      <section class="ref-section">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Related Sizes & Explore More</h2>
+        <div class="ref-section__body ref-section__grid grid lg:grid-cols-2">
+          <div class="ref-card overflow-hidden rounded-card border border-border bg-surface">
+            <div class="border-b border-border bg-surface-subtle/80 ref-card-pad">
+              <h3 class="text-sm font-semibold text-heading">Other {specs.widthMm}-Width Tires</h3>
+            </div>
+            <ul class="divide-y divide-border">
+              {hub.sameWidthSizes.length > 0 ? hub.sameWidthSizes.map((link) => (
+                <li>
+                  <a href={link.href} class="hub-link-row flex items-center justify-between ref-card-pad text-sm">
+                    <span class="font-mono font-semibold text-heading">{link.size}</span>
+                    <span class="tabular-nums text-muted">{link.diameterIn.toFixed(2)} in</span>
+                  </a>
+                </li>
+              )) : (
+                <li class="ref-card-pad text-sm text-muted">No other {specs.widthMm} mm widths in dataset.</li>
+              )}
+            </ul>
+          </div>
+          <div class="ref-card overflow-hidden rounded-card border border-border bg-surface">
+            <div class="border-b border-border bg-surface-subtle/80 ref-card-pad">
+              <h3 class="text-sm font-semibold text-heading">Other {specs.wheelDiameterIn}-Inch Tires</h3>
+            </div>
+            <ul class="divide-y divide-border">
+              {hub.sameWheelSizes.length > 0 ? hub.sameWheelSizes.map((link) => (
+                <li>
+                  <a href={link.href} class="hub-link-row flex items-center justify-between ref-card-pad text-sm">
+                    <span class="font-mono font-semibold text-heading">{link.size}</span>
+                    <span class="tabular-nums text-muted">{link.diameterIn.toFixed(2)} in</span>
+                  </a>
+                </li>
+              )) : (
+                <li class="ref-card-pad text-sm text-muted">No other {specs.wheelDiameterIn} in wheels in dataset.</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <HubSizeSidebar
+        hub={hub}
+        compareTarget={compareTarget}
+        placement="mobile"
+        vehicleNames={premiumVehicleNames}
+        upgradeCards={upgrades}
+      />
+    </div>
+
+    <HubSizeSidebar
+      hub={hub}
+      compareTarget={compareTarget}
+      placement="desktop"
+      vehicleNames={premiumVehicleNames}
+      upgradeCards={upgrades}
+    />
+  </div>
+</div>
+
+<style>
+  .ref-layout {
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 1024px) {
+    .ref-layout {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      gap: 2.5rem;
+      align-items: start;
+    }
+  }
+  @media (min-width: 1280px) {
+    .ref-layout {
+      grid-template-columns: minmax(0, 1fr) 22rem;
+      gap: 3rem;
+    }
+  }
+</style>

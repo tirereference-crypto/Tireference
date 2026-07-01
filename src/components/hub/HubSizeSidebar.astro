@@ -1,0 +1,269 @@
+---
+import HubIcon from './HubIcon.astro';
+import HubSidebarUpgrades from './HubSidebarUpgrades.astro';
+import HubSidebarInsight from './HubSidebarInsight.astro';
+import { SITE_CALCULATORS } from '../../lib/calculator-links';
+import type { HubIconName } from '../../lib/hub-icons';
+import type { PremiumUpgradeCard } from '../../lib/tire-size-275-premium';
+import type { TireSizeHubData } from '../../lib/tire-size-hub';
+import { buildSidebarRelatedSizes } from '../../lib/tire-size-hub-content';
+import { getInsightForTire } from '../../lib/tire-logic-insights';
+
+interface Props {
+  hub: TireSizeHubData;
+  compareTarget?: string;
+  placement?: 'desktop' | 'mobile';
+  vehicleNames?: string[];
+  fitmentAnchor?: string;
+  upgradeCards?: PremiumUpgradeCard[];
+}
+
+const {
+  hub,
+  compareTarget,
+  placement = 'desktop',
+  vehicleNames: vehicleNamesOverride,
+  fitmentAnchor = '#vehicles-fitment',
+  upgradeCards,
+} = Astro.props;
+
+const visibilityClass = placement === 'mobile' ? 'lg:hidden' : 'hidden lg:block';
+const { specs } = hub;
+
+const vehicles = (vehicleNamesOverride ?? hub.vehicleFitment.map((v) => `${v.manufacturer} ${v.model}`)).slice(
+  0,
+  8,
+);
+
+const relatedSizes = buildSidebarRelatedSizes(
+  specs.overallDiameterIn,
+  hub.equivalents,
+  hub.quickComparisons,
+  5,
+);
+
+const insight = getInsightForTire(hub.entry.category, hub.entry.size);
+
+const HUB_CALCULATOR_ICONS: Record<string, HubIconName> = {
+  '/tire-size-calculator': 'calculator',
+  '/tire-size-comparison': 'split-square-vertical',
+  '/tire-diameter-calculator': 'ruler',
+  '/wheel-offset-calculator': 'disc',
+  '/calculators/gear-ratio-calculator': 'rotate-cw',
+};
+
+const calculators = SITE_CALCULATORS.map((calc) => ({
+  label: calc.label,
+  href: calc.href,
+  description: calc.description,
+  icon: HUB_CALCULATOR_ICONS[calc.href] ?? 'calculator',
+}));
+---
+
+<aside class:list={['hub-size-sidebar', visibilityClass]}>
+  <div class="hub-size-sidebar__rail sticky top-[5.5rem] space-y-3.5 pb-2">
+    <!-- 1. Related Calculators -->
+    <div class="hub-sidebar-widget">
+      <h3 class="hub-sidebar-widget__title">
+        <HubIcon name="tools" class="h-3.5 w-3.5 text-primary" />
+        Related Calculators
+      </h3>
+      <ul class="mt-3 space-y-1.5">
+        {calculators.map((calc) => (
+          <li>
+            <a href={calc.href} class="hub-sidebar-calc group">
+              <span class="hub-sidebar-calc__icon">
+                <HubIcon name={calc.icon} class="h-4 w-4" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="hub-sidebar-calc__label">{calc.label}</span>
+                <span class="hub-sidebar-calc__desc">{calc.description}</span>
+              </span>
+              <HubIcon
+                name="chevron-right"
+                class="hub-sidebar-calc__chevron h-3.5 w-3.5 shrink-0"
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <!-- 2. Popular Upgrades -->
+    {upgradeCards && upgradeCards.length > 0 && (
+      <HubSidebarUpgrades upgrades={upgradeCards} displaySize={hub.displaySize} />
+    )}
+
+    <!-- 3. Popular Vehicles -->
+    {vehicles.length > 0 && (
+      <div class="hub-sidebar-widget">
+        <h3 class="hub-sidebar-widget__title">
+          <HubIcon name="vehicles" class="h-3.5 w-3.5 text-primary" />
+          Popular Vehicles
+        </h3>
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          {vehicles.map((name) => (
+            <a href={fitmentAnchor} class="hub-sidebar-vehicle-chip group">
+              <HubIcon name="car-front" class="h-3 w-3 shrink-0 text-primary/70" />
+              <span class="truncate">{name}</span>
+            </a>
+          ))}
+        </div>
+        <a href={fitmentAnchor} class="hub-sidebar-widget__link mt-3">
+          View full fitment list
+          <HubIcon name="chevron-right" class="h-3 w-3" />
+        </a>
+      </div>
+    )}
+
+    <!-- TireLogic Insight -->
+    <HubSidebarInsight insight={insight} />
+
+    <!-- 4. Similar Tire Sizes -->
+    {relatedSizes.length > 0 && (
+      <div class="hub-sidebar-widget">
+        <h3 class="hub-sidebar-widget__title">
+          <HubIcon name="related" class="h-3.5 w-3.5 text-primary" />
+          Similar Tire Sizes
+        </h3>
+        <ul class="mt-3 space-y-0.5">
+          {relatedSizes.map((link) => (
+            <li>
+              <a href={link.href} class="hub-sidebar-size-link group">
+                <span class="font-mono text-sm font-semibold text-heading group-hover:text-primary">{link.size}</span>
+                <span class="flex shrink-0 items-center gap-1.5">
+                  <span
+                    class:list={[
+                      'rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums',
+                      link.diameterDiffPercent >= 0 ? 'hub-diff-badge-positive' : 'hub-diff-badge-negative',
+                    ]}
+                  >
+                    {link.diameterDiffPercent >= 0 ? '+' : ''}{link.diameterDiffPercent.toFixed(1)}%
+                  </span>
+                  <HubIcon
+                    name="chevron-right"
+                    class="h-3 w-3 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                  />
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</aside>
+
+<style>
+  .hub-sidebar-calc {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    padding: 0.5rem 0.625rem;
+    margin-inline: -0.375rem;
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .hub-sidebar-calc:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
+    background-color: var(--color-surface-subtle);
+    box-shadow: 0 2px 8px -3px rgb(15 23 42 / 0.08);
+    transform: translateX(2px);
+  }
+
+  .hub-sidebar-calc__icon {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .hub-sidebar-calc:hover .hub-sidebar-calc__icon {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-primary-light));
+  }
+
+  .hub-sidebar-calc__label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-heading);
+    transition: color 0.2s ease;
+  }
+
+  .hub-sidebar-calc:hover .hub-sidebar-calc__label {
+    color: var(--color-primary);
+  }
+
+  .hub-sidebar-calc__desc {
+    display: block;
+    margin-top: 0.125rem;
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    color: var(--color-muted);
+  }
+
+  .hub-sidebar-calc__chevron {
+    color: var(--color-muted);
+    transition:
+      color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .hub-sidebar-calc:hover .hub-sidebar-calc__chevron {
+    color: var(--color-primary);
+    transform: translateX(2px);
+  }
+
+  .hub-sidebar-vehicle-chip {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface-subtle);
+    padding: 0.3125rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-body);
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .hub-sidebar-vehicle-chip:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    background-color: var(--color-primary-light);
+    color: var(--color-heading);
+  }
+
+  .hub-sidebar-size-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    padding: 0.4375rem 0.5rem;
+    margin-inline: -0.375rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .hub-sidebar-size-link:hover {
+    background-color: color-mix(in srgb, var(--color-surface-subtle) 80%, transparent);
+  }
+</style>

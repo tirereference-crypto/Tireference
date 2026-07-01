@@ -1,0 +1,70 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
+import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
+import {
+  comparisonSlugFromSizes,
+  getAllComparisonSlugs,
+  parseComparisonSlug,
+} from '../../lib/tire-comparison-links';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
+import {
+  buildPageSchema,
+  comparisonBreadcrumbs,
+} from '../../lib/seo/page-schemas';
+import { compareTires, getTireSpecs } from '../../lib/tire-math';
+
+export function getStaticPaths() {
+  return getAllComparisonSlugs().map(({ slug, current, new: newSize }) => ({
+    params: { slug },
+    props: { current, newSize },
+  }));
+}
+
+const { slug } = Astro.params;
+const props = Astro.props as { current?: string; newSize?: string };
+const parsed = slug ? parseComparisonSlug(slug) : null;
+const current = props.current ?? parsed?.current;
+const newSize = props.newSize ?? parsed?.new;
+
+if (!current || !newSize) {
+  throw new Error(`Unknown comparison slug: ${slug}`);
+}
+
+let title = `${current} vs ${newSize} Tire Size Comparison`;
+let description = SEO_DESCRIPTIONS.comparison;
+let faqs: { question: string; answer: string }[] = [];
+
+try {
+  const specsA = getTireSpecs(current);
+  const specsB = getTireSpecs(newSize);
+  const comparison = compareTires(current, newSize, 60);
+  const insights = buildComparisonInsights(current, newSize, comparison, specsA, specsB);
+  title = insights.seo.title.replace(' | Tire Reference', '');
+  description = insights.seo.metaDescription;
+  faqs = insights.seo.faqs;
+} catch {
+  /* keep defaults for invalid pairs filtered at build time */
+}
+
+const canonicalSlug = comparisonSlugFromSizes(current, newSize);
+const canonical = `/compare/${canonicalSlug}`;
+
+const schema = buildPageSchema({
+  breadcrumbs: comparisonBreadcrumbs(current, newSize, canonicalSlug),
+  faqs,
+});
+---
+
+<Layout
+  title={title}
+  description={description}
+  canonical={canonical}
+  schema={schema}
+>
+  <PremiumTireSizeComparison
+    client:load
+    initialCurrent={current}
+    initialNew={newSize}
+  />
+</Layout>

@@ -1,0 +1,48 @@
+---
+import type { HubFaqItem } from '../../lib/tire-size-hub';
+
+interface Props {
+  items: HubFaqItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="hub-faq space-y-3">
+  {
+    items.map((item, i) => (
+      <details class="group rounded-card border border-border bg-surface shadow-card transition-shadow open:border-primary/20 open:shadow-card-hover" open={i === 0}>
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium text-heading marker:content-none [&::-webkit-details-marker]:hidden">
+          <span>{item.question}</span>
+          <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary transition-transform group-open:rotate-45">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </span>
+        </summary>
+        <div class="border-t border-border px-5 pb-5 pt-3">
+          <p class="text-sm leading-relaxed text-body">{item.answer}</p>
+        </div>
+      </details>
+    ))
+  }
+</div>
+
+<script>
+  function initHubFaqAccordion() {
+    document.querySelectorAll('.hub-faq').forEach((container) => {
+      const items = container.querySelectorAll('details');
+      items.forEach((item) => {
+        item.addEventListener('toggle', () => {
+          if (!item.open) return;
+          items.forEach((other) => {
+            if (other !== item) other.open = false;
+          });
+        });
+      });
+    });
+  }
+
+  initHubFaqAccordion();
+  document.addEventListener('astro:page-load', initHubFaqAccordion);
+</script>

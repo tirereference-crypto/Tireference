@@ -1,0 +1,43 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PremiumTireDiameterCalculator from '../components/calculators/PremiumTireDiameterCalculator';
+import {
+  WHEEL_DIAMETER_OPTIONS,
+  type WheelDiameterOption,
+} from '../lib/tire-diameter-search';
+import { DIAMETER_FAQS } from '../lib/tire-diameter-insights';
+import { SEO_DESCRIPTIONS } from '../lib/seo/constants';
+import { buildPageSchema, calculatorBreadcrumbs } from '../lib/seo/page-schemas';
+
+const diameterParam = Astro.url.searchParams.get('diameter');
+const wheelParam = Astro.url.searchParams.get('wheel');
+
+const parsedDiameter = diameterParam ? Number(diameterParam) : 33;
+const initialDiameter = Number.isFinite(parsedDiameter) && parsedDiameter > 0 ? parsedDiameter : 33;
+
+const parsedWheel = wheelParam ? Number(wheelParam) : 18;
+const validWheels = WHEEL_DIAMETER_OPTIONS as readonly number[];
+const initialWheel = (validWheels.includes(parsedWheel) ? parsedWheel : 18) as WheelDiameterOption;
+
+const rounded = Math.round(initialDiameter);
+const title = 'Tire Diameter Calculator';
+const description = SEO_DESCRIPTIONS.calculator;
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Tire Diameter Calculator'),
+  faqs: DIAMETER_FAQS.map((faq) => ({ question: faq.question, answer: faq.answer })),
+});
+---
+
+<Layout
+  title={title}
+  description={description}
+  canonical="/tire-diameter-calculator"
+  schema={schema}
+>
+  <PremiumTireDiameterCalculator
+    client:load
+    initialDiameter={initialDiameter}
+    initialWheel={initialWheel}
+  />
+</Layout>

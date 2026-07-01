@@ -1,0 +1,17 @@
+---
+interface Props {
+  uses: string[];
+}
+
+const { uses } = Astro.props;
+---
+
+<div class="flex flex-wrap gap-2">
+  {
+    uses.map((use) => (
+      <span class="inline-flex items-center rounded-full border border-primary/20 bg-primary-light px-4 py-2 text-sm font-medium text-heading">
+        {use}
+      </span>
+    ))
+  }
+</div>

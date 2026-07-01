@@ -1,0 +1,27 @@
+---
+import type { StatDisplay } from '../../lib/calculator-types';
+
+interface Props {
+  stats: StatDisplay[];
+  title?: string;
+}
+
+const { stats, title } = Astro.props;
+---
+
+{title && <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">{title}</h3>}
+<dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {
+    stats.map((stat) => (
+      <div class="rounded-xl border border-border bg-surface p-4 shadow-card">
+        <dt class="text-sm font-medium text-muted">{stat.label}</dt>
+        <dd class="mt-1 flex items-baseline gap-2">
+          <span class="text-3xl font-semibold tabular-nums tracking-tight text-heading">
+            {stat.value}
+          </span>
+          {stat.unit && <span class="text-base text-muted">{stat.unit}</span>}
+        </dd>
+      </div>
+    ))
+  }
+</dl>

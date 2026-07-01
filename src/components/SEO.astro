@@ -1,0 +1,118 @@
+---
+import {
+  DEFAULT_OG_IMAGE,
+  formatPageTitle,
+  mergeJsonLd,
+  ROBOTS,
+  truncateDescription,
+  TWITTER_SITE,
+} from '../lib/seo';
+import { resolveCanonical, resolveCanonicalFromPathname } from '../lib/seo/urls';
+
+export type OgType = 'website' | 'article';
+
+export interface Props {
+  title: string;
+  description: string;
+  /** Absolute URL or site-relative path. Defaults to current pathname. */
+  canonical?: string;
+  pathname?: string;
+  image?: string;
+  type?: OgType;
+  schema?: Record<string, unknown> | Record<string, unknown>[];
+  robots?: string;
+  preloadHero?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonical,
+  pathname = Astro.url.pathname,
+  image,
+  type = 'website',
+  schema,
+  robots = ROBOTS.indexFollow,
+  preloadHero = false,
+} = Astro.props;
+
+const canonicalUrl = canonical
+  ? resolveCanonical(canonical)
+  : resolveCanonicalFromPathname(pathname);
+
+const pageTitle = formatPageTitle(title);
+const metaDescription = truncateDescription(description);
+const ogImage = image ?? DEFAULT_OG_IMAGE;
+
+const jsonLd = schema
+  ? Array.isArray(schema)
+    ? mergeJsonLd(schema)
+    : schema
+  : undefined;
+
+const heroBannerSrc = '/images/home/hero-banner.png?v=13';
+const heroBannerTabletSrc = '/images/home/hero-banner-tablet.png';
+const heroBannerMobileSrc = '/images/home/hero-banner-mobile.png';
+const heroBannerSrcset = `${heroBannerMobileSrc} 800w, ${heroBannerTabletSrc} 1280w, ${heroBannerSrc} 2048w`;
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="robots" content={robots} />
+<meta name="description" content={metaDescription} />
+
+<link rel="canonical" href={canonicalUrl} />
+
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={metaDescription} />
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:site_name" content="Tire Reference" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={metaDescription} />
+<meta name="twitter:image" content={ogImage} />
+{TWITTER_SITE ? <meta name="twitter:site" content={TWITTER_SITE} /> : null}
+
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="preload"
+  as="style"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+/>
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
+
+{
+  preloadHero ? (
+    <link
+      rel="preload"
+      as="image"
+      href={heroBannerSrc}
+      imagesrcset={heroBannerSrcset}
+      imagesizes="(max-width: 767px) 100vw, (max-width: 1023px) 100vw, 90rem"
+      fetchpriority="high"
+    />
+  ) : null
+}
+
+<meta name="generator" content={Astro.generator} />
+<title>{pageTitle}</title>
+
+{
+  jsonLd ? (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  ) : null
+}

@@ -1,0 +1,30 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PremiumTireSizeCalculator from '../components/calculators/PremiumTireSizeCalculator';
+import {
+  SEO_DESCRIPTIONS,
+} from '../lib/seo/constants';
+import {
+  buildPageSchema,
+  calculatorBreadcrumbs,
+} from '../lib/seo/page-schemas';
+import { TIRE_SIZE_CALCULATOR_FAQS } from '../lib/tire-size-calculator-faqs';
+
+const size = Astro.url.searchParams.get('size') ?? undefined;
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Tire Size Calculator'),
+  faqs: [...TIRE_SIZE_CALCULATOR_FAQS],
+});
+---
+
+<Layout
+  title="Tire Size Calculator"
+  description={SEO_DESCRIPTIONS.calculator}
+  canonical="/tire-size-calculator"
+  schema={schema}
+>
+  <div class="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <PremiumTireSizeCalculator client:load initialSize={size} />
+  </div>
+</Layout>

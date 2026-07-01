@@ -1,0 +1,101 @@
+---
+import { CONTACT_EMAIL } from '../../lib/info-pages';
+
+interface Props {
+  reasons: ReadonlyArray<{ title: string; description: string }>;
+}
+
+const { reasons } = Astro.props;
+---
+
+<form class="info-form" id="contact-form" novalidate>
+  <!--
+    Form handling: connect to your email/API provider here.
+    Options: Formspree, Netlify Forms, Resend, or a custom /api/contact endpoint.
+    Replace the submit handler below when the backend is ready.
+  -->
+  <div class="info-form__field">
+    <label class="info-form__label" for="contact-name">Name</label>
+    <input
+      class="info-form__input"
+      type="text"
+      id="contact-name"
+      name="name"
+      autocomplete="name"
+      required
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="contact-email">Email</label>
+    <input
+      class="info-form__input"
+      type="email"
+      id="contact-email"
+      name="email"
+      autocomplete="email"
+      required
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="contact-subject">Subject</label>
+    <input
+      class="info-form__input"
+      type="text"
+      id="contact-subject"
+      name="subject"
+      required
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="contact-message">Message</label>
+    <textarea
+      class="info-form__textarea"
+      id="contact-message"
+      name="message"
+      required
+    ></textarea>
+  </div>
+
+  <button type="submit" class="tl-btn-primary info-form__submit">
+    Send message
+  </button>
+
+  <p class="info-form__status" id="contact-form-status" role="status" aria-live="polite" hidden>
+    Thank you for your message. We will review it and respond to the email address you provided.
+  </p>
+</form>
+
+<script>
+  function initContactForm() {
+    const form = document.getElementById('contact-form') as HTMLFormElement | null;
+    const status = document.getElementById('contact-form-status');
+
+    if (!form || form.dataset.bound === 'true') return;
+    form.dataset.bound = 'true';
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      /*
+       * TODO: POST form data to your contact endpoint, e.g.:
+       * await fetch('/api/contact', { method: 'POST', body: new FormData(form) });
+       */
+
+      form.reset();
+      if (status) {
+        status.hidden = false;
+      }
+    });
+  }
+
+  initContactForm();
+  document.addEventListener('astro:page-load', initContactForm);
+</script>

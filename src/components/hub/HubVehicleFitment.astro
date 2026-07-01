@@ -1,0 +1,60 @@
+---
+import HubIcon from './HubIcon.astro';
+import type { VehicleFitment } from '../../data/vehicle-fitment';
+import { getVehicleIcon } from '../../lib/vehicle-icon';
+
+interface Props {
+  vehicles: VehicleFitment[];
+}
+
+const { vehicles } = Astro.props;
+---
+
+<div class="rounded-2xl border border-border bg-surface shadow-card">
+  <!-- Desktop table -->
+  <div class="hidden overflow-x-auto sm:block">
+    <table class="w-full text-left text-sm">
+      <thead class="border-b border-border bg-surface-subtle text-xs uppercase tracking-wide text-muted">
+        <tr>
+          <th class="px-6 py-3 font-semibold">Vehicle</th>
+          <th class="px-6 py-3 font-semibold">Trim</th>
+          <th class="px-6 py-3 font-semibold">Years</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {vehicles.map((v) => (
+          <tr class="hover:bg-surface-subtle/50">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2.5 font-medium text-heading">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+                  <HubIcon name={getVehicleIcon(v.manufacturer, v.model)} class="h-3.5 w-3.5" />
+                </span>
+                {v.manufacturer} {v.model}
+              </div>
+            </td>
+            <td class="px-6 py-4 text-body">{v.trim}</td>
+            <td class="px-6 py-4 tabular-nums text-muted">{v.yearRange}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile cards -->
+  <div class="space-y-3 p-4 sm:hidden">
+    {vehicles.map((v) => (
+      <div class="rounded-xl border border-border bg-surface-subtle/50 p-4">
+        <div class="flex items-start gap-2.5">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+            <HubIcon name={getVehicleIcon(v.manufacturer, v.model)} class="h-4 w-4" />
+          </span>
+          <div>
+            <p class="font-semibold text-heading">{v.manufacturer} {v.model}</p>
+            <p class="mt-1 text-sm text-body">{v.trim}</p>
+            <p class="mt-1 text-xs text-muted">{v.yearRange}</p>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>

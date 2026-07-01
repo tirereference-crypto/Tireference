@@ -1,0 +1,23 @@
+---
+import { SITE_LOGO, SITE_NAME, SITE_TAGLINE } from '../lib/site-brand';
+
+interface Props {
+  variant?: 'full' | 'icon';
+  class?: string;
+}
+
+const { variant = 'full', class: className = '' } = Astro.props;
+const isIcon = variant === 'icon';
+const src = `${isIcon ? SITE_LOGO.icon : SITE_LOGO.full}?v=3`;
+const width = isIcon ? SITE_LOGO.iconWidth : SITE_LOGO.fullWidth;
+const height = isIcon ? SITE_LOGO.iconHeight : SITE_LOGO.fullHeight;
+---
+
+<img
+  src={src}
+  alt={`${SITE_NAME} — ${SITE_TAGLINE}`}
+  width={width}
+  height={height}
+  class:list={['site-logo', isIcon && 'site-logo--icon', className]}
+  decoding="async"
+/>

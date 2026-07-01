@@ -1,0 +1,73 @@
+import type { UnitSystem, StatDisplay } from './calculator-types';
+import type { TireSpecs } from './tire-math';
+
+function formatNumber(value: number, decimals: number): string {
+  return value.toFixed(decimals);
+}
+
+export interface TireDiameterDisplay {
+  diameter: StatDisplay;
+  details: StatDisplay[];
+}
+
+/** Diameter-first display: overall diameter, then circumference, sidewall, revs. */
+export function formatTireDiameterResults(
+  specs: TireSpecs,
+  unitSystem: UnitSystem,
+): TireDiameterDisplay {
+  if (unitSystem === 'imperial') {
+    return {
+      diameter: {
+        label: 'Overall diameter',
+        value: formatNumber(specs.overallDiameterIn, 2),
+        unit: 'in',
+        size: 'hero',
+      },
+      details: [
+        {
+          label: 'Circumference',
+          value: formatNumber(specs.circumferenceIn, 2),
+          unit: 'in',
+        },
+        {
+          label: 'Sidewall height',
+          value: formatNumber(specs.sidewallIn, 2),
+          unit: 'in',
+        },
+        {
+          label: 'Revolutions per mile',
+          value: formatNumber(specs.revsPerMile, 0),
+          unit: 'revs/mi',
+        },
+      ],
+    };
+  }
+
+  const circumferenceCm = specs.circumferenceMm / 10;
+
+  return {
+    diameter: {
+      label: 'Overall diameter',
+      value: formatNumber(specs.overallDiameterMm, 1),
+      unit: 'mm',
+      size: 'hero',
+    },
+    details: [
+      {
+        label: 'Circumference',
+        value: formatNumber(circumferenceCm, 1),
+        unit: 'cm',
+      },
+      {
+        label: 'Sidewall height',
+        value: formatNumber(specs.sidewallMm, 1),
+        unit: 'mm',
+      },
+      {
+        label: 'Revolutions per km',
+        value: formatNumber(specs.revsPerKm, 0),
+        unit: 'revs/km',
+      },
+    ],
+  };
+}

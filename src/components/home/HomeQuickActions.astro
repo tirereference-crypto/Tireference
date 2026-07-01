@@ -1,0 +1,28 @@
+---
+import HomeCalcIcon from './HomeCalcIcon.astro';
+import { HOME_QUICK_ACTIONS } from '../../lib/home-hero';
+---
+
+<section class="home-quick-actions" id="calculators" aria-labelledby="home-quick-actions-title">
+  <h2 id="home-quick-actions-title" class="sr-only">All Calculators</h2>
+  <div class="home-quick-actions__grid">
+    {
+      HOME_QUICK_ACTIONS.map((action) => (
+        <a href={action.href} class="home-quick-actions__card hub-link-card">
+          <span class={`home-quick-actions__icon-wrap home-quick-actions__icon-wrap--${action.icon}`}>
+            <HomeCalcIcon name={action.icon} />
+          </span>
+          <span class="home-quick-actions__body">
+            <span class="home-quick-actions__title">{action.title}</span>
+            <span class="home-quick-actions__desc">{action.description}</span>
+          </span>
+          <span class="home-quick-actions__arrow" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </a>
+      ))
+    }
+  </div>
+</section>

@@ -1,0 +1,69 @@
+---
+import HubIcon from './HubIcon.astro';
+import type { HubIconName } from '../../lib/hub-icons';
+import type { RealWorldImpact } from '../../lib/tire-size-hub';
+
+interface Props {
+  impact: RealWorldImpact | null;
+  displaySize: string;
+}
+
+const { impact, displaySize } = Astro.props;
+
+const impactItems: Array<{ label: string; icon: HubIconName }> = [
+  { label: 'Speedometer', icon: 'gauge' },
+  { label: 'Ground clearance', icon: 'mountain' },
+  { label: 'Sidewall', icon: 'arrow-up-down' },
+  { label: 'Width', icon: 'move-horizontal' },
+];
+---
+
+{
+  impact ? (
+    <div class="rounded-xl border border-border bg-gradient-to-br from-surface to-surface-subtle p-6 shadow-card">
+      <p class="text-sm text-muted">
+        Compared with <span class="font-mono font-medium text-heading">{impact.referenceSize}</span>
+      </p>
+      <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {impactItems.map((item, i) => (
+          <div class="rounded-lg bg-surface px-3 py-2">
+            <dt class="flex items-center gap-1.5 text-xs text-muted">
+              <HubIcon name={item.icon} class="h-3.5 w-3.5 text-primary/80" />
+              {item.label}
+            </dt>
+            {i === 0 && (
+              <dd class={`mt-1 text-lg font-bold tabular-nums ${impact.speedoErrorPercent >= 0 ? 'text-success' : 'text-danger'}`}>
+                {impact.speedoErrorPercent >= 0 ? '+' : ''}{impact.speedoErrorPercent.toFixed(1)}%
+              </dd>
+            )}
+            {i === 1 && (
+              <dd class="mt-1 text-lg font-bold tabular-nums text-heading">
+                {impact.groundClearanceChangeIn >= 0 ? '+' : ''}{impact.groundClearanceChangeIn.toFixed(2)} in
+              </dd>
+            )}
+            {i === 2 && (
+              <dd class="mt-1 text-lg font-bold tabular-nums text-heading">
+                {impact.sidewallDiffIn >= 0 ? '+' : ''}{impact.sidewallDiffIn.toFixed(2)} in
+              </dd>
+            )}
+            {i === 3 && (
+              <dd class="mt-1 text-lg font-bold tabular-nums text-heading">
+                {impact.widthDiffMm >= 0 ? '+' : ''}{impact.widthDiffMm} mm
+              </dd>
+            )}
+          </div>
+        ))}
+      </dl>
+      <ul class="mt-5 space-y-2 border-t border-border pt-5">
+        {impact.explanations.map((line) => (
+          <li class="flex gap-2 text-sm leading-relaxed text-body">
+            <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+            {line}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : (
+    <p class="text-sm text-muted">Enter a comparison size to see real-world impact for {displaySize}.</p>
+  )
+}

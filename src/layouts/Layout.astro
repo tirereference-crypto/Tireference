@@ -1,23 +1,58 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+---
+import '../styles/global.css';
+import '../styles/mobile-responsive.css';
+import '../styles/site-header.css';
+import SEO from '../components/SEO.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { SITE_NAME } from '../lib/site-brand';
+import type { OgType } from '../components/SEO.astro';
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  image?: string;
+  type?: OgType;
+  schema?: Record<string, unknown> | Record<string, unknown>[];
+  robots?: string;
+  preloadHero?: boolean;
+  mainClass?: string;
+}
+
+const {
+  title = SITE_NAME,
+  description,
+  canonical,
+  image,
+  type = 'website',
+  schema,
+  robots,
+  preloadHero = false,
+  mainClass = 'bg-surface-subtle',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <SEO
+      title={title}
+      description={description ?? ''}
+      canonical={canonical}
+      pathname={Astro.url.pathname}
+      image={image}
+      type={type}
+      schema={schema}
+      robots={robots}
+      preloadHero={preloadHero}
+    />
+  </head>
+  <body class="flex min-h-screen flex-col antialiased">
+    <SiteHeader />
+    <main class:list={['flex-1', mainClass]}>
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

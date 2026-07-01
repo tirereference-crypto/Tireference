@@ -1,0 +1,30 @@
+---
+import HomeHeroSearch from './HomeHeroSearch';
+
+const heroBannerSrc = '/images/home/hero-banner.png?v=13';
+const heroBannerTabletSrc = '/images/home/hero-banner-tablet.png';
+const heroBannerMobileSrc = '/images/home/hero-banner-mobile.png';
+const heroBannerSrcset = `${heroBannerMobileSrc} 800w, ${heroBannerTabletSrc} 1280w, ${heroBannerSrc} 2048w`;
+---
+
+<section class="home-hero" aria-labelledby="home-hero-title">
+  <h1 id="home-hero-title" class="sr-only">Precision Tire Calculators &amp; Size Guides</h1>
+  <div class="home-hero__stage">
+    <img
+      src={heroBannerSrc}
+      srcset={heroBannerSrcset}
+      sizes="(max-width: 767px) 100vw, (max-width: 1023px) 100vw, 90rem"
+      alt="Off-road tire on rocky terrain illustrating tire size measurements and fitment data"
+      width="2048"
+      height="717"
+      class="home-hero__banner"
+      loading="eager"
+      decoding="async"
+      fetchpriority="high"
+    />
+
+    <div class="home-hero__search-overlay">
+      <HomeHeroSearch client:load />
+    </div>
+  </div>
+</section>

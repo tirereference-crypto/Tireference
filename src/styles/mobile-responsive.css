@@ -1,0 +1,556 @@
+/* TireLogic mobile & tablet responsive layer — desktop layouts unchanged above 768px */
+
+/* ── Base: prevent horizontal scroll on small screens ── */
+@media (max-width: 767px) {
+  html {
+    overflow-x: clip;
+  }
+
+  body {
+    overflow-x: clip;
+  }
+
+  img:not(.home-hero__banner),
+  video,
+  svg,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ── Tablet spacing (768–1023px) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .cmp-shell {
+    padding-bottom: 2.5rem;
+  }
+
+  .home-shell {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE (<768px)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* ── Typography (mobile only) ── */
+  .cmp-header__title,
+  .cmp-page-header__title,
+  .wof-hero__title,
+  .dia-search-card__title,
+  .calc-hero__intro-title,
+  .grc-compare-table__title,
+  .home-section-header__title {
+    font-size: clamp(1.375rem, 5vw, 1.75rem);
+    line-height: 1.2;
+  }
+
+  .cmp-header__subtitle,
+  .cmp-page-header__intro,
+  .wof-hero__desc,
+  .dia-search-card__subtitle,
+  .calc-hero__intro-desc {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  body {
+    line-height: 1.6;
+  }
+
+  /* ── Page padding (16px) ── */
+  .cmp-page {
+    margin: 0;
+    padding: 0 1rem;
+  }
+
+  .cmp-shell {
+    padding: 0.75rem 0 2rem;
+  }
+
+  .calc-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .home-shell {
+    padding: 1rem 1rem 2rem;
+  }
+
+  /* ── Calculator layout flow (title → inputs → results → sidebars) ── */
+  .cmp-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cmp-layout > .cmp-main {
+    display: contents;
+  }
+
+  .cmp-page-header {
+    order: 1;
+  }
+
+  .cmp-layout > .cmp-sidebar-left:not(.dia-sidebar-left) {
+    order: 2;
+  }
+
+  .cmp-main > *:not(.cmp-page-header) {
+    order: 3;
+  }
+
+  .cmp-layout > .cmp-sidebar-right,
+  .cmp-layout > .wof-sidebar-right {
+    order: 10;
+  }
+
+  /* Diameter: title/inputs in main first; sidebars at bottom */
+  .dia-page .dia-sidebar-left {
+    order: 10;
+  }
+
+  .dia-page .dia-sidebar-right {
+    order: 11;
+  }
+
+  .dia-page .dia-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    order: 1;
+  }
+
+  /* Wheel offset: main before sidebar */
+  .wof-page .wof-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    order: 1;
+  }
+
+  .wof-page .wof-sidebar-right {
+    order: 10;
+  }
+
+  /* Gear ratio layout */
+  .grc-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .grc-layout__main {
+    order: 1;
+  }
+
+  .grc-faq-related {
+    order: 10;
+  }
+
+  /* ── Stack multi-column rows ── */
+  .cmp-tire-input-block__row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .cmp-kpi-row,
+  .cmp-summary-bar,
+  .cmp-insights-row,
+  .cmp-bottom-row,
+  .cmp-perf-ref,
+  .wof-calc-card__grid,
+  .wof-metrics__grid,
+  .grc-calc-grid,
+  .grc-compare-install-row,
+  .calc-hero-grid,
+  .calc-explained-row,
+  .calc-feature-cards__grid,
+  .calc-faq__grid,
+  .calc-spec-grid {
+    grid-template-columns: 1fr !important;
+    flex-direction: column;
+  }
+
+  .cmp-upgrade-paths__flow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cmp-upgrade-paths__arrow {
+    display: none;
+  }
+
+  .cmp-personality-cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Full-width cards ── */
+  .cmp-panel,
+  .cmp-card,
+  .wof-calc-card,
+  .wof-viz-card,
+  .dia-search-card,
+  .calc-section,
+  .calc-feature-card,
+  .grc-workspace-card,
+  .hub-sidebar-widget {
+    width: 100%;
+  }
+
+  /* ── Inputs: stack, 52–56px height, readable font ── */
+  .cmp-tire-input-block__field input,
+  .cmp-tire-input-block__paste,
+  .cmp-field input,
+  .cmp-enter-card__settings input,
+  .dia-step__input,
+  .dia-step__select,
+  .wof-field input,
+  .wof-field select,
+  .grc-field input,
+  .grc-field select,
+  .calc-enter-panel__dim-input,
+  .calc-enter-panel__paste-input {
+    min-height: 3.25rem;
+    font-size: 1rem;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .cmp-tire-input-block__field label,
+  .wof-field label,
+  .grc-field label,
+  .calc-enter-panel__dim-label,
+  .dia-step__label {
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .calc-enter-panel__dims {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .dia-step__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  /* ── Buttons: min 48px, full width primary CTAs ── */
+  .cmp-compare-btn,
+  .wof-analyze-btn,
+  .dia-search-btn,
+  .calc-enter-panel__cta,
+  .tl-btn-primary,
+  .home-hero__search-btn {
+    min-height: 3rem;
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  .cmp-segment {
+    width: 100%;
+  }
+
+  .cmp-segment__btn {
+    min-height: 2.75rem;
+    flex: 1;
+  }
+
+  /* ── Sticky analyze button (mobile only) ── */
+  .tl-sticky-analyze {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -4px 20px rgb(15 23 42 / 0.1);
+    transform: translateY(110%);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
+  .tl-sticky-analyze--visible {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .tl-sticky-analyze__inner {
+    max-width: 28rem;
+    margin: 0 auto;
+  }
+
+  .tl-sticky-analyze__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 3rem;
+    border: none;
+    border-radius: 0.875rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgb(var(--color-primary-rgb) / 0.35);
+  }
+
+  .tl-sticky-analyze__btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Pages with sticky analyze need bottom padding */
+  .cmp-page.tl-has-sticky-analyze,
+  .calc-page.tl-has-sticky-analyze {
+    padding-bottom: 5rem;
+  }
+
+  /* Hide desktop sticky results bar on mobile — use analyze CTA instead */
+  .calc-sticky-bar {
+    display: none;
+  }
+
+  /* ── Result cards ── */
+  .cmp-kpi,
+  .cmp-summary-chip,
+  .wof-metric-card,
+  .calc-spec-tile,
+  .grc-summary-card {
+    width: 100%;
+  }
+
+  .cmp-kpi__amount,
+  .cmp-kpi__pct,
+  .wof-metric-card__value {
+    font-size: clamp(1rem, 4vw, 1.25rem);
+  }
+
+  /* ── Tables → stacked cards ── */
+  .cmp-spec-table-wrap--desktop,
+  .grc-compare-table__wrap--desktop {
+    display: none;
+  }
+
+  .cmp-spec-cards,
+  .grc-compare-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cmp-spec-card,
+  .grc-compare-card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.875rem 1rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  .cmp-spec-card__title,
+  .grc-compare-card__title {
+    margin: 0 0 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+
+  .cmp-spec-card__row,
+  .grc-compare-card__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.375rem 0;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .cmp-spec-card__row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .cmp-spec-card__label,
+  .grc-compare-card__label {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .cmp-spec-card__value,
+  .grc-compare-card__value {
+    text-align: right;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+
+  .cmp-spec-card__value.tone-positive,
+  .grc-compare-card__value--positive {
+    color: var(--color-success);
+  }
+
+  .cmp-spec-card__value.tone-negative,
+  .grc-compare-card__value--negative {
+    color: var(--color-danger);
+  }
+
+  /* ── FAQ accordion touch targets ── */
+  .cmp-faq details,
+  .dia-faq details,
+  .wof-faq-item,
+  .calc-faq__item {
+    padding: 0;
+  }
+
+  .cmp-faq summary,
+  .dia-faq summary,
+  .wof-faq-item summary,
+  .calc-faq__item summary {
+    min-height: 3rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .cmp-faq p,
+  .dia-faq p,
+  .wof-faq-item p,
+  .calc-faq__item p {
+    padding: 0 1rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .calc-faq__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .calc-faq__column {
+    display: contents;
+  }
+
+  /* ── Touch targets (48×48 min) ── */
+  .site-nav__icon-btn,
+  .site-nav__search-toggle,
+  .site-nav__menu-btn {
+    min-width: 3rem;
+    min-height: 3rem;
+  }
+
+  .site-nav__accordion-trigger,
+  .site-nav__mobile-link {
+    min-height: 3rem;
+  }
+
+  .site-nav__mobile-sub a {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .dia-popular-diameter-row--button {
+    min-height: 3rem;
+  }
+
+  /* ── Home mobile ── */
+  .home-hero__search-form {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .home-hero__search-input {
+    min-height: 3.25rem;
+    font-size: 1rem;
+  }
+
+  .home-hero__search-btn {
+    width: 100%;
+  }
+
+  .home-quick-actions__grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .home-popular-sizes__grid,
+  .home-popular-comparisons__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .home-popular-sizes__pills,
+  .home-popular-comparisons__pills {
+    justify-content: center;
+  }
+
+  .home-categories__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .home-seo-content__grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .home-why__grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Hub pages ── */
+  .ref-275__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ref-table-wrap {
+    display: none;
+  }
+
+  .ref-table-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+/* Desktop: hide mobile table cards */
+@media (min-width: 768px) {
+  .tl-sticky-analyze {
+    display: none;
+  }
+
+  .cmp-spec-cards,
+  .grc-compare-cards,
+  .ref-table-cards {
+    display: none;
+  }
+
+  .cmp-spec-table-wrap--desktop,
+  .grc-compare-table__wrap--desktop {
+    display: block;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tl-sticky-analyze {
+    transition: none;
+  }
+}

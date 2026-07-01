@@ -1,0 +1,334 @@
+---
+import SiteHeaderSearch from './SiteHeaderSearch.tsx';
+import {
+  buildNavPopularTireSizes,
+  getActiveNavItem,
+  NAV_ALL_TIRE_SIZES_HREF,
+  NAV_ABOUT,
+  NAV_CALCULATORS,
+  NAV_COMPARE,
+  NAV_CONTACT,
+  NAV_FITMENT_ITEMS,
+} from '../lib/site-nav';
+
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+const active = getActiveNavItem(currentPath);
+const popularSizes = buildNavPopularTireSizes();
+---
+
+<div class="site-header__nav-shell">
+  <nav class="site-nav" aria-label="Main">
+    <div class={`site-nav__item${active === 'tire-sizes' ? ' site-nav__item--active' : ''}`}>
+      <button
+        type="button"
+        class={`site-nav__trigger${active === 'tire-sizes' ? ' site-nav__trigger--active' : ''}`}
+        aria-expanded="false"
+        aria-haspopup="true"
+      >
+        Tire Sizes
+        <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+      <div class="site-nav__panel site-nav__panel--wide" role="menu">
+        <div class="site-nav__panel-surface">
+          <p class="site-nav__panel-title">Popular Tire Sizes</p>
+          <div class="site-nav__size-grid">
+            {popularSizes.map((item) => (
+              <a href={item.href} class="site-nav__size-link" role="menuitem">
+                {item.size}
+              </a>
+            ))}
+          </div>
+          <a href={NAV_ALL_TIRE_SIZES_HREF} class="site-nav__footer-link" role="menuitem">
+            Browse All Tire Sizes →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class={`site-nav__item${active === 'calculators' ? ' site-nav__item--active' : ''}`}>
+      <button
+        type="button"
+        class={`site-nav__trigger${active === 'calculators' ? ' site-nav__trigger--active' : ''}`}
+        aria-expanded="false"
+        aria-haspopup="true"
+      >
+        Calculators
+        <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+      <div class="site-nav__panel site-nav__panel--wide" role="menu">
+        <div class="site-nav__panel-surface">
+          <ul class="site-nav__menu">
+            {NAV_CALCULATORS.map((calc) => (
+              <li class="site-nav__menu-item" role="none">
+                <a href={calc.href} role="menuitem">
+                  <span class="site-nav__menu-emoji" aria-hidden="true">{calc.emoji}</span>
+                  <span class="site-nav__menu-text">
+                    <span class="site-nav__menu-label">{calc.label}</span>
+                    <span class="site-nav__menu-desc">{calc.description}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <a
+      href={NAV_COMPARE.href}
+      class={`site-nav__link${active === 'compare' ? ' site-nav__link--active' : ''}`}
+    >
+      {NAV_COMPARE.label}
+    </a>
+
+    <div class={`site-nav__item${active === 'fitment' ? ' site-nav__item--active' : ''}`}>
+      <button
+        type="button"
+        class={`site-nav__trigger${active === 'fitment' ? ' site-nav__trigger--active' : ''}`}
+        aria-expanded="false"
+        aria-haspopup="true"
+      >
+        Wheels &amp; Fitment
+        <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+      <div class="site-nav__panel site-nav__panel--fitment" role="menu">
+        <div class="site-nav__panel-surface">
+          <ul class="site-nav__menu">
+            {NAV_FITMENT_ITEMS.map((item) => (
+              <li class="site-nav__menu-item" role="none">
+                <a href={item.href} role="menuitem">
+                  <span class="site-nav__menu-emoji" aria-hidden="true">🛞</span>
+                  <span class="site-nav__menu-text">
+                    <span class="site-nav__menu-label">{item.label}</span>
+                    <span class="site-nav__menu-desc">{item.description}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <a
+      href={NAV_ABOUT.href}
+      class={`site-nav__link${active === 'about' ? ' site-nav__link--active' : ''}`}
+    >
+      {NAV_ABOUT.label}
+    </a>
+
+    <a
+      href={NAV_CONTACT.href}
+      class={`site-nav__link${active === 'contact' ? ' site-nav__link--active' : ''}`}
+    >
+      {NAV_CONTACT.label}
+    </a>
+  </nav>
+
+  <div class="site-nav__actions">
+    <SiteHeaderSearch client:load />
+
+    <div class="site-nav__search-toggle-wrap">
+      <button
+        type="button"
+        class="site-nav__icon-btn site-nav__search-toggle"
+        aria-label="Open search"
+        aria-expanded="false"
+        data-nav-search-toggle
+      >
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </button>
+      <div class="site-nav__mobile-search-popover" hidden data-nav-search-popover>
+        <SiteHeaderSearch client:load inputId="site-header-search-mobile-popover" />
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="site-nav__icon-btn"
+      aria-label="Toggle dark mode"
+      title="Dark mode (coming soon)"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+        ></path>
+      </svg>
+    </button>
+
+    <button
+      type="button"
+      class="site-nav__icon-btn site-nav__menu-btn"
+      aria-label="Open menu"
+      aria-expanded="false"
+      data-nav-menu-toggle
+    >
+      <svg class="site-nav__menu-icon site-nav__menu-icon--open h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+      <svg class="site-nav__menu-icon site-nav__menu-icon--close h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" hidden>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div class="site-nav__mobile-panel" hidden data-nav-mobile-panel>
+  <div class="site-nav__mobile-inner">
+    <div class="site-nav__mobile-search">
+      <SiteHeaderSearch client:load class="!block w-full" inputId="site-header-search-mobile" />
+    </div>
+
+    <button type="button" class="site-nav__accordion-trigger" aria-expanded="false" data-nav-accordion="tire-sizes">
+      Tire Sizes
+      <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </button>
+    <div class="site-nav__accordion-body" hidden data-nav-accordion-body="tire-sizes">
+      <p class="site-nav__panel-title">Popular Tire Sizes</p>
+      <div class="site-nav__mobile-sub">
+        {popularSizes.map((item) => (
+          <a href={item.href}>{item.size}</a>
+        ))}
+        <a href={NAV_ALL_TIRE_SIZES_HREF}>Browse All Tire Sizes →</a>
+      </div>
+    </div>
+
+    <button type="button" class="site-nav__accordion-trigger" aria-expanded="false" data-nav-accordion="calculators">
+      Calculators
+      <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </button>
+    <div class="site-nav__accordion-body" hidden data-nav-accordion-body="calculators">
+      <div class="site-nav__mobile-sub">
+        {NAV_CALCULATORS.map((calc) => (
+          <a href={calc.href}>{calc.label}</a>
+        ))}
+      </div>
+    </div>
+
+    <a
+      href={NAV_COMPARE.href}
+      class={`site-nav__mobile-link${active === 'compare' ? ' site-nav__mobile-link--active' : ''}`}
+    >
+      {NAV_COMPARE.label}
+    </a>
+
+    <button type="button" class="site-nav__accordion-trigger" aria-expanded="false" data-nav-accordion="fitment">
+      Wheels &amp; Fitment
+      <svg class="site-nav__chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path d="M5 8l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </button>
+    <div class="site-nav__accordion-body" hidden data-nav-accordion-body="fitment">
+      <div class="site-nav__mobile-sub">
+        {NAV_FITMENT_ITEMS.map((item) => (
+          <a href={item.href}>{item.label}</a>
+        ))}
+      </div>
+    </div>
+
+    <a
+      href={NAV_ABOUT.href}
+      class={`site-nav__mobile-link${active === 'about' ? ' site-nav__mobile-link--active' : ''}`}
+    >
+      {NAV_ABOUT.label}
+    </a>
+
+    <a
+      href={NAV_CONTACT.href}
+      class={`site-nav__mobile-link${active === 'contact' ? ' site-nav__mobile-link--active' : ''}`}
+    >
+      {NAV_CONTACT.label}
+    </a>
+  </div>
+</div>
+
+<script>
+  function initSiteHeaderNav() {
+    const menuToggle = document.querySelector<HTMLButtonElement>('[data-nav-menu-toggle]');
+    const mobilePanel = document.querySelector<HTMLElement>('[data-nav-mobile-panel]');
+    const searchToggle = document.querySelector<HTMLButtonElement>('[data-nav-search-toggle]');
+    const searchPopover = document.querySelector<HTMLElement>('[data-nav-search-popover]');
+    const openIcon = menuToggle?.querySelector<SVGElement>('.site-nav__menu-icon--open');
+    const closeIcon = menuToggle?.querySelector<SVGElement>('.site-nav__menu-icon--close');
+
+    const closeMobile = () => {
+      mobilePanel?.setAttribute('hidden', '');
+      menuToggle?.setAttribute('aria-expanded', 'false');
+      menuToggle?.setAttribute('aria-label', 'Open menu');
+      openIcon?.removeAttribute('hidden');
+      closeIcon?.setAttribute('hidden', '');
+    };
+
+    menuToggle?.addEventListener('click', () => {
+      const isOpen = !mobilePanel?.hasAttribute('hidden');
+      if (isOpen) {
+        closeMobile();
+        return;
+      }
+      mobilePanel?.removeAttribute('hidden');
+      menuToggle.setAttribute('aria-expanded', 'true');
+      menuToggle.setAttribute('aria-label', 'Close menu');
+      openIcon?.setAttribute('hidden', '');
+      closeIcon?.removeAttribute('hidden');
+    });
+
+    searchToggle?.addEventListener('click', () => {
+      const isOpen = !searchPopover?.hasAttribute('hidden');
+      if (isOpen) {
+        searchPopover?.setAttribute('hidden', '');
+        searchToggle.setAttribute('aria-expanded', 'false');
+        searchToggle.setAttribute('aria-label', 'Open search');
+        return;
+      }
+      searchPopover?.removeAttribute('hidden');
+      searchToggle.setAttribute('aria-expanded', 'true');
+      searchToggle.setAttribute('aria-label', 'Close search');
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('[data-nav-accordion]').forEach((trigger) => {
+      trigger.addEventListener('click', () => {
+        const key = trigger.getAttribute('data-nav-accordion');
+        if (!key) return;
+        const body = document.querySelector<HTMLElement>(`[data-nav-accordion-body="${key}"]`);
+        const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+        trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        if (isOpen) {
+          body?.setAttribute('hidden', '');
+        } else {
+          body?.removeAttribute('hidden');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeMobile();
+        searchPopover?.setAttribute('hidden', '');
+        searchToggle?.setAttribute('aria-expanded', 'false');
+        searchToggle?.setAttribute('aria-label', 'Open search');
+      }
+    });
+  }
+
+  initSiteHeaderNav();
+  document.addEventListener('astro:page-load', initSiteHeaderNav);
+</script>

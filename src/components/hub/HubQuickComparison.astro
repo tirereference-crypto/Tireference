@@ -1,0 +1,56 @@
+---
+import type { QuickComparisonRow } from '../../lib/tire-size-hub';
+
+interface Props {
+  rows: QuickComparisonRow[];
+}
+
+const { rows } = Astro.props;
+---
+
+<!-- Desktop table -->
+<div class="hidden overflow-hidden rounded-card border border-border bg-surface shadow-card md:block">
+  <table class="w-full text-left text-sm">
+    <thead class="border-b border-border bg-surface-subtle text-xs uppercase tracking-wide text-muted">
+      <tr>
+        <th class="px-4 py-3 font-semibold">Size</th>
+        <th class="px-4 py-3 font-semibold">Diameter</th>
+        <th class="px-4 py-3 font-semibold">Width</th>
+        <th class="px-4 py-3 font-semibold">Speedo @ 60</th>
+        <th class="px-4 py-3 font-semibold"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-border">
+      {rows.map((row) => (
+        <tr class="transition-colors hover:bg-surface-subtle/60">
+          <td class="px-4 py-3">
+            <a href={row.href} class="hub-text-link font-mono font-semibold text-primary">{row.size}</a>
+          </td>
+          <td class="px-4 py-3 tabular-nums text-body">{row.diameterIn.toFixed(2)} in</td>
+          <td class="px-4 py-3 tabular-nums text-body">{row.widthMm} mm</td>
+          <td class={`px-4 py-3 tabular-nums font-semibold ${row.speedoErrorPercent >= 0 ? 'hub-diff-positive' : 'hub-diff-negative'}`}>
+            {row.speedoErrorPercent >= 0 ? '+' : ''}{row.speedoErrorPercent.toFixed(1)}%
+          </td>
+          <td class="px-4 py-3">
+            <a href={row.comparisonHref} class="hub-text-link text-sm font-medium text-primary">Compare →</a>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<!-- Mobile cards -->
+<div class="space-y-3 md:hidden">
+  {rows.map((row) => (
+    <a href={row.comparisonHref} class="hub-link-card block rounded-card border border-border bg-surface p-4">
+      <div class="flex items-center justify-between">
+        <span class="font-mono font-semibold text-heading">{row.size}</span>
+        <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${row.speedoErrorPercent >= 0 ? 'hub-diff-badge-positive' : 'hub-diff-badge-negative'}`}>
+          {row.speedoErrorPercent >= 0 ? '+' : ''}{row.speedoErrorPercent.toFixed(1)}%
+        </span>
+      </div>
+      <p class="mt-2 text-sm text-body">{row.diameterIn.toFixed(2)} in · {row.widthMm} mm wide</p>
+    </a>
+  ))}
+</div>

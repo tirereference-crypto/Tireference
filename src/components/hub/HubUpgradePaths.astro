@@ -1,0 +1,78 @@
+---
+import type { UpgradePathOption } from '../../lib/tire-size-hub';
+
+interface Props {
+  up: UpgradePathOption[];
+  down: UpgradePathOption[];
+}
+
+const { up, down } = Astro.props;
+
+const tierLabels: Record<string, string> = {
+  mild: 'Mild',
+  moderate: 'Moderate',
+  aggressive: 'Aggressive',
+};
+---
+
+<div class="space-y-8">
+  {up.length > 0 && (
+    <div>
+      <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Upsize options</h3>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {up.map((option) => (
+          <a
+            href={option.href}
+            class="block rounded-xl border border-border bg-surface p-4 shadow-card transition-colors hover:border-primary/30"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-success">
+                {tierLabels[option.tier]} upsize
+              </span>
+              <span class={`text-xs font-semibold tabular-nums ${option.diameterDiffPercent >= 0 ? 'text-success' : 'text-danger'}`}>
+                {option.diameterDiffPercent >= 0 ? '+' : ''}{option.diameterDiffPercent.toFixed(1)}%
+              </span>
+            </div>
+            <p class="mt-2 font-mono text-lg font-bold text-heading">{option.size}</p>
+            <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div><dt class="text-muted">Speedo @ 60</dt><dd class="font-semibold tabular-nums text-heading">{option.speedoErrorPercent >= 0 ? '+' : ''}{option.speedoErrorPercent.toFixed(1)}%</dd></div>
+              <div><dt class="text-muted">Clearance Δ</dt><dd class="font-semibold tabular-nums text-heading">{option.groundClearanceChangeIn >= 0 ? '+' : ''}{option.groundClearanceChangeIn.toFixed(2)} in</dd></div>
+            </dl>
+            <p class="mt-3 text-xs font-medium text-primary">Compare →</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+  {down.length > 0 && (
+    <div>
+      <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Downsize options</h3>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {down.map((option) => (
+          <a
+            href={option.href}
+            class="block rounded-xl border border-border bg-surface p-4 shadow-card transition-colors hover:border-primary/30"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
+                {tierLabels[option.tier]} downsize
+              </span>
+              <span class={`text-xs font-semibold tabular-nums ${option.diameterDiffPercent >= 0 ? 'text-success' : 'text-danger'}`}>
+                {option.diameterDiffPercent >= 0 ? '+' : ''}{option.diameterDiffPercent.toFixed(1)}%
+              </span>
+            </div>
+            <p class="mt-2 font-mono text-lg font-bold text-heading">{option.size}</p>
+            <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div><dt class="text-muted">Speedo @ 60</dt><dd class="font-semibold tabular-nums text-heading">{option.speedoErrorPercent >= 0 ? '+' : ''}{option.speedoErrorPercent.toFixed(1)}%</dd></div>
+              <div><dt class="text-muted">Clearance Δ</dt><dd class="font-semibold tabular-nums text-heading">{option.groundClearanceChangeIn >= 0 ? '+' : ''}{option.groundClearanceChangeIn.toFixed(2)} in</dd></div>
+            </dl>
+            <p class="mt-3 text-xs font-medium text-primary">Compare →</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  )}
+  {up.length === 0 && down.length === 0 && (
+    <p class="text-sm text-muted">No upsize or downsize options in the current dataset.</p>
+  )}
+</div>

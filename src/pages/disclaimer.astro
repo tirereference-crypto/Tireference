@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import { CONTACT_EMAIL } from '../lib/info-pages';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = 'Disclaimer';
+const description =
+  'Read important disclaimers regarding the use of Tire Reference calculators and technical content.';
+
+const schema = buildInfoPageSchema(title, description, '/disclaimer', 'Disclaimer');
+const updated = 'July 1, 2026';
+---
+
+<Layout title={title} description={description} canonical="/disclaimer" schema={schema}>
+  <div class="info-page">
+    <div class="info-shell info-shell--narrow">
+      <InfoPageHero
+        title="Disclaimer"
+        lead="Tire Reference provides technical tools and educational content to support informed decisions. Please read the following disclaimers before relying on any calculator output or guide."
+      />
+
+      <article class="info-legal">
+        <h2>General information</h2>
+        <p>
+          Content on Tire Reference — including calculators, comparison results, tire size hubs, and articles — is offered for general informational and educational purposes. It is not a substitute for professional mechanical inspection, manufacturer guidance, or certified fitment advice specific to your vehicle.
+        </p>
+
+        <h2>Accuracy disclaimer</h2>
+        <p>
+          Although every effort is made to provide accurate calculations based on recognized tire sizing standards and mathematical formulas, Tire Reference cannot guarantee that every result will match a specific tire brand&apos;s published specs, mounted height on your vehicle, or in-service measurements after wear and loading.
+        </p>
+        <p>
+          Real-world factors such as tread depth, inflation pressure, load, rim width, and manufacturing variance can change effective dimensions. Treat our output as a planning baseline, not a guarantee.
+        </p>
+
+        <h2>Fitment responsibility</h2>
+        <p>
+          You remain responsible for confirming compatibility with your vehicle, wheels, brakes, suspension, fenders, and local regulations before purchasing tires or wheels. Calculator results do not physically measure your wheel wells or account for every aftermarket modification.
+        </p>
+        <p>
+          Mock-fit, test mount, or consult a qualified installer when upgrading to significantly taller, wider, or offset-heavy setups.
+        </p>
+
+        <h2>Professional advice</h2>
+        <p>
+          Nothing on Tire Reference constitutes professional engineering, legal, or financial advice. When safety, warranty coverage, or compliance is in question, seek guidance from qualified automotive professionals and official manufacturer documentation.
+        </p>
+
+        <h2>Affiliate disclosure</h2>
+        <p>
+          Tire Reference may participate in affiliate programs in the future, which means we could earn a commission when you follow certain outbound links and make a purchase. Affiliate relationships do not change our commitment to transparent calculations and independent editorial standards. Where affiliate links are used, they will be disclosed in context.
+        </p>
+
+        <h2>External links</h2>
+        <p>
+          Links to retailers, forums, or manufacturers are provided for convenience. Tire Reference does not control third-party content and is not responsible for products, pricing, or policies on external websites.
+        </p>
+
+        <p>
+          Although every effort is made to provide accurate calculations, users remain responsible for confirming compatibility with manufacturers before purchasing tires or wheels. See also our <a href="/terms">Terms of Use</a>.
+        </p>
+      </article>
+
+      <p class="info-updated">
+        Last updated: {updated}. Questions? <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+      </p>
+    </div>
+  </div>
+</Layout>

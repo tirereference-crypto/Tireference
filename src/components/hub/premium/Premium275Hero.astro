@@ -1,0 +1,92 @@
+---
+import type { TireSizeHubData } from '../../../lib/tire-size-hub';
+import { buildHeroSpecCards } from '../../../lib/tire-size-premium';
+import HubCategoryBadge from '../HubCategoryBadge.astro';
+import Premium275TireViz from './Premium275TireViz.astro';
+
+interface Props {
+  hub: TireSizeHubData;
+}
+
+const { hub } = Astro.props;
+const { displaySize, specs, categoryLabel, intro } = hub;
+const specCards = buildHeroSpecCards(specs);
+---
+
+<section class="premium-hero">
+  <div class="premium-hero__head">
+    <HubCategoryBadge category={hub.entry.category} label={categoryLabel} />
+    <h1 class="mt-2 text-2xl font-bold tracking-tight text-heading sm:text-3xl lg:text-[2.125rem] lg:leading-tight">
+      {displaySize} Tire Size
+    </h1>
+  </div>
+
+  <div class="premium-hero__viz">
+    <Premium275TireViz category={hub.entry.category} size={hub.entry.size} specs={specs} specCards={specCards} />
+  </div>
+
+  <div class="premium-hero__intro">
+    <p class="max-w-4xl text-sm leading-snug text-body sm:text-[0.9375rem]">
+      {intro}
+    </p>
+  </div>
+</section>
+
+<style>
+  .premium-hero {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--ref-content-radius, 1.125rem);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-border));
+    background-color: color-mix(in srgb, var(--color-primary-light) 18%, var(--color-surface));
+    box-shadow:
+      0 4px 24px -6px rgb(15 23 42 / 0.08),
+      0 2px 8px -2px rgb(var(--color-primary-rgb) / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.65);
+  }
+
+  .premium-hero__head {
+    padding: 0.875rem var(--ref-section-px, 1.25rem) 0.625rem;
+  }
+
+  .premium-hero__viz {
+    padding: 0 var(--ref-section-px, 1.25rem) 0.625rem;
+  }
+
+  .premium-hero__intro {
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+    padding: 0.75rem var(--ref-section-px, 1.25rem) 0.875rem;
+    background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  }
+
+  @media (min-width: 640px) {
+    .premium-hero__head {
+      padding-top: 1rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .premium-hero__viz {
+      padding-bottom: 0.75rem;
+    }
+
+    .premium-hero__intro {
+      padding-top: 0.75rem;
+      padding-bottom: 1rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .premium-hero__head {
+      padding-top: 1.125rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .premium-hero__intro {
+      padding-top: 0.875rem;
+      padding-bottom: 1.125rem;
+    }
+  }
+</style>

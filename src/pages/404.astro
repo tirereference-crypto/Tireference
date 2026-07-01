@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { ROBOTS } from '../lib/seo/constants';
+---
+
+<Layout
+  title="Page Not Found"
+  description="The page you requested could not be found on Tire Reference."
+  canonical="/404"
+  robots={ROBOTS.noindexNofollow}
+>
+  <div class="mx-auto flex max-w-lg flex-col items-center px-4 py-20 text-center">
+    <p class="text-sm font-semibold uppercase tracking-wide text-primary">404</p>
+    <h1 class="mt-2 text-3xl font-bold text-heading">Page not found</h1>
+    <p class="mt-3 text-body">
+      The page you are looking for does not exist or may have moved.
+    </p>
+    <a
+      href="/"
+      class="mt-8 inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
+    >
+      Back to home
+    </a>
+  </div>
+</Layout>

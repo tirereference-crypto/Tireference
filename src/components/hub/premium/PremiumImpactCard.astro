@@ -1,0 +1,78 @@
+---
+import HubIcon from '../HubIcon.astro';
+import type { ImpactMetric } from '../../../lib/tire-size-275-premium';
+
+interface Props {
+  metric: ImpactMetric;
+}
+
+const { metric } = Astro.props;
+---
+
+<article
+  class:list={[
+    'impact-card group flex h-full flex-col rounded-[1rem] border border-border bg-surface p-5 shadow-[0_2px_10px_-3px_rgb(15_23_42/0.08)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_8px_24px_-6px_rgb(15_23_42/0.12)] lg:p-6',
+    `impact-card--${metric.tone}`,
+  ]}
+>
+  <span class="impact-card__icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+    <HubIcon name={metric.icon} class="h-[1.125rem] w-[1.125rem]" />
+  </span>
+
+  <div class="mt-4 flex items-center gap-2">
+    <span class="impact-card__badge rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+      {metric.label}
+    </span>
+  </div>
+
+  <p class="impact-card__value mt-2 text-2xl font-bold tabular-nums tracking-tight lg:text-[1.75rem]">
+    {metric.value}
+  </p>
+
+  <div class="mt-4 flex-1 border-t border-border/70 pt-3.5">
+    <p class="text-[10px] font-semibold uppercase tracking-wider text-muted">What this means</p>
+    <p class="mt-1.5 text-sm leading-relaxed text-body">{metric.meaning}</p>
+  </div>
+</article>
+
+<style>
+  .impact-card--positive {
+    --impact-fg: var(--color-impact-green);
+    --impact-bg: var(--color-impact-green-bg);
+  }
+
+  .impact-card--info {
+    --impact-fg: var(--color-impact-blue);
+    --impact-bg: var(--color-impact-blue-bg);
+  }
+
+  .impact-card--rpm {
+    --impact-fg: var(--color-impact-purple);
+    --impact-bg: var(--color-impact-purple-bg);
+  }
+
+  .impact-card--fuel {
+    --impact-fg: var(--color-impact-amber);
+    --impact-bg: var(--color-impact-amber-bg);
+  }
+
+  .impact-card--comfort {
+    --impact-fg: var(--color-impact-teal);
+    --impact-bg: var(--color-impact-teal-bg);
+  }
+
+  .impact-card__icon {
+    background-color: var(--impact-bg);
+    color: var(--impact-fg);
+    border: 1px solid color-mix(in srgb, var(--impact-fg) 16%, transparent);
+  }
+
+  .impact-card__badge {
+    background-color: var(--impact-bg);
+    color: var(--impact-fg);
+  }
+
+  .impact-card__value {
+    color: var(--impact-fg);
+  }
+</style>

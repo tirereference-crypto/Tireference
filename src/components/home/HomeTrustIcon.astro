@@ -1,0 +1,46 @@
+---
+import type { HomeTrustIconName } from '../../lib/home-sections';
+
+interface Props {
+  name: HomeTrustIconName;
+}
+
+const { name } = Astro.props;
+---
+
+<span class="home-trust-icon" aria-hidden="true">
+  {
+    name === 'verified' ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12 3l7 3v6c0 4.2-2.8 7.9-7 9-4.2-1.1-7-4.8-7-9V6l7-3z" stroke-linejoin="round" />
+      </svg>
+    ) : name === 'fitment' ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 3.5v3M12 17.5v3" stroke-linecap="round" />
+      </svg>
+    ) : name === 'fast' ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <path d="M13 2L4 14h7l-1 8 10-14h-7l0-6z" stroke-linejoin="round" />
+      </svg>
+    ) : name === 'free' ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <path d="M20 12v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1h7" stroke-linecap="round" />
+        <path d="M14 3h7v7M10 14L21 3" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    ) : name === 'privacy' ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <path d="M12 3l8 4v6c0 4.4-3.4 8.2-8 9-4.6-.8-8-4.6-8-9V7l8-4z" stroke-linejoin="round" />
+        <path d="M9.5 12.5l1.8 1.8 3.5-3.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+        <rect x="5" y="11" width="14" height="10" rx="2" />
+        <path d="M8 11V8a4 4 0 118 0v3" stroke-linecap="round" />
+        <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+</span>

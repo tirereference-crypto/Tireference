@@ -1,0 +1,24 @@
+---
+import HubIcon from '../HubIcon.astro';
+import type { HubIconName } from '../../../lib/hub-icons';
+
+interface Props {
+  name: 'diameter' | 'width' | 'sidewall' | 'circumference' | 'revs' | 'wheel' | 'category' | 'clearance';
+  class?: string;
+}
+
+const { name, class: className = 'h-[18px] w-[18px]' } = Astro.props;
+
+const iconMap: Record<Props['name'], HubIconName> = {
+  diameter: 'ruler',
+  width: 'move-horizontal',
+  sidewall: 'arrow-up-down',
+  circumference: 'circle',
+  revs: 'rotate-cw',
+  wheel: 'disc',
+  category: 'tools',
+  clearance: 'mountain',
+};
+---
+
+<HubIcon name={iconMap[name]} class={className} />

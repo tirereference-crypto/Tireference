@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import { CONTACT_EMAIL } from '../lib/info-pages';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = 'Terms of Use';
+const description = 'Read the terms governing your use of Tire Reference.';
+
+const schema = buildInfoPageSchema(title, description, '/terms', 'Terms of Use');
+const updated = 'July 1, 2026';
+---
+
+<Layout title={title} description={description} canonical="/terms" schema={schema}>
+  <div class="info-page">
+    <div class="info-shell info-shell--narrow">
+      <InfoPageHero
+        title="Terms of Use"
+        lead="These terms govern access to Tire Reference and use of our calculators, guides, and related content. By using the site, you agree to the terms below."
+      />
+
+      <article class="info-legal">
+        <h2>Acceptance of terms</h2>
+        <p>
+          By accessing or using Tire Reference at tirereference.com, you agree to these Terms of Use and our <a href="/privacy-policy">Privacy Policy</a>. If you do not agree, please do not use the website.
+        </p>
+
+        <h2>Use of calculators</h2>
+        <p>
+          Tire Reference provides tire size, comparison, offset, gearing, and related calculators for informational purposes. Results are generated from standardized formulas and published sizing conventions. Calculator output may not account for every real-world variable, including manufacturer tolerances, tread depth, vehicle-specific clearance, suspension geometry, or local regulations.
+        </p>
+        <p>
+          You are responsible for verifying measurements, compatibility, and safety before purchasing tires, wheels, or related components. Always confirm fitment with qualified professionals when stakes are high.
+        </p>
+
+        <h2>Intellectual property</h2>
+        <p>
+          The Tire Reference name, branding, site design, original text, software, and curated content are protected by applicable intellectual property laws. You may link to our pages and share results for personal, non-commercial use, but you may not copy, scrape, republish, or commercially exploit substantial portions of the site without written permission.
+        </p>
+
+        <h2>No warranty</h2>
+        <p>
+          Tire Reference is provided on an &quot;as is&quot; and &quot;as available&quot; basis. We disclaim all warranties, express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not warrant that the site will be uninterrupted, error-free, or free of harmful components.
+        </p>
+
+        <h2>Limitation of liability</h2>
+        <p>
+          To the fullest extent permitted by law, Tire Reference and its operators will not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the site or reliance on calculator results — including vehicle damage, fitment issues, financial loss, or personal injury — even if we have been advised of the possibility of such damages.
+        </p>
+
+        <h2>External links</h2>
+        <p>
+          The site may link to third-party websites or resources. Those links are provided for convenience only. We do not endorse and are not responsible for the content, policies, or practices of external sites.
+        </p>
+
+        <h2>Changes to terms</h2>
+        <p>
+          We may update these Terms of Use from time to time. Changes take effect when posted on this page with an updated date. Continued use of Tire Reference after changes are posted constitutes acceptance of the revised terms.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about these terms? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or use our <a href="/contact">contact form</a>.
+        </p>
+      </article>
+
+      <p class="info-updated">Last updated: {updated}</p>
+    </div>
+  </div>
+</Layout>
