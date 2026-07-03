@@ -24,12 +24,12 @@ import { useTireSizeComparison,
 } from './useTireSizeComparison';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
 
-const CALCULATOR_LINKS = getRelatedCalculatorLinks('/tire-size-comparison');
+const CALCULATOR_LINKS = getRelatedCalculatorLinks('/calculators/tire-comparison-calculator');
 
 const GUIDE_LINKS = [
-  { label: 'Understanding Tire Sizes', href: '/tire-size-calculator#understanding' },
-  { label: 'How Plus Sizing Works', href: '/tire-size-calculator#plus-size' },
-  { label: 'Speedometer Accuracy Guide', href: '/tire-size-calculator#speedometer' },
+  { label: 'Understanding Tire Sizes', href: '/calculators/tire-size-calculator#understanding' },
+  { label: 'How Plus Sizing Works', href: '/calculators/tire-size-calculator#plus-size' },
+  { label: 'Speedometer Accuracy Guide', href: '/calculators/tire-size-calculator#speedometer' },
 ];
 
 function UpgradePathCardView({ card }: { card: UpgradePathCard }) {
@@ -193,6 +193,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
   } = useTireSizeComparison(props);
 
   const [activeTab, setActiveTab] = useState<'visual' | 'specs'>('visual');
+  const [understandingExpanded, setUnderstandingExpanded] = useState(false);
   const formRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLElement>(null);
@@ -229,7 +230,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/tire-size-comparison">Tire Compare</a>
+            <a href="/calculators/tire-comparison-calculator">Tire Compare</a>
             <span>/</span>
             <span>{breadcrumbLabel}</span>
           </nav>
@@ -353,9 +354,21 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   unitSystem={unitSystem}
                 />
 
-                <article className="cmp-seo-block cmp-seo-block--understanding">
+                <article
+                  className={`cmp-seo-block cmp-seo-block--understanding${
+                    understandingExpanded ? ' is-expanded' : ''
+                  }`}
+                >
                   <h2>Understanding This Tire Size Difference</h2>
-                  <p>{insights.understandingDifference}</p>
+                  <p className="cmp-seo-block__clampable">{insights.understandingDifference}</p>
+                  <button
+                    type="button"
+                    className="cmp-read-more-toggle"
+                    aria-expanded={understandingExpanded}
+                    onClick={() => setUnderstandingExpanded((v) => !v)}
+                  >
+                    {understandingExpanded ? 'Read less' : 'Read more'}
+                  </button>
                 </article>
 
                 <section className="cmp-card cmp-card--perf-impact" aria-label="Performance and driving impact">
@@ -390,7 +403,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                 </div>
 
                 <div className={`cmp-bottom-row ${insights.upgradePaths ? '' : 'cmp-bottom-row--single'}`}>
-                  <section className={`cmp-card ${insights.upgradePaths ? 'cmp-card--half' : ''}`} aria-label="Things to consider">
+                  <section className={`cmp-card cmp-consider-card ${insights.upgradePaths ? 'cmp-card--half' : ''}`} aria-label="Things to consider">
                     <h2 className="cmp-card__title">Things to Consider</h2>
                     <ul className="cmp-consider-list">
                       {insights.thingsToConsider.map((item) => (
@@ -449,20 +462,20 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   </section>
                 )}
 
-                <article className="cmp-seo-block">
+                <article className="cmp-seo-block cmp-seo-block--what-changes">
                   <h2>What Changes When You Switch From {currentSizeLabel} To {newSizeLabel}</h2>
                   <p>{insights.seo.whatChanges}</p>
                 </article>
-                <article className="cmp-seo-block">
+                <article className="cmp-seo-block cmp-seo-block--good-upgrade">
                   <h2>Is {newSizeLabel} A Good Upgrade From {currentSizeLabel}?</h2>
                   <h3>{insights.seo.isGoodUpgrade.headline}</h3>
                   <p>{insights.seo.isGoodUpgrade.body}</p>
                 </article>
-                <article className="cmp-seo-block">
+                <article className="cmp-seo-block cmp-seo-block--who-should">
                   <h2>Who Should Choose This Tire Size?</h2>
                   <p>{insights.seo.whoShouldChoose}</p>
                 </article>
-                <section className="cmp-seo-block">
+                <section className="cmp-seo-block cmp-seo-block--faq">
                   <h2>Frequently Asked Questions</h2>
                   <div className="cmp-faq" ref={faqRef}>
                     {insights.seo.faqs.map((faq) => (
@@ -479,18 +492,18 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
               <>
                 <QuickVerdictCard verdict={insights.quickVerdict} />
 
-                <div className="cmp-panel">
+                <div className="cmp-panel cmp-panel--personality">
                   <p className="cmp-sidebar-block__title">Upgrade Personality</p>
                   <PersonalityCards cards={insights.personalityCards} />
                 </div>
 
-                <div className="cmp-panel">
+                <div className="cmp-panel cmp-panel--will-fit">
                   <p className="cmp-sidebar-block__title">Will This Fit?</p>
                   <WillThisFitList rows={insights.willThisFitRows} />
                 </div>
 
                 {insights.popularComparisons.length > 0 && (
-                  <div className="cmp-panel">
+                  <div className="cmp-panel cmp-panel--popular">
                     <p className="cmp-sidebar-block__title">Popular Comparisons</p>
                     <ul className="cmp-link-list">
                       {insights.popularComparisons.map((link) => (
@@ -502,14 +515,14 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   </div>
                 )}
 
-                <div className="cmp-panel">
+                <div className="cmp-panel cmp-panel--calc-network">
                   <p className="cmp-sidebar-block__title">Calculator Network</p>
                   <ul className="cmp-link-list">
                     {CALCULATOR_LINKS.map((link) => (<li key={link.href}><a href={link.href}>{link.label}</a></li>))}
                   </ul>
                 </div>
 
-                <div className="cmp-panel">
+                <div className="cmp-panel cmp-panel--guides">
                   <p className="cmp-sidebar-block__title">Helpful Tire Guides</p>
                   <ul className="cmp-link-list">
                     {GUIDE_LINKS.map((link) => (<li key={link.href}><a href={link.href}>{link.label}</a></li>))}

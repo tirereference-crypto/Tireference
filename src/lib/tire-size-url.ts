@@ -27,17 +27,17 @@ export function comparisonPagePath(sizeA: string, sizeB: string): string {
     current: sizeA,
     new: sizeB,
   });
-  return `/tire-size-comparison?${params.toString()}`;
+  return `/calculators/tire-comparison-calculator?${params.toString()}`;
 }
 
 /** Open comparison with the selected size as the current tire. */
 export function comparisonPagePathCurrent(size: string): string {
   const params = new URLSearchParams({ current: size });
-  return `/tire-size-comparison?${params.toString()}`;
+  return `/calculators/tire-comparison-calculator?${params.toString()}`;
 }
 
 /** Open tire size calculator with the size pre-filled. */
 export function tireSizeCalculatorPath(size: string): string {
   const params = new URLSearchParams({ size });
-  return `/tire-size-calculator?${params.toString()}`;
+  return `/calculators/tire-size-calculator?${params.toString()}`;
 }

@@ -24,6 +24,14 @@ export interface ArticleSchemaInput {
   datePublished?: string;
   dateModified?: string;
   type?: 'Article' | 'TechArticle';
+  /** Optional PropertyValue nodes (e.g. tire load index, speed rating). */
+  additionalProperty?: Array<Record<string, unknown>>;
+  /** Credited author name (defaults to the organization). */
+  authorName?: string;
+  authorType?: 'Organization' | 'Person';
+  /** Credited reviewer/contributor name for E-E-A-T. */
+  reviewerName?: string;
+  reviewerType?: 'Organization' | 'Person';
 }
 
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
@@ -125,6 +133,11 @@ export function buildArticleSchema({
   datePublished,
   dateModified,
   type = 'TechArticle',
+  additionalProperty,
+  authorName = SITE_NAME,
+  authorType = 'Organization',
+  reviewerName,
+  reviewerType = 'Organization',
 }: ArticleSchemaInput): Record<string, unknown> {
   const published = datePublished ?? buildDefaultPublishDate();
   const modified = dateModified ?? published;
@@ -135,11 +148,22 @@ export function buildArticleSchema({
     '@type': type,
     headline,
     description,
+    ...(additionalProperty && additionalProperty.length > 0
+      ? { additionalProperty }
+      : {}),
     author: {
-      '@type': 'Organization',
-      name: SITE_NAME,
+      '@type': authorType,
+      name: authorName,
       url: `${SITE_URL}/`,
     },
+    ...(reviewerName
+      ? {
+          contributor: {
+            '@type': reviewerType,
+            name: reviewerName,
+          },
+        }
+      : {}),
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,

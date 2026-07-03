@@ -118,30 +118,6 @@ function ResultQualityBadges({
   );
 }
 
-function SearchContextBar({
-  displayDiameter,
-  wheelIn,
-  tolerance,
-  matchCount,
-}: {
-  displayDiameter: number;
-  wheelIn: number;
-  tolerance: number;
-  matchCount: number;
-}) {
-  return (
-    <div className="dia-search-context" aria-label="Active search filters">
-      <p className="dia-search-context__filters">
-        <span className="dia-search-context__label">Searching for:</span>
-        {displayDiameter}&quot; Diameter • {wheelIn}&quot; Wheel • ±{tolerance}&quot; Tolerance
-      </p>
-      <p className="dia-search-context__count">
-        Matches Found: <strong>{matchCount}</strong>
-      </p>
-    </div>
-  );
-}
-
 type SortKey = 'closest' | 'smallest-diff' | 'largest-diameter' | 'smallest-diameter';
 type ViewMode = 'table' | 'card';
 
@@ -630,7 +606,7 @@ export default function PremiumTireDiameterCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/tire-size-calculator">Calculators</a>
+            <a href="/calculators/tire-size-calculator">Calculators</a>
             <span>/</span>
             <span>Tire Diameter Calculator</span>
           </nav>
@@ -638,7 +614,7 @@ export default function PremiumTireDiameterCalculator({
 
         <div className="cmp-layout">
           <aside className="cmp-sidebar-left dia-sidebar-left" aria-label="Popular searches">
-            <section className="cmp-panel dia-sidebar-panel">
+            <section className="cmp-panel dia-sidebar-panel dia-sidebar-panel--popular-searches">
               <h2 className="cmp-panel__title">Popular Diameter Searches</h2>
               <ul className="dia-popular-diameter-list">
                 {POPULAR_DIAMETER_SEARCHES.map((search) => (
@@ -747,7 +723,7 @@ export default function PremiumTireDiameterCalculator({
                     <span className="text-sm font-semibold text-heading">Tolerance Range</span>
                     <p className="mt-1 text-xs text-muted">How close results must be to target diameter</p>
                     <div
-                      className="mt-3 flex flex-1 flex-row items-end gap-3"
+                      className="dia-tolerance-group mt-3 flex flex-1 flex-row items-end gap-3"
                       role="group"
                       aria-label="Diameter tolerance"
                     >
@@ -755,7 +731,7 @@ export default function PremiumTireDiameterCalculator({
                         <button
                           key={option}
                           type="button"
-                          className={`flex-1 h-14 min-w-0 rounded-xl border text-sm font-semibold transition-all duration-200 ${
+                          className={`dia-tolerance-btn flex-1 h-14 min-w-0 rounded-xl border text-sm font-semibold transition-all duration-200 ${
                             tolerance === option
                               ? 'border-transparent bg-gradient-to-br from-primary to-primary-hover text-white shadow-[0_4px_14px_rgb(91_79_230/0.35)]'
                               : 'border-border bg-white text-body hover:border-primary hover:bg-primary-light'
@@ -803,15 +779,6 @@ export default function PremiumTireDiameterCalculator({
             </section>
 
             <div className="dia-discovery" ref={resultsRef}>
-              {searchResult && targetDiameterIn && searchResult.matches.length > 0 && (
-                <SearchContextBar
-                  displayDiameter={displayDiameter}
-                  wheelIn={wheelDiameter}
-                  tolerance={tolerance}
-                  matchCount={searchResult.matches.length}
-                />
-              )}
-
               {bestMatch && targetDiameterIn && (
                 <BestMatchStrip match={bestMatch} targetIn={targetDiameterIn} />
               )}
@@ -857,7 +824,7 @@ export default function PremiumTireDiameterCalculator({
               </div>
             </article>
 
-            <article className="cmp-seo-block dia-edu-block">
+            <article className="cmp-seo-block dia-edu-block dia-edu-block--vs-wheel">
               <h2>Tire Diameter vs Wheel Diameter</h2>
               <p>
                 An {wheelDiameter}&quot; wheel is not an {wheelDiameter}&quot; tire — overall diameter
@@ -931,7 +898,7 @@ export default function PremiumTireDiameterCalculator({
               </div>
             </section>
 
-            <section className="cmp-panel">
+            <section className="cmp-panel dia-sidebar-panel--about">
               <h2 className="cmp-panel__title">About Tire Diameter</h2>
               <p className="dia-sidebar-text">
                 Overall tire diameter is the full height of a mounted tire from ground to tread top.
@@ -947,7 +914,7 @@ export default function PremiumTireDiameterCalculator({
               </ul>
             </section>
 
-            <section className="cmp-panel">
+            <section className="cmp-panel dia-sidebar-panel--popular-diameters">
               <h2 className="cmp-panel__title">Popular Tire Diameters</h2>
               <ul className="dia-popular-diameter-list">
                 {POPULAR_TIRE_DIAMETERS.map((item) => (

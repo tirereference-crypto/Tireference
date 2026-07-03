@@ -1,7 +1,7 @@
 /* TireLogic homepage — calculator-aligned tokens, a11y, CWV-friendly */
 
 .home-page {
-  --home-max: 90rem;
+  --home-max: var(--tl-container-max);
   --home-section-gap: 2.25rem;
   --home-card-pad: 1.125rem;
   background: var(--color-surface);
@@ -113,7 +113,7 @@ html.dark .home-page {
 .home-hero__stage {
   position: relative;
   width: 100%;
-  max-width: 1440px;
+  max-width: var(--tl-container-max);
   margin: 0 auto;
   aspect-ratio: 2048 / 717;
   display: grid;

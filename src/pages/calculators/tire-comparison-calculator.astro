@@ -1,0 +1,53 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
+import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
+import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+import { compareTires, getTireSpecs } from '../../lib/tire-math';
+import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
+
+const current = Astro.url.searchParams.get('current') ?? '225/45R17';
+const newSize = Astro.url.searchParams.get('new') ?? '235/40R18';
+
+// The indexed landing page (canonical /calculators/tire-comparison-calculator) always uses
+// tool-focused metadata. Pair-specific titles/descriptions live on the
+// dedicated /compare/[slug] pages, not here.
+const title = 'Tire Size Comparison Calculator';
+const description = SEO_DESCRIPTIONS.comparison;
+let faqs: { question: string; answer: string }[] = [];
+
+try {
+  const specsA = getTireSpecs(current);
+  const specsB = getTireSpecs(newSize);
+  const comparison = compareTires(current, newSize, 60);
+  const insights = buildComparisonInsights(current, newSize, comparison, specsA, specsB);
+  faqs = insights.seo.faqs;
+} catch {
+  /* keep defaults for invalid query params */
+}
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Tire Size Comparison'),
+  faqs,
+});
+---
+
+<Layout
+  title={title}
+  description={description}
+  canonical="/calculators/tire-comparison-calculator"
+  schema={schema}
+>
+  <PremiumTireSizeComparison
+    client:load
+    initialCurrent={current}
+    initialNew={newSize}
+  />
+  <div class="tl-container pb-10 lg:pb-14">
+    <TrustDisclosure
+      title="How our calculators work"
+      subtitle="Comparison results are computed from standardized tire-geometry formulas and reviewed for accuracy — here is our methodology, data sources, and editorial process."
+    />
+  </div>
+</Layout>

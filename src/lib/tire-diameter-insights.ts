@@ -129,7 +129,7 @@ export function diameterLandingHref(
     diameter: String(diameterIn),
     wheel: String(wheelIn),
   });
-  return `/tire-diameter-calculator?${params.toString()}`;
+  return `/calculators/tire-diameter-calculator?${params.toString()}`;
 }
 
 export const POPULAR_COMPARISONS: PopularComparisonItem[] = buildCuratedPopularComparisons(6).map(
@@ -247,7 +247,7 @@ export function buildPopularSizesNearDiameter(
     }));
 }
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/tire-diameter-calculator');
+export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/calculators/tire-diameter-calculator');
 
 export const DIAMETER_FAQS: DiameterFaq[] = [
   {

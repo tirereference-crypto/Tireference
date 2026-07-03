@@ -35,7 +35,7 @@ export function calculatorBreadcrumbs(label: string): BreadcrumbItem[] {
 export function comparisonBreadcrumbs(current: string, next: string, slug: string): BreadcrumbItem[] {
   return [
     { name: 'Home', item: '/' },
-    { name: 'Compare', item: '/tire-size-comparison' },
+    { name: 'Compare', item: '/calculators/tire-comparison-calculator' },
     { name: `${current} vs ${next}`, item: `/compare/${slug}` },
   ];
 }

@@ -49,8 +49,8 @@ describe('truncateDescription', () => {
 
 describe('resolveCanonical', () => {
   it('builds absolute URLs from tirereference.com', () => {
-    expect(resolveCanonical('/tire-size-calculator')).toBe(
-      'https://tirereference.com/tire-size-calculator',
+    expect(resolveCanonical('/calculators/tire-size-calculator')).toBe(
+      'https://tirereference.com/calculators/tire-size-calculator',
     );
     expect(resolveCanonical('/')).toBe('https://tirereference.com/');
   });

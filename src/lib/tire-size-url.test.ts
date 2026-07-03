@@ -15,7 +15,7 @@ describe('tire-size-url', () => {
 
   it('builds tire size calculator path with prefilled size', () => {
     expect(tireSizeCalculatorPath('275/70R18')).toBe(
-      '/tire-size-calculator?size=275%2F70R18',
+      '/calculators/tire-size-calculator?size=275%2F70R18',
     );
   });
 });

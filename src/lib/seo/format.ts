@@ -16,9 +16,11 @@ export function formatPageTitle(title: string, siteName = SITE_NAME): string {
   if (combined.length <= SEO_TITLE_MAX_LENGTH) return combined;
 
   const budget = SEO_TITLE_MAX_LENGTH - suffix.length - 1;
-  if (budget < 12) return truncateAtWord(combined, SEO_TITLE_MAX_LENGTH);
+  if (budget < 12) {
+    return stripTrailingSeparators(truncateAtWord(combined, SEO_TITLE_MAX_LENGTH));
+  }
 
-  return `${truncateAtWord(title, budget)}${suffix}`;
+  return `${stripTrailingSeparators(truncateAtWord(title, budget))}${suffix}`;
 }
 
 /** Trim meta descriptions to ~150–160 characters. */
@@ -28,7 +30,7 @@ export function truncateDescription(
 ): string {
   const trimmed = description.trim();
   if (trimmed.length <= maxLength) return trimmed;
-  return `${truncateAtWord(trimmed, maxLength - 1)}…`;
+  return `${stripTrailingSeparators(truncateAtWord(trimmed, maxLength - 1))}…`;
 }
 
 function truncateAtWord(text: string, maxLength: number): string {
@@ -39,6 +41,14 @@ function truncateAtWord(text: string, maxLength: number): string {
     return slice.slice(0, lastSpace).trim();
   }
   return slice.trim();
+}
+
+/**
+ * Remove trailing separators/conjunctions left behind after truncation so
+ * titles never end with dangling punctuation like "&", "—", "," or "|".
+ */
+function stripTrailingSeparators(text: string): string {
+  return text.replace(/[\s]*[|&,·/–—-]+\s*$/u, '').trim();
 }
 
 /** Strip brand suffix for pages that pass a pre-formatted document title. */

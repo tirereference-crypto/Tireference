@@ -1,0 +1,37 @@
+---
+import { EDITORIAL_AUTHOR, type EditorialPerson } from '../../lib/editorial';
+
+interface Props {
+  person?: EditorialPerson;
+  /** "inline" = compact byline row; "card" = bordered block with bio. */
+  variant?: 'inline' | 'card';
+  class?: string;
+}
+
+const { person = EDITORIAL_AUTHOR, variant = 'inline', class: className = '' } =
+  Astro.props;
+---
+
+{variant === 'card' ? (
+  <div class:list={['flex items-start gap-3 rounded-card border border-border bg-surface p-4', className]}>
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary">
+      {person.initials}
+    </span>
+    <div class="min-w-0">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">Written by</p>
+      <a href={person.profileUrl} rel="author" class="font-bold text-heading hover:text-primary">{person.name}</a>
+      <p class="text-xs text-muted">{person.role}</p>
+      <p class="mt-1.5 text-sm leading-relaxed text-body">{person.bio}</p>
+    </div>
+  </div>
+) : (
+  <span class:list={['inline-flex items-center gap-2', className]}>
+    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-light text-[11px] font-bold text-primary" aria-hidden="true">
+      {person.initials}
+    </span>
+    <span class="text-sm leading-tight">
+      <span class="text-muted">By </span>
+      <a href={person.profileUrl} rel="author" class="font-semibold text-heading hover:text-primary">{person.name}</a>
+    </span>
+  </span>
+)}

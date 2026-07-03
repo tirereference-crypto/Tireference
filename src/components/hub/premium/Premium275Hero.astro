@@ -62,6 +62,22 @@ const specCards = buildHeroSpecCards(specs);
     background: color-mix(in srgb, var(--color-surface) 88%, transparent);
   }
 
+  @media (max-width: 639px) {
+    .premium-hero__head {
+      padding-top: 0.6875rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .premium-hero__viz {
+      padding-bottom: 0.5rem;
+    }
+
+    .premium-hero__intro {
+      padding-top: 0.5625rem;
+      padding-bottom: 0.6875rem;
+    }
+  }
+
   @media (min-width: 640px) {
     .premium-hero__head {
       padding-top: 1rem;

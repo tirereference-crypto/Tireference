@@ -3,14 +3,15 @@ import Layout from '../layouts/Layout.astro';
 import InfoPageHero from '../components/info/InfoPageHero.astro';
 import { CONTACT_EMAIL } from '../lib/info-pages';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import { formatEditorialDate } from '../lib/editorial';
 import '../styles/info-pages.css';
 
 const title = 'Privacy Policy';
 const description =
-  "Read Tire Reference's privacy policy explaining how we collect, use and protect your information.";
+  'Read the Tire Reference privacy policy to understand what information we collect, how we use it, the cookies we set, and the choices you have over your data.';
 
 const schema = buildInfoPageSchema(title, description, '/privacy-policy', 'Privacy Policy');
-const updated = 'July 1, 2026';
+const updated = formatEditorialDate();
 ---
 
 <Layout title={title} description={description} canonical="/privacy-policy" schema={schema}>

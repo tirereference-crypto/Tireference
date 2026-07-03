@@ -134,7 +134,7 @@ export const POPULAR_VEHICLE_OFFSET_LINKS = [
   { label: 'F-150', vehicle: 'Ford F-150' },
 ];
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/wheel-offset-calculator');
+export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/calculators/wheel-offset-calculator');
 
 export const OFFSET_FAQS: OffsetFaq[] = [
   {

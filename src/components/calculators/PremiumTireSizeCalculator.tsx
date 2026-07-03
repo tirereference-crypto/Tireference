@@ -97,7 +97,7 @@ const FEATURE_FACTS = [
   'A wider tire does not always improve snow traction.',
 ];
 
-const RELATED_CALCULATORS = getRelatedCalculatorLinks('/tire-size-calculator').map(
+const RELATED_CALCULATORS = getRelatedCalculatorLinks('/calculators/tire-size-calculator').map(
   ({ label, description, href }) => ({ title: label, description, href }),
 );
 
@@ -741,7 +741,7 @@ function CalculatorFeatureCards({ sizeLabel }: { sizeLabel: string }) {
               />
             </div>
           </div>
-          <a href="/tire-size-comparison" className="calc-feature-card__cta">
+          <a href="/calculators/tire-comparison-calculator" className="calc-feature-card__cta">
             Open Comparison Tool →
           </a>
         </article>
@@ -754,9 +754,6 @@ function CalculatorFeatureCards({ sizeLabel }: { sizeLabel: string }) {
             </div>
             <VehiclePhoto />
           </div>
-          <a href="/guides" className="calc-feature-card__cta">
-            Explore tire guides →
-          </a>
         </article>
       </div>
     </section>

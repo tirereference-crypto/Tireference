@@ -4,6 +4,7 @@ import PremiumGearRatioCalculator from '../../components/calculators/PremiumGear
 import { GEAR_FAQS } from '../../lib/gear-ratio-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Gear Ratio Calculator'),
@@ -12,10 +13,16 @@ const schema = buildPageSchema({
 ---
 
 <Layout
-  title="Gear Ratio Calculator"
-  description={SEO_DESCRIPTIONS.calculator}
+  title="Gear Ratio Calculator – Tire Size & RPM"
+  description={SEO_DESCRIPTIONS.gearRatioCalculator}
   canonical="/calculators/gear-ratio-calculator"
   schema={schema}
 >
   <PremiumGearRatioCalculator client:load />
+  <div class="tl-container pb-10 lg:pb-14">
+    <TrustDisclosure
+      title="How our calculators work"
+      subtitle="Gear-ratio and RPM results are computed from standardized tire-geometry formulas and reviewed for accuracy — here is our methodology, data sources, and editorial process."
+    />
+  </div>
 </Layout>

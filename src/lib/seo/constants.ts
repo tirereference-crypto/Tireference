@@ -21,10 +21,21 @@ export const SEO_TITLES = {
 export const SEO_DESCRIPTIONS = {
   homepage:
     'Professional tire size calculators, wheel fitment tools, tire comparison calculators and expert guides to help you choose the right tires.',
+  /** Generic calculator fallback (kept for backward compatibility). */
   calculator:
     'Calculate tire dimensions, diameter, sidewall height, revs per mile and compare tire sizes instantly.',
+  tireSizeCalculator:
+    'Calculate tire diameter, section width, sidewall height, circumference and revs per mile for any tire size, then compare metric and inch sizes instantly.',
+  diameterCalculator:
+    'Find tire sizes by target overall diameter. Enter a diameter and wheel size to see every matching tire with sidewall, width and revs-per-mile specs.',
+  gearRatioCalculator:
+    'See how a tire size change affects your effective gear ratio, RPM at speed and acceleration, and find the axle ratio needed to restore your gearing.',
+  wheelOffsetCalculator:
+    'Calculate wheel offset and backspacing, convert between them, and see how offset changes affect fitment, clearance and stance for your vehicle.',
   comparison:
-    'Compare tire sizes side-by-side with detailed measurements and speedometer differences.',
+    'Compare two tire sizes side by side with overall diameter, width, sidewall, circumference, revs per mile and speedometer error to see how they differ.',
+  tireSizesIndex:
+    'Browse popular tire sizes with full specs — overall diameter, section width, sidewall, circumference and revs per mile — plus equivalents and fitment.',
   hub: 'Helpful guides covering tire sizing, wheel fitment, offsets, backspacing, gearing and more.',
 } as const;
 

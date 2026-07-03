@@ -349,65 +349,36 @@ function buildUnderstandingDifference(
   const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
   const widthDeltaMm = specsB.widthMm - specsA.widthMm;
 
-  const diamPhrase =
+  // Technical reasoning only — the raw deltas live in the KPI/spec table and
+  // performance cards, so this block explains the *mechanisms* rather than
+  // repeating the numbers.
+  const diamReasoning =
     Math.abs(comparison.diameterDiffPercent) < 0.1
-      ? 'virtually the same overall diameter'
+      ? 'keeps the rolling diameter almost identical, so effective gearing, speedometer calibration, and cruising RPM all carry over unchanged'
       : signedDiamDiffIn > 0
-        ? 'a taller overall diameter that rolls farther each revolution'
-        : 'a smaller overall diameter that covers less ground per revolution';
+        ? 'raises the rolling diameter, which lengthens every revolution and effectively lowers the axle ratio — acceleration softens a little while highway RPM eases down'
+        : 'shortens the rolling diameter, which quickens the effective axle ratio — acceleration feels slightly sharper while highway RPM rises';
 
-  const widthPhrase =
-    Math.abs(widthDeltaMm) < 2
-      ? 'Section width stays close to the original footprint'
-      : widthDeltaMm > 0
-        ? 'The new tire is wider, which can increase contact patch area and steering load'
-        : 'The new tire is narrower, which can reduce rolling resistance and steering effort';
-
-  const sidewallPhrase =
+  const sidewallReasoning =
     Math.abs(sidewallDiff) < 0.1
-      ? 'Sidewall height is nearly unchanged, so ride compliance should feel familiar.'
+      ? 'Because sidewall height barely moves, ride compliance and steering precision stay close to the original.'
       : sidewallDiff > 0
-        ? 'Extra sidewall height usually softens impact over broken pavement but can add a little lean in quick transitions.'
-        : 'A shorter sidewall typically firms up turn-in and transmits more road texture into the cabin.';
+        ? 'A taller sidewall behaves like a larger air spring: it absorbs impacts better but flexes more under cornering load, trading a little steering sharpness for ride comfort.'
+        : 'A shorter sidewall flexes less under load, sharpening turn-in and steering feedback at the cost of transmitting more road texture into the cabin.';
 
-  const speedoPhrase =
-    Math.abs(comparison.speedometer.errorPercent) > 3
-      ? 'Speedometer and odometer drift becomes noticeable enough that recalibration or mental adjustment is worth planning for on highway trips.'
-      : 'Speedometer error should stay modest for routine commuting, though indicated speed and navigation ETA may shift slightly.';
-
-  const ridePhrase =
-    sidewallDiff > 0.15 && widthDeltaMm > 5
-      ? 'Expect a slightly cushier ride with more grip potential, balanced against added mass and clearance checks.'
-      : sidewallDiff < -0.15
-        ? 'Ride quality may feel firmer and more connected, which performance-oriented drivers often prefer on smooth roads.'
-        : 'Day-to-day ride comfort changes should be moderate unless compound or air pressure also changes.';
-
-  const handlingPhrase =
-    widthDeltaMm > 8
-      ? 'Handling can feel more planted in dry corners, with slightly heavier steering and greater sensitivity to standing water.'
-      : widthDeltaMm < -8
-        ? 'Handling may feel lighter with less ultimate dry grip, which can help in snow or fuel-focused setups.'
-        : 'Handling character should shift gradually rather than dramatically, assuming wheel offset and pressure stay appropriate.';
-
-  const fuelPhrase =
-    comparison.revsPerMileDiffPercent > 1
-      ? `Highway fuel economy may dip slightly because revs per mile rise and rolling resistance can increase with the wider footprint.`
-      : comparison.revsPerMileDiffPercent < -1
-        ? `Highway fuel economy may improve modestly as revs per mile drop, though wider or heavier tires can partially offset the gain.`
-        : `Fuel economy impact should stay minor unless width or tread compound changes substantially.`;
-
-  const ownershipPhrase =
-    Math.abs(comparison.diameterDiffPercent) > 3 || Math.abs(comparison.speedometer.errorPercent) > 3
-      ? `Long-term ownership should account for speedometer drift, possible recalibration, and a mock-fit before purchase.`
-      : `For most daily drivers, the calculated deltas are small enough to evaluate with a quick fitment check rather than major modifications.`;
+  const widthReasoning =
+    Math.abs(widthDeltaMm) < 2
+      ? 'Section width is essentially carried over, so contact patch, grip balance, and steering effort stay familiar.'
+      : widthDeltaMm > 0
+        ? 'The wider tread enlarges the contact patch, adding dry grip and braking bite but raising steering effort and sensitivity to standing water.'
+        : 'The narrower tread trims the contact patch, lowering rolling resistance and improving snow traction while reducing ultimate dry grip.';
 
   return [
-    `Switching from ${sizeA} to ${sizeB} introduces ${diamPhrase}. ${widthPhrase}, affecting how the tire fills the wheel well and loads the suspension.`,
-    `${sidewallPhrase} ${speedoPhrase}`,
-    `${ridePhrase} ${handlingPhrase}`,
-    `Effective gearing shifts with the ${fmtPct(comparison.diameterDiffPercent)} circumference change, altering acceleration feel and cruising RPM by roughly ${Math.abs(comparison.revsPerMileDiffPercent).toFixed(1)}% in revs per mile.`,
-    `Static clearance changes by about ${fmtSigned(comparison.groundClearanceChangeIn, 2, '"')} at the lowest chassis point, which matters for driveways, trail obstacles, and break-over angle.`,
-    `${fuelPhrase} ${ownershipPhrase}`,
+    `Understanding the move from ${sizeA} to ${sizeB} starts with one figure — the ${fmtPct(comparison.diameterDiffPercent)} change in overall diameter — because the rest of the behaviour flows from it and the width and sidewall shifts that accompany it.`,
+    `That diameter change ${diamReasoning}.`,
+    sidewallReasoning,
+    widthReasoning,
+    `These effects never act in isolation: diameter drives gearing and speedometer accuracy, sidewall sets the comfort-versus-response balance, and width decides the grip-versus-efficiency trade. The right choice depends on whether you prioritise comfort, sharper response, efficiency, or clearance for how you actually drive.`,
   ].join(' ');
 }
 
@@ -449,6 +420,27 @@ function fitmentStatusFromThreshold(
   return 'fail';
 }
 
+type TireClass = 'truck' | 'performance' | 'passenger';
+
+/**
+ * Infer the broad vehicle class a tire size belongs to purely from its
+ * computed dimensions. Used to keep use-case advice honest — e.g. never
+ * recommending overlanding for a sports-car tire or track use for a truck tire.
+ */
+function classifyTireClass(specs: TireSpecs): TireClass {
+  const diameter = specs.overallDiameterIn;
+  const aspect = specs.aspectRatio;
+  const width = specs.sectionWidthIn;
+
+  if (diameter >= 29 || (aspect >= 60 && width >= 8.5) || (aspect >= 68 && diameter >= 27)) {
+    return 'truck';
+  }
+  if (aspect <= 50 && diameter <= 28) {
+    return 'performance';
+  }
+  return 'passenger';
+}
+
 function computeFitmentScore(
   comparison: TireComparison,
   specsA: TireSpecs,
@@ -471,18 +463,26 @@ function computeFitmentScore(
   return { score, tone: 'red', label: 'Use Caution' };
 }
 
+/**
+ * Single source of truth for the verdict. Both the recommendation label and
+ * the quick-verdict badge derive from the same score bands so they can never
+ * disagree:
+ *   ≥ 9.5  → Excellent Upgrade
+ *   8–9.5  → Good Upgrade
+ *   6–8    → Consider Carefully
+ *   < 6    → Not Recommended
+ */
 function recommendationFromScore(score: number): { level: VerdictLevel; label: string } {
-  if (score >= 8.5) return { level: 'excellent', label: 'Recommended' };
-  if (score >= 7) return { level: 'good', label: 'Good Upgrade' };
-  if (score >= 5.5) return { level: 'caution', label: 'Use Caution' };
+  if (score >= 9.5) return { level: 'excellent', label: 'Excellent Upgrade' };
+  if (score >= 8) return { level: 'good', label: 'Good Upgrade' };
+  if (score >= 6) return { level: 'caution', label: 'Consider Carefully' };
   return { level: 'not-recommended', label: 'Not Recommended' };
 }
 
 function verdictLabelFromScore(score: number): Pick<QuickComparisonVerdict, 'label' | 'tone' | 'indicator'> {
-  if (score >= 9) return { label: 'Excellent Upgrade', tone: 'green', indicator: '🟢' };
-  if (score >= 7) return { label: 'Good Upgrade', tone: 'green', indicator: '🟢' };
-  if (score >= 5) return { label: 'Acceptable Fit', tone: 'yellow', indicator: '🟡' };
-  if (score >= 3) return { label: 'Requires Modifications', tone: 'orange', indicator: '🟠' };
+  if (score >= 9.5) return { label: 'Excellent Upgrade', tone: 'green', indicator: '🟢' };
+  if (score >= 8) return { label: 'Good Upgrade', tone: 'green', indicator: '🟢' };
+  if (score >= 6) return { label: 'Consider Carefully', tone: 'yellow', indicator: '🟡' };
   return { label: 'Not Recommended', tone: 'red', indicator: '🔴' };
 }
 
@@ -558,6 +558,7 @@ function buildVerdictBestFor(
   specsB: TireSpecs,
 ): string[] {
   const tags: string[] = [];
+  const cls = classifyTireClass(specsB);
   const diamPct = comparison.diameterDiffPercent;
   const balanced =
     Math.abs(diamPct) < 2 && Math.abs(specsB.widthMm - specsA.widthMm) < 8;
@@ -574,10 +575,13 @@ function buildVerdictBestFor(
 
   if (balanced) tags.push('Daily Driving');
   if (highway) tags.push('Highway Cruising');
-  if (sport) tags.push('Sporty Handling');
-  if (offroad) tags.push('Off-Road Builds');
-  if (overlanding) tags.push('Overlanding');
-  if (towing) tags.push('Towing');
+  // Handling/track tags apply to car-class tires, never trucks.
+  if (sport && cls !== 'truck') tags.push('Sporty Handling');
+  if (sport && cls === 'performance') tags.push('Track Days');
+  // Off-road / overlanding / towing apply only to truck-class tires.
+  if (offroad && cls === 'truck') tags.push('Off-Road Builds');
+  if (overlanding && cls === 'truck') tags.push('Overlanding');
+  if (towing && cls === 'truck') tags.push('Towing');
   if (winter) tags.push('Winter Driving');
 
   if (tags.length === 0) tags.push('Daily Driving');
@@ -609,63 +613,91 @@ function buildPersonality(
   specsA: TireSpecs,
   specsB: TireSpecs,
 ): UpgradePersonality {
-  const taller = specsB.overallDiameterIn > specsA.overallDiameterIn + 0.05;
-  const wider = specsB.widthMm > specsA.widthMm + 3;
-  const softer = specsB.aspectRatio > specsA.aspectRatio + 3;
-  const lower = specsB.aspectRatio < specsA.aspectRatio - 3;
-  const smaller = specsB.overallDiameterIn < specsA.overallDiameterIn - 0.05;
+  const diamDiffIn = specsB.overallDiameterIn - specsA.overallDiameterIn;
+  const widthDeltaMm = specsB.widthMm - specsA.widthMm;
+  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
+  const aspectDiff = specsB.aspectRatio - specsA.aspectRatio;
 
-  if (taller && softer && wider) {
-    return {
-      type: 'Off-Road Upgrade',
-      badge: 'Trail Ready',
-      summary:
-        'This swap adds footprint and sidewall for clearance-focused builds without jumping to an extreme diameter.',
-      pros: ['More ground clearance', 'Stronger off-road presence', 'Better obstacle rollover'],
-      cons: ['Heavier steering feel', 'Slightly lower fuel economy'],
-    };
-  }
+  const taller = diamDiffIn > 0.05;
+  const shorter = diamDiffIn < -0.05;
+  const wider = widthDeltaMm > 3;
+  const narrower = widthDeltaMm < -3;
+  const softer = sidewallDiff > 0.1 || aspectDiff > 3;
+  const firmer = sidewallDiff < -0.1 || aspectDiff < -3;
+  const revsDown = comparison.revsPerMileDiff < -2;
+  const revsUp = comparison.revsPerMileDiff > 2;
+  const speedoHigh = Math.abs(comparison.speedometer.errorPercent) > 3;
+  const cls = classifyTireClass(specsB);
 
-  if (lower && wider) {
-    return {
-      type: 'Aggressive Street Setup',
-      badge: 'Performance',
-      summary:
-        'A lower-profile, wider setup that sharpens response and fills out the fenders for a sportier stance.',
-      pros: ['Quicker turn-in', 'More dry grip potential', 'Modern performance look'],
-      cons: ['Firmer ride quality', 'More sensitive to potholes'],
-    };
-  }
+  // Pros — every entry is gated on an actual computed delta, so a benefit is
+  // only ever shown when the dimensions truly support it.
+  const pros: string[] = [];
+  if (taller) pros.push('More ground clearance', 'Better obstacle rollover');
+  if (shorter) pros.push('Lower stance and center of gravity', 'Quicker acceleration feel');
+  if (wider) pros.push('Larger contact patch for grip');
+  if (narrower) pros.push('Lower rolling resistance', 'Better snow and slush traction');
+  if (softer) pros.push('Softer ride over bumps');
+  if (firmer) pros.push('Sharper steering response');
+  if (revsDown) pros.push('Lower highway cruising RPM');
+  if (!speedoHigh) pros.push('Speedometer stays within tolerance');
 
-  if (smaller || comparison.revsPerMileDiffPercent < -1) {
-    return {
-      type: 'Fuel Economy Focused',
-      badge: 'Efficiency',
-      summary:
-        'The new size reduces rolling circumference and often rolling resistance for lighter daily driving.',
-      pros: ['Lower highway RPM', 'Easier fitment margin', 'Lighter rotating mass potential'],
-      cons: ['Less ground clearance', 'Smaller contact patch'],
-    };
-  }
+  // Cons — mirror the same deltas so they can never contradict the pros
+  // (e.g. "Less ground clearance" only appears when the tire is smaller,
+  // "Smaller contact patch" only when the tire is narrower).
+  const cons: string[] = [];
+  if (taller) cons.push('Slightly slower acceleration', 'Verify fender and liner clearance');
+  if (shorter) cons.push('Less ground clearance');
+  if (wider) cons.push('Heavier steering effort', 'Rubbing checks at full lock');
+  if (narrower) cons.push('Smaller contact patch');
+  if (softer) cons.push('More body roll in corners');
+  if (firmer) cons.push('Firmer ride quality');
+  if (revsUp) cons.push('Higher cruising RPM and fuel use');
+  if (speedoHigh) cons.push('Speedometer recalibration advised');
 
-  if (softer) {
-    return {
-      type: 'Comfort Upgrade',
-      badge: 'Comfort',
-      summary:
-        'Taller sidewalls absorb more impact energy, making this change friendly for rough roads and daily commuting.',
-      pros: ['Softer ride', 'Better pothole absorption', 'More sidewall protection'],
-      cons: ['Less precise handling', 'More body roll in corners'],
-    };
+  const prosList = [...new Set(pros)];
+  const consList = [...new Set(cons)];
+  if (prosList.length === 0) prosList.push('Keeps factory-like drivability');
+  if (consList.length === 0) consList.push('Minimal real-world change');
+
+  // Archetype label — category-aware so a truck swap is never called an
+  // "Aggressive Street Setup" and a car swap is never called "Off-Road".
+  let type: UpgradePersonalityType;
+  let badge: string;
+  let summary: string;
+
+  if (cls === 'truck' && taller && (wider || softer)) {
+    type = 'Off-Road Upgrade';
+    badge = 'Trail Ready';
+    summary =
+      'This swap adds diameter and footprint for clearance-focused truck and SUV builds.';
+  } else if (cls !== 'truck' && firmer && wider) {
+    type = 'Aggressive Street Setup';
+    badge = 'Performance';
+    summary =
+      'A lower-profile, wider setup that sharpens response and fills out the fenders.';
+  } else if ((narrower || (shorter && !wider)) && !taller) {
+    type = 'Fuel Economy Focused';
+    badge = 'Efficiency';
+    summary =
+      'A smaller or narrower footprint that trims rolling resistance for lighter daily driving.';
+  } else if (softer && !firmer) {
+    type = 'Comfort Upgrade';
+    badge = 'Comfort';
+    summary =
+      'Taller sidewalls absorb more impact energy for a smoother ride on rough roads.';
+  } else {
+    type = 'Balanced Daily Driver';
+    badge = 'Balanced';
+    summary =
+      'A moderate dimensional change that preserves everyday drivability while adjusting stance.';
   }
 
   return {
-    type: 'Balanced Daily Driver',
-    badge: 'Balanced',
-    summary:
-      'This is a moderate dimensional change that preserves everyday drivability while adjusting stance and capability.',
-    pros: ['Predictable handling', 'Manageable fitment risk', 'Versatile for mixed use'],
-    cons: ['Not a major capability jump', 'Minor speedometer drift possible'],
+    type,
+    badge,
+    summary,
+    pros: prosList.slice(0, 3),
+    cons: consList.slice(0, 3),
   };
 }
 
@@ -694,6 +726,7 @@ function buildComparisonFaqs(
     comparison.diameterDiffPercent > 3 || widthDeltaMm > 10 || Math.abs(signedDiamDiffIn) > 0.75;
   const needsLift = comparison.groundClearanceChangeIn > 0.75;
   const sameWheel = specsB.wheelDiameterIn === specsA.wheelDiameterIn;
+  const cls = classifyTireClass(specsB);
 
   const speedoAnswer = speedoWithinTolerance
     ? `That ${speedo} variance sits within the ±2–3% band most OEMs target for speedometer accuracy, so daily driving and typical enforcement margins are usually unaffected.`
@@ -739,7 +772,7 @@ function buildComparisonFaqs(
     },
     {
       question: `How much ground clearance and break-over angle do I gain going from ${sizeA} to ${sizeB}?`,
-      answer: `Overall diameter increases ${diamDiff} (${fmtPct(comparison.diameterDiffPercent)}), from ${fmtInQuote(specsA.overallDiameterIn)} to ${fmtInQuote(specsB.overallDiameterIn)}. Static ground clearance at the lowest point (typically the differential pumpkin or exhaust crossmember) rises by approximately ${clearance} — half the diameter delta. Break-over angle improves because the contact patches move farther from the center of the vehicle, reducing the likelihood of high-centering on obstacles. ${signedDiamDiffIn > 0.3 ? 'For overlanding and trail use, this is a meaningful gain; pair it with appropriate skid protection since the larger tire also reduces gear ratio effective torque at the wheels.' : signedDiamDiffIn < -0.3 ? 'Note that a smaller diameter reduces clearance and increases break-over vulnerability — confirm this tradeoff aligns with your use case.' : 'The clearance change is modest; do not expect a dramatic off-road capability shift from diameter alone.'}`,
+      answer: `Overall diameter increases ${diamDiff} (${fmtPct(comparison.diameterDiffPercent)}), from ${fmtInQuote(specsA.overallDiameterIn)} to ${fmtInQuote(specsB.overallDiameterIn)}. Static ground clearance at the lowest point (typically the differential pumpkin or exhaust crossmember) rises by approximately ${clearance} — half the diameter delta. Break-over angle improves because the contact patches move farther from the center of the vehicle, reducing the likelihood of high-centering on obstacles. ${signedDiamDiffIn > 0.3 ? (cls === 'truck' ? 'For overlanding and trail use, this is a meaningful gain; pair it with appropriate skid protection since the larger tire also reduces gear ratio effective torque at the wheels.' : 'The larger diameter raises ride height and mildly reduces effective gearing at the wheels; treat it as a stance and clearance change rather than an off-road upgrade.') : signedDiamDiffIn < -0.3 ? 'Note that a smaller diameter reduces clearance and increases break-over vulnerability — confirm this tradeoff aligns with your use case.' : 'The clearance change is modest; do not expect a dramatic capability shift from diameter alone.'}`,
     },
     {
       question: `Will ${sizeB} affect my ABS, traction control, or stability systems compared to ${sizeA}?`,
@@ -761,76 +794,86 @@ function buildSeoContent(
   score: number,
 ): ComparisonSeoContent {
   const signedDiamDiffIn = specsB.overallDiameterIn - specsA.overallDiameterIn;
-  const diamDiff = fmtSigned(signedDiamDiffIn, 2, ' in');
-  const widthDiff = fmtSigned(specsB.sectionWidthIn - specsA.sectionWidthIn, 2, ' in');
   const speedo = fmtPct(comparison.speedometer.errorPercent);
-  const clearance = fmtSigned(comparison.groundClearanceChangeIn, 2, ' in');
-
-  const rpmDelta = Math.round(
-    rpmAtSpeed(comparison.speedometer.indicatedSpeed, specsB, 'imperial') -
-      rpmAtSpeed(comparison.speedometer.indicatedSpeed, specsA, 'imperial'),
-  );
-  const widthPct = ((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100;
   const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
+  const cls = classifyTireClass(specsB);
 
+  // Fitment-consequence angle. The exact deltas are shown in the KPI cards and
+  // spec table directly above, so this block explains what those numbers mean
+  // for the wheel well and what to verify — not the numbers themselves.
   const whatChanges = [
-    `Switching from ${sizeA} to ${sizeB} changes overall diameter by ${diamDiff} (${fmtPct(comparison.diameterDiffPercent)}), section width by ${widthDiff}, and sidewall height by ${fmtSigned(sidewallDiff, 2, ' in')}.`,
-    `At ${comparison.speedometer.indicatedSpeed} mph indicated, the speedometer reads ${speedo} versus true road speed, while ground clearance shifts by roughly ${clearance}.`,
-    `Circumference grows ${fmtSigned(comparison.circumferenceDiffIn, 2, ' in')}, changing revs per mile by ${fmtSigned(comparison.revsPerMileDiff, 0)} and highway RPM by about ${Math.abs(rpmDelta)} at the same indicated speed.`,
-    `Handling becomes ${specsB.aspectRatio < specsA.aspectRatio - 2 ? 'sharper with less sidewall flex' : specsB.aspectRatio > specsA.aspectRatio + 2 ? 'softer with more impact absorption' : 'similar unless compound or pressure also changes'}.`,
-    `Wider section width (${fmtPct(widthPct)}) can improve dry grip but increases steering effort and clearance checks at the fenders.`,
-    `These calculated differences summarize the real-world tradeoffs between ${sizeA} and ${sizeB} — confirm inner fender, suspension, and brake clearance on your exact vehicle and wheel offset before buying.`,
+    `The specs above quantify exactly how ${sizeB} differs from ${sizeA}; this section covers what those differences do on the vehicle.`,
+    signedDiamDiffIn > 0.05
+      ? 'A taller tire pushes the tread closer to the fender lip and inner liner at full compression, so up-travel and steering clearance are the first things to verify.'
+      : signedDiamDiffIn < -0.05
+        ? 'A shorter tire frees up fender clearance but lowers ride height and trims break-over margin off-road.'
+        : 'With diameter almost unchanged, fender and liner clearance should closely match the original tire.',
+    (specsB.sectionWidthIn - specsA.sectionWidthIn) > 0.1
+      ? 'The wider section eats into clearance at the fender edge, pinch weld, and suspension components, so wheel offset matters as much as tire size for this fit.'
+      : (specsB.sectionWidthIn - specsA.sectionWidthIn) < -0.1
+        ? 'The narrower section relaxes fender-edge clearance and slightly reduces steering effort.'
+        : 'Section width is close enough that wheel and fender clearance behave much like the original setup.',
+    'Because circumference changes, effective gearing and speedometer calibration shift too — which is why drivetrain feel and cluster readings can differ even when the tire looks similar.',
+    `Treat these as calculated starting points: confirm inner fender, suspension, and brake clearance on your exact ${sizeB} wheel and offset before buying.`,
   ].join(' ');
 
+  // Recommendation reasoning. This block explains *why* the fitment score lands
+  // where it does — the raw deltas already appear in the KPIs, performance
+  // cards, and FAQ, so they are not repeated here.
   let upgradeHeadline = 'Good upgrade for most daily drivers';
   let upgradeBody = [
-    `With a fitment score of ${score.toFixed(1)}/10, ${sizeB} stays close enough to ${sizeA} for many vehicles without major modifications.`,
-    `The ${fmtPct(comparison.diameterDiffPercent)} diameter change ${Math.abs(comparison.diameterDiffPercent) <= 3 ? 'sits inside the commonly recommended ±3% speedometer window' : 'steps outside the ideal ±3% speedometer window and may require recalibration planning'}.`,
-    `Speedometer error of ${speedo} means indicated speed at ${comparison.speedometer.indicatedSpeed} mph reads against a true ${comparison.speedometer.trueSpeed.toFixed(1)} mph.`,
-    `Sidewall height moves ${fmtSigned(sidewallDiff, 2, ' in')}, so ride quality will ${sidewallDiff > 0.1 ? 'soften slightly over broken pavement' : sidewallDiff < -0.1 ? 'feel firmer with quicker turn-in' : 'remain largely familiar'}.`,
-    `Clearance changes by ${clearance}, which ${signedDiamDiffIn > 0.2 ? 'helps obstacle rollover and break-over angle' : signedDiamDiffIn < -0.2 ? 'lowers ride height and reduces off-road margin' : 'should not dramatically alter daily fitment on stock suspension'}.`,
-    `Revs per mile shift ${fmtSigned(comparison.revsPerMileDiff, 0)}, affecting effective gearing and ${comparison.revsPerMileDiffPercent > 0 ? 'potentially trimming highway fuel economy' : comparison.revsPerMileDiffPercent < 0 ? 'potentially improving cruising efficiency' : 'keeping RPM near the original calibration'}.`,
-    `If your goal is a ${score >= 7 ? 'straightforward daily-driver upgrade' : 'carefully planned fitment project'}, mock-fit at full lock and under compression before committing to all four tires.`,
+    `With a fitment score of ${score.toFixed(1)}/10, ${sizeB} stays close enough to ${sizeA} that most vehicles can run it without major modifications.`,
+    `That score is high because the change is proportional: no single dimension moves far enough to force a lift, new wheels, or a speedometer recalibration on a healthy factory platform.`,
+    `In other words, the tire grows or shrinks evenly rather than pushing one measurement — diameter, width, or drivetrain gearing — past the point where it demands hardware to compensate.`,
+    `"Good on paper" still isn't "confirmed on your car," though, so mock-fit at full lock and full compression before committing to a full set.`,
   ].join(' ');
 
   if (Math.abs(comparison.diameterDiffPercent) > 5) {
     upgradeHeadline = 'Aggressive upgrade — verify fitment carefully';
     upgradeBody = [
-      `This ${sizeA} to ${sizeB} comparison shows a ${fmtPct(comparison.diameterDiffPercent)} diameter change — large enough to deliver meaningful clearance gains but risky without fitment verification.`,
-      `Speedometer error of ${speedo} can affect cruise control, navigation ETA, and enforcement margins on highway trips.`,
-      `Section width changes ${widthDiff} (${fmtPct(widthPct)}), increasing the tire envelope at the fenders and steering lock.`,
-      `Budget for rubbing checks, possible trimming, revised offset, and gear or speedometer correction before committing.`,
-      `Off-road builds may accept the tradeoff; street-only vehicles should mock-fit at full compression and full lock first.`,
-      `The ${score.toFixed(1)}/10 fitment score reflects combined diameter, width, and speedometer drift — treat this as a planning tool, not a guarantee.`,
+      `The ${score.toFixed(1)}/10 score reflects a large jump from ${sizeA} to ${sizeB}: big enough to deliver real clearance and stance gains, but too big to assume it simply bolts on.`,
+      `The reason the score drops is compounding risk — when diameter and width grow together, the tire envelope expands in every direction at once, multiplying the chance of contact at the fender, liner, and strut.`,
+      `Off-road and lifted builds routinely accept that trade; street vehicles running factory clearance usually need trimming, revised wheel offset, or a mild lift to make it work.`,
+      `Plan for a mock-fit and, if diameter moved far, a speedometer or gearing correction before you buy all four.`,
     ].join(' ');
   } else if (Math.abs(comparison.diameterDiffPercent) < 1 && Math.abs(specsB.widthMm - specsA.widthMm) < 5) {
     upgradeHeadline = 'Minor change with limited real-world impact';
     upgradeBody = [
-      `${sizeB} is very close to ${sizeA} in overall dimensions, so most drivers will notice subtle rather than dramatic changes.`,
-      `Diameter shifts only ${fmtPct(comparison.diameterDiffPercent)}, keeping speedometer drift near ${speedo} for routine commuting.`,
-      `Sidewall and width deltas are small, meaning ride height, steering feel, and revs per mile should stay familiar.`,
-      `This is often a good replacement-size comparison when you want a slight stance or compound change without re-engineering fitment.`,
-      `Still verify load index, speed rating, and inner clearance — even minor growth can rub on lowered or tightly packaged vehicles.`,
+      `The ${score.toFixed(1)}/10 score is high simply because ${sizeB} is dimensionally almost identical to ${sizeA}.`,
+      `That is the whole story here — the deltas are small enough that ride height, gearing, steering feel, and speedometer accuracy effectively carry over unchanged.`,
+      `This is the ideal profile for a replacement-size, brand, or compound change when you want a slightly different tire without re-engineering fitment.`,
+      `Confirm load index, speed rating, and inner clearance anyway, since even tiny growth can rub on lowered or tightly packaged vehicles.`,
     ].join(' ');
   } else if (score < 6) {
     upgradeHeadline = 'Not recommended without fitment planning';
     upgradeBody = [
-      `Combined diameter (${fmtPct(comparison.diameterDiffPercent)}), width (${fmtPct(widthPct)}), and speedometer (${speedo}) differences push this swap into a higher-risk category.`,
-      `The ${score.toFixed(1)}/10 fitment score suggests you should validate wheel offset, suspension travel, and fender clearance on your specific vehicle.`,
-      `Rubbing risk rises when both diameter and width grow together, especially at full lock and under compression.`,
-      `Use this comparison to quantify the change, then mock-fit or consult a fitment guide before purchasing four tires.`,
+      `The ${score.toFixed(1)}/10 score places this ${sizeA} to ${sizeB} swap in a higher-risk category.`,
+      `It scores low because the diameter, width, and drivetrain changes each push toward the edge of — or past — common fitment and calibration tolerances rather than staying comfortably inside them.`,
+      `Rubbing risk climbs fastest when diameter and width grow together, particularly at full lock and under compression.`,
+      `Use the figures above to plan the build: expect to validate wheel offset, suspension travel, and fender clearance, and budget for correction hardware before purchasing four tires.`,
     ].join(' ');
   }
 
   const whoShouldChoose = [
     `Drivers comparing ${sizeA} and ${sizeB} should match the upgrade to how the vehicle is actually used.`,
     `${specsB.aspectRatio >= specsA.aspectRatio ? 'Commuters who want a slightly softer ride' : 'Drivers who prefer sharper response'} may appreciate this change if fitment margins are confirmed.`,
-    `${specsB.overallDiameterIn > specsA.overallDiameterIn + 0.2 ? 'Off-road and overlanding builds benefit from the added clearance and break-over improvement.' : 'Drivers prioritizing clearance should note the limited diameter gain in this comparison.'}`,
-    `${specsB.widthMm > specsA.widthMm + 5 ? 'Towing and heavy-load users may prefer the wider footprint but should watch for rubbing at full lock.' : 'Highway commuters can treat this as a balanced alternative if speedometer drift stays acceptable.'}`,
-    `${Math.abs(comparison.speedometer.errorPercent) > 3 ? 'Precision-speed and winter drivers should account for the speedometer error when setting cruise or navigating ETA.' : 'Daily drivers are less likely to notice the speedometer variance in normal commuting.'}`,
-    `Performance-oriented setups should weigh the ${fmtSigned(sidewallDiff, 2, '"')} sidewall change and ${fmtPct(widthPct)} width shift against their target handling feel.`,
-    `Fuel-conscious owners should note the ${fmtSigned(comparison.revsPerMileDiff, 0)} revs/mi change and ${comparison.revsPerMileDiffPercent > 0 ? 'slightly higher' : comparison.revsPerMileDiffPercent < 0 ? 'slightly lower' : 'similar'} highway RPM at the same indicated speed.`,
-    `Anyone unsure about fitment should use the Will This Fit checks and mock-fit before buying — dimensional math is the starting point, not the final answer.`,
+    `${
+      specsB.overallDiameterIn > specsA.overallDiameterIn + 0.2
+        ? cls === 'truck'
+          ? 'Off-road and overlanding builds benefit from the added clearance and break-over improvement.'
+          : 'The added diameter raises ride height slightly; confirm clearance if you want that stance.'
+        : 'Drivers prioritizing clearance should note the limited diameter gain in this comparison.'
+    }`,
+    `${
+      specsB.widthMm > specsA.widthMm + 5
+        ? cls === 'truck'
+          ? 'Towing and heavy-load users may prefer the wider footprint but should watch for rubbing at full lock.'
+          : 'The wider footprint adds dry grip and stance but check fender clearance at full lock.'
+        : 'Highway commuters can treat this as a balanced alternative if speedometer drift stays acceptable.'
+    }`,
+    `${Math.abs(comparison.speedometer.errorPercent) > 3 ? 'If you rely on precise indicated speed — towing, winter driving, or heavy highway miles — plan around the speedometer drift noted in the summary.' : 'For typical commuting, indicated speed stays close enough to true that most drivers will not notice a difference.'}`,
+    `${sidewallDiff < -0.1 ? 'Performance-focused drivers who want firmer response and sharper turn-in are the natural fit for this direction.' : sidewallDiff > 0.1 ? 'Comfort-focused drivers who prioritise a compliant ride over ultimate sharpness are the natural fit for this direction.' : 'Drivers who want to keep the current balance of comfort and response will find this a safe, neutral change.'}`,
+    `Anyone unsure about fitment should lean on the Will This Fit checks and a physical mock-fit — the dimensional math is the starting point, not the final answer.`,
   ].join(' ');
 
   const faqs = buildComparisonFaqs(sizeA, sizeB, comparison, specsA, specsB);

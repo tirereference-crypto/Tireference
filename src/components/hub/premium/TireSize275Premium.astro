@@ -18,6 +18,8 @@ import {
 } from '../../../lib/tire-size-premium';
 import { getVehicleIcon } from '../../../lib/vehicle-icon';
 import { buildQuickTakeForSize } from '../../../lib/tire-size-quick-take';
+import TrustByline from '../../trust/TrustByline.astro';
+import TrustDisclosure from '../../trust/TrustDisclosure.astro';
 
 interface Props {
   hub: TireSizeHubData;
@@ -50,7 +52,77 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
       <!-- 1. Hero -->
       <div class="ref-hero-wrap">
         <Premium275Hero hub={hub} />
+        <TrustByline class="mt-3" />
       </div>
+
+      <!-- Quick actions (mobile-only in-page navigation) -->
+      <nav class="ref-quick-actions" aria-label="Jump to section">
+        <a href="#compare-sizes" class="ref-quick-action">
+          <HubIcon name="split-square-vertical" class="ref-quick-action__icon" />
+          <span>Compare</span>
+        </a>
+        <a href="/calculators/tire-size-calculator" class="ref-quick-action">
+          <HubIcon name="calculator" class="ref-quick-action__icon" />
+          <span>Calculator</span>
+        </a>
+        <a href="#equivalent-sizes" class="ref-quick-action">
+          <HubIcon name="related" class="ref-quick-action__icon" />
+          <span>Equivalent Sizes</span>
+        </a>
+        <a href="#vehicles-fitment" class="ref-quick-action">
+          <HubIcon name="car-front" class="ref-quick-action__icon" />
+          <span>Vehicles</span>
+        </a>
+      </nav>
+
+      <!-- Load & Speed Ratings (only when data exists; fields hide individually) -->
+      {hub.ratings && (
+        <section id="load-speed-ratings" class="ref-section ref-section--ratings">
+          <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Load &amp; Speed Ratings</h2>
+          <p class="ref-section__subtitle">
+            Common service-description values for {displaySize}. Ratings vary by tire model — always confirm the
+            markings on your tire&rsquo;s sidewall.
+          </p>
+          <div class="ref-section__body ref-section__grid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+            {hub.ratings.loadIndex && (
+              <div class="ref-card rounded-card border border-border bg-surface ref-card-pad">
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">Load Index</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight tabular-nums text-heading">{hub.ratings.loadIndex}</p>
+                <p class="mt-1 text-sm text-body">Per-tire load-capacity code</p>
+              </div>
+            )}
+            {hub.ratings.speedRating && (
+              <div class="ref-card rounded-card border border-border bg-surface ref-card-pad">
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">Speed Rating</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-heading">{hub.ratings.speedRating}</p>
+                {hub.ratings.speedRatingLabel && (
+                  <p class="mt-1 text-sm text-body">{hub.ratings.speedRatingLabel}</p>
+                )}
+              </div>
+            )}
+            {hub.ratings.loadRange && (
+              <div class="ref-card rounded-card border border-border bg-surface ref-card-pad">
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">Load Range</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-heading">{hub.ratings.loadRange}</p>
+                {hub.ratings.loadRangePly && (
+                  <p class="mt-1 text-sm text-body">{hub.ratings.loadRangePly}</p>
+                )}
+              </div>
+            )}
+            {hub.ratings.maxLoadLbs != null && (
+              <div class="ref-card rounded-card border border-border bg-surface ref-card-pad">
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">Maximum Load</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight tabular-nums text-heading">
+                  {hub.ratings.maxLoadLbs.toLocaleString('en-US')} lb
+                </p>
+                {hub.ratings.maxLoadKg != null && (
+                  <p class="mt-1 text-sm text-body">{hub.ratings.maxLoadKg.toLocaleString('en-US')} kg per tire</p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <!-- 2. Vehicle Fitment -->
       <section id="vehicles-fitment" class="ref-section">
@@ -127,7 +199,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
       <PremiumQuickTake data={quickTake} />
 
       <!-- 5. Equivalent Sizes -->
-      <section class="ref-section">
+      <section id="equivalent-sizes" class="ref-section ref-section--equivalent">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Equivalent Sizes</h2>
         <p class="ref-section__subtitle">Within ±3% overall diameter — speedometer-safe alternatives.</p>
         <div class="ref-featured-wrap">
@@ -201,7 +273,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
       </section>
 
       <!-- 6. Tire Size Comparison -->
-      <section class="ref-section ref-section--alt ref-section--compare">
+      <section id="compare-sizes" class="ref-section ref-section--alt ref-section--compare">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Compare Tire Sizes</h2>
         <p class="ref-section__subtitle">Compare {displaySize} against common alternative tire sizes.</p>
         <div class="ref-featured-wrap">
@@ -218,7 +290,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
       </section>
 
       <!-- 7. Quick Comparison -->
-      <section class="ref-section">
+      <section class="ref-section ref-section--quick-compare">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Quick Comparison</h2>
         <p class="ref-section__subtitle">Diameter, width, and speedometer error at 60 mph indicated.</p>
         <div class="ref-section__body--full overflow-hidden">
@@ -234,8 +306,11 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <!-- 9. Related Sizes -->
-      <section class="ref-section">
+      <!-- 9. Trust & Editorial -->
+      <TrustDisclosure class="ref-section ref-section--editorial" />
+
+      <!-- 10. Related Sizes -->
+      <section class="ref-section ref-section--related">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Related Sizes & Explore More</h2>
         <div class="ref-section__body ref-section__grid grid lg:grid-cols-2">
           <div class="ref-card overflow-hidden rounded-card border border-border bg-surface">

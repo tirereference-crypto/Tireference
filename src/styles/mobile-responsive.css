@@ -10,9 +10,9 @@
     overflow-x: clip;
   }
 
-  img:not(.home-hero__banner),
+  img:not(.home-hero__banner):not(.hero-tire-img),
   video,
-  svg,
+  svg:not(.hero-tire-svg),
   canvas {
     max-width: 100%;
     height: auto;
@@ -76,7 +76,7 @@
   }
 
   .home-shell {
-    padding: 1rem 1rem 2rem;
+    padding: 0.75rem 1rem 2rem;
   }
 
   /* ── Calculator layout flow (title → inputs → results → sidebars) ── */
@@ -107,32 +107,262 @@
     order: 10;
   }
 
-  /* Diameter: title/inputs in main first; sidebars at bottom */
-  .dia-page .dia-sidebar-left {
-    order: 10;
+  /* ── Comparison page: decision-first mobile section order ──
+     Flatten the right sidebar and the two-up bottom row into the single
+     column so every section can be individually ordered. Desktop is
+     untouched (all of this lives inside the max-width: 767px query). */
+  .cmp-page:not(.dia-page) .cmp-layout {
+    gap: 1.5rem; /* consistent 24px rhythm between every section */
   }
 
+  .cmp-page:not(.dia-page) .cmp-sidebar-right,
+  .cmp-page:not(.dia-page) .cmp-bottom-row {
+    display: contents;
+  }
+
+  /* Rely on the flex gap alone for section spacing (removes stray/uneven
+     top-bottom margins that made spacing feel excessive). */
+  .cmp-page:not(.dia-page) .cmp-layout > .cmp-sidebar-left,
+  .cmp-page:not(.dia-page) .cmp-main > *,
+  .cmp-page:not(.dia-page) .cmp-sidebar-right > *,
+  .cmp-page:not(.dia-page) .cmp-bottom-row > * {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .cmp-page .cmp-page-header { order: 1; }
+  .cmp-page .cmp-sidebar-left:not(.dia-sidebar-left) { order: 2; }
+  .cmp-page .cmp-results-anchor { order: 3; }
+  .cmp-page .cmp-viz-panel { order: 4; }               /* 2. Visual Tire Comparison */
+  .cmp-page .cmp-summary-bar { order: 5; }             /* 3. Tire Specifications Summary */
+  .cmp-page .cmp-kpi-row { order: 6; }                 /* 3. Tire Specifications Summary */
+  .cmp-page .cmp-verdict { order: 7; }                 /* 4. Overall Verdict */
+  .cmp-page .cmp-card--perf-impact { order: 8; }       /* 5. Performance Impact cards */
+  .cmp-page .cmp-insights-row { order: 9; }            /* 6. Charts & graphs */
+  .cmp-page .cmp-seo-block--understanding { order: 10; } /* 7. Understanding (collapsed) */
+  .cmp-page .cmp-seo-block--good-upgrade { order: 11; }
+  .cmp-page .cmp-seo-block--what-changes { order: 12; }
+  .cmp-page .cmp-seo-block--who-should { order: 13; }
+  .cmp-page .cmp-upgrade-paths { order: 14; }          /* 8. Alternative Tire Sizes */
+  .cmp-page .cmp-consider-card { order: 15; }
+  .cmp-page .cmp-panel--personality { order: 16; }
+  .cmp-page .cmp-panel--will-fit { order: 17; }
+  .cmp-page .cmp-vehicle-compat { order: 18; }         /* 9. Compatible Vehicles */
+  .cmp-page .cmp-seo-block--faq { order: 19; }         /* 10. Frequently Asked Questions */
+  .cmp-page .cmp-panel--popular { order: 20; }         /* 11. Related Tire Comparisons */
+  .cmp-page .cmp-panel--calc-network { order: 21; }    /* 12. Other Calculators */
+  .cmp-page .cmp-panel--guides { order: 22; }          /* 13. Tire Guides */
+
+  /* Collapse the Understanding section to ~4 lines with a Read more expander. */
+  .cmp-page .cmp-seo-block--understanding:not(.is-expanded) .cmp-seo-block__clampable {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .cmp-page .cmp-read-more-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 0.625rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+  }
+
+  /* ── Tire Diameter Calculator: mobile flow & overflow safety ── */
+  /* Flatten the main column and right sidebar into the single mobile column so
+     individual sections can be freely reordered; prevent horizontal scroll. */
+  .dia-page .cmp-shell {
+    overflow-x: clip;
+  }
+  .dia-page .cmp-layout {
+    gap: 1.25rem; /* ~20px between every section */
+  }
+  .dia-page .cmp-layout,
+  .dia-page .dia-main,
+  .dia-page .dia-main > *,
+  .dia-page .dia-sidebar-right > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .dia-page .dia-main > *,
+  .dia-page .dia-sidebar-right > * {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .dia-page .dia-main,
   .dia-page .dia-sidebar-right {
-    order: 11;
+    display: contents;
   }
 
-  .dia-page .dia-main {
+  /* Neutralise stray section margins so the column gap is the single source of
+     vertical rhythm on mobile. */
+  .dia-page .dia-main > *,
+  .dia-page .dia-discovery,
+  .dia-page .dia-presets--main,
+  .dia-page .dia-visual-compare {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  /* Section order:
+     1   Hero / Inputs / Tolerance / Find  (inside .dia-search-card)
+     2   Results / Matching                (inside .dia-discovery)
+     3   Quick Diameter Presets
+     4   Tire Diameter vs Wheel illustration
+     5   Tire Diameter Formula             (pulled up from the right sidebar)
+     6   Educational content
+     7   FAQs
+     8   Remaining right-sidebar cards (Related calculators, etc.)
+     9   Left sidebar (Popular Comparisons) */
+  .dia-page .dia-main > .dia-search-card { order: 1; }
+  .dia-page .dia-main > .dia-discovery { order: 2; }
+  .dia-page .dia-main > .dia-presets { order: 3; }
+  .dia-page .dia-main > .dia-edu-block,
+  .dia-page .dia-main > .cmp-seo-block { order: 6; }
+  .dia-page .dia-main > .dia-edu-block--vs-wheel { order: 4; }
+  .dia-page .dia-main > .dia-faq-section { order: 8; }
+
+  .dia-page .dia-sidebar-right > * { order: 9; }
+  .dia-page .dia-sidebar-right > .dia-formula-panel { order: 5; }
+  .dia-page .dia-sidebar-right > .dia-sidebar-panel--popular-diameters { order: 7; }
+  .dia-page .dia-sidebar-left { order: 10; }
+
+  /* "Popular Diameter Searches" duplicates the Quick Diameter Presets chip row
+     on mobile — hide the sidebar copy here only (desktop keeps both). */
+  .dia-page .dia-sidebar-panel--popular-searches,
+  .dia-page .dia-sidebar-panel--about {
+    display: none;
+  }
+
+  /* Related cards tighter rhythm (12–16px) */
+  .dia-page .dia-discovery {
+    gap: 0.875rem;
+  }
+
+  /* Compact "Searching for…" summary */
+  .dia-page .dia-search-context {
+    min-height: 0;
+    padding: 0.375rem 0.625rem;
+  }
+
+  /* The large "hero" diameter input keeps a wide intrinsic min-width; without
+     these it forces .dia-search-card past the viewport and clips every field
+     inside it. Let the input (and its grid track) shrink to the column width. */
+  .dia-page .dia-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dia-page .dia-step__input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Tolerance buttons: wrap to a tidy 2×2 instead of shrinking/overflowing */
+  .dia-page .dia-tolerance-group {
+    flex-wrap: wrap;
+  }
+  .dia-page .dia-tolerance-btn {
+    flex: 1 1 calc(50% - 0.375rem);
+    min-width: 0;
+  }
+
+  /* "Tire Diameter vs Wheel Diameter" illustration: ~90% width, centered,
+     capped height, aspect ratio preserved, no clipping. */
+  .dia-page .dia-visual-compare {
+    max-width: 90%;
+    margin-inline: auto;
+  }
+  .dia-page .dia-visual-compare__canvas {
+    min-height: 0;
+    max-height: 240px;
+  }
+
+  /* ── Wheel Offset Calculator: mobile flow, reorder & overflow safety ── */
+  /* Flatten the main column and the right sidebar into the single mobile column
+     so reference sections can be interleaved after the results. The results and
+     edu/converter wrappers stay as real blocks (results holds the scroll anchor
+     and each groups its own ordered content). */
+  .wof-page:not(.grc-page) .cmp-shell {
+    overflow-x: clip;
+  }
+  .wof-page:not(.grc-page) .cmp-layout {
+    gap: 1.25rem; /* ~20px between major sections */
+  }
+  .wof-page:not(.grc-page) .wof-main,
+  .wof-page:not(.grc-page) .wof-sidebar-right {
+    display: contents;
+  }
+
+  /* Overflow safety: nothing exceeds the viewport width. */
+  .wof-page:not(.grc-page) .cmp-layout,
+  .wof-page:not(.grc-page) .wof-main > *,
+  .wof-page:not(.grc-page) .wof-results-anchor > *,
+  .wof-page:not(.grc-page) .wof-edu-converter-row > *,
+  .wof-page:not(.grc-page) .wof-sidebar-right > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .wof-page:not(.grc-page) .wof-main > *,
+  .wof-page:not(.grc-page) .wof-results-anchor > *,
+  .wof-page:not(.grc-page) .wof-edu-converter-row > *,
+  .wof-page:not(.grc-page) .wof-sidebar-right > * {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  /* Top-level section order (flattened main + sidebar) */
+  .wof-page:not(.grc-page) .wof-hero { order: 1; }
+  .wof-page:not(.grc-page) .wof-calc-card { order: 2; }
+  .wof-page:not(.grc-page) .wof-results-anchor { order: 4; }        /* summary → cards → visual */
+  .wof-page:not(.grc-page) .wof-edu-converter-row { order: 8; }     /* offset diagram → converter */
+  .wof-page:not(.grc-page) .wof-sidebar-panel--vehicles { order: 10; }
+  .wof-page:not(.grc-page) .wof-sidebar-panel--guide { order: 11; }
+  .wof-page:not(.grc-page) .wof-sidebar-panel--related { order: 12; }
+  .wof-page:not(.grc-page) .wof-impact-card,
+  .wof-page:not(.grc-page) .wof-seo-block { order: 13; }            /* Educational content */
+  .wof-page:not(.grc-page) .wof-faq-section { order: 14; }
+
+  /* Results block: reorder to Summary → Result cards → Visual, 12–16px rhythm */
+  .wof-page:not(.grc-page) .wof-results-anchor {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    order: 1;
+    gap: 0.875rem;
+  }
+  .wof-page:not(.grc-page) .wof-verdict { order: 1; }   /* Fitment summary + notes */
+  .wof-page:not(.grc-page) .wof-metrics { order: 2; }   /* Result cards */
+  .wof-page:not(.grc-page) .wof-viz-card { order: 3; }  /* Visual wheel position */
+
+  /* Related cards rhythm (12–16px) */
+  .wof-page:not(.grc-page) .wof-metrics__grid {
+    gap: 0.875rem;
   }
 
-  /* Wheel offset: main before sidebar */
-  .wof-page .wof-main {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    order: 1;
+  /* Popular Vehicle Offsets → horizontal scroll carousel with hidden scrollbar */
+  .wof-page:not(.grc-page) .wof-vehicle-list {
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 0.75rem;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-
-  .wof-page .wof-sidebar-right {
-    order: 10;
+  .wof-page:not(.grc-page) .wof-vehicle-list::-webkit-scrollbar {
+    display: none;
+  }
+  .wof-page:not(.grc-page) .wof-vehicle-list__item {
+    flex: 0 0 auto;
+    min-width: 240px;
+    scroll-snap-align: start;
   }
 
   /* Gear ratio layout */
@@ -148,6 +378,15 @@
 
   .grc-faq-related {
     order: 10;
+  }
+
+  /* Gear ratio (mobile only): keep the "How Tire Size Changes Affect Your
+     Gearing" explainer directly above the FAQ block. */
+  .grc-page .grc-main > .grc-seo-block {
+    order: 8;
+  }
+  .grc-page .grc-main > .grc-faq-related-row {
+    order: 9;
   }
 
   /* ── Stack multi-column rows ── */
@@ -267,7 +506,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 45;
+    z-index: var(--z-sticky);
     padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--color-border);
     background: color-mix(in srgb, var(--color-surface) 94%, transparent);
@@ -469,27 +708,201 @@
     min-height: 3rem;
   }
 
-  /* ── Home mobile ── */
-  .home-hero__search-form {
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem;
+  /* ══════════════════════════════════════════════════════════
+     Home mobile — surgical spacing/hierarchy pass (design preserved)
+     ══════════════════════════════════════════════════════════ */
+
+  /* Consistent 24px section rhythm on mobile */
+  .home-page {
+    --home-section-gap: 1.5rem;
   }
 
-  .home-hero__search-input {
-    min-height: 3.25rem;
-    font-size: 1rem;
-  }
+  /* Hero: reflow the search UI + popular examples into normal document
+     flow beneath the banner image. Previously the search UI was
+     position:absolute at 74% of a ~130px-tall stage, so it overflowed and
+     overlapped the calculator cards below. Flowing it fixes the overlap
+     and lets the search bar/examples breathe. */
 
-  .home-hero__search-btn {
+  /* Align the banner to the content margins (was full-bleed): lighter,
+     ~8–10% smaller footprint, more whitespace, and consistent with the
+     rest of the page grid. Composition/aspect ratio unchanged. */
+  .home-page .home-hero {
+    margin: 0;
     width: 100%;
   }
 
-  .home-quick-actions__grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+  .home-page .home-hero__stage {
+    display: block;
+    aspect-ratio: auto;
+    overflow: visible;
   }
 
+  .home-page .home-hero__banner {
+    aspect-ratio: 2048 / 717;
+    height: auto;
+  }
+
+  .home-page .home-hero__search-overlay {
+    position: static;
+    height: auto;
+    pointer-events: auto;
+  }
+
+  .home-page .home-hero__search-ui {
+    position: static;
+    inset: auto;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-inline: 0;
+  }
+
+  /* Search bar: single row, 52px tall, larger icon, radius unchanged */
+  .home-page .home-hero__search-form {
+    flex-direction: row;
+    gap: 0;
+    height: 3.25rem; /* 52px */
+    padding: 0 0.25rem 0 0;
+    background: #fff;
+  }
+
+  .home-page .home-hero__search-icon {
+    width: 3rem;
+  }
+
+  .home-page .home-hero__search-icon svg {
+    width: 1.375rem; /* ~22px */
+    height: 1.375rem;
+  }
+
+  .home-page .home-hero__search-input {
+    min-height: 0;
+    font-size: 1rem; /* 16px — readable, avoids iOS zoom */
+  }
+
+  .home-page .home-hero__search-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0.25rem;
+  }
+
+  /* Popular examples → wrapping pill buttons, equal dimensions + gaps */
+  .home-page .home-hero__popular {
+    margin-top: 0.75rem;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .home-page .home-hero__popular-list {
+    gap: 0.5rem;
+  }
+
+  .home-page .home-hero__popular-sep {
+    display: none;
+  }
+
+  .home-page .home-hero__popular-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4375rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: #fff;
+    line-height: 1.2;
+  }
+
+  .home-page .home-hero__popular-link:hover {
+    text-decoration: none;
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  }
+
+  /* 24px gap between the hero (popular examples) and calculator cards */
+  .home-page .home-quick-actions {
+    margin-top: 1.5rem;
+  }
+
+  .home-page .home-quick-actions__grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem; /* 24px card spacing */
+  }
+
+  /* Calculator cards: compact height, centered arrow, consistent icon */
+  .home-page .home-quick-actions__card {
+    min-height: 0;
+    gap: 0.5rem;
+    padding: 1.25rem 2.75rem 1.25rem 1.25rem; /* 20px; right room for arrow */
+  }
+
+  .home-page .home-quick-actions__icon-wrap {
+    width: 2.375rem; /* matches other homepage sections */
+    height: 2.375rem;
+  }
+
+  .home-page .home-calc-icon svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+
+  .home-page .home-quick-actions__arrow {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
+
+  .home-page .home-quick-actions__card:hover .home-quick-actions__arrow {
+    transform: translateY(-50%) translateX(3px);
+  }
+
+  /* Slightly darker secondary text + calmer line-height for readability */
+  .home-page .home-quick-actions__desc {
+    color: var(--color-body);
+    line-height: 1.55;
+  }
+
+  /* Popular tire sizes + comparisons: trim panel padding so more pills
+     show, tighter equal-gap wrapping, consistent pill dimensions */
+  .home-page .home-popular-sizes__panel,
+  .home-page .home-popular-comparisons__panel {
+    padding: 1.25rem;
+  }
+
+  .home-page .home-popular-sizes__header,
+  .home-page .home-popular-comparisons__header {
+    margin-bottom: 1rem;
+  }
+
+  .home-page .home-popular-sizes__grid,
+  .home-page .home-popular-comparisons__grid {
+    gap: 0.5rem;
+  }
+
+  .home-page .home-popular-sizes__pill,
+  .home-page .home-popular-comparisons__pill {
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Find by vehicle: lighter padding, tighter fields, 48px touch targets */
+  .home-page .home-vehicle-lookup {
+    padding: 1.125rem 1.125rem 1.25rem;
+  }
+
+  .home-page .home-vehicle-lookup__badge {
+    margin-bottom: 0.875rem;
+  }
+
+  .home-page .home-vehicle-lookup__form {
+    gap: 0.875rem;
+  }
+
+  .home-page .home-vehicle-lookup__fields {
+    gap: 0.75rem;
+  }
+
+  .home-page .home-vehicle-lookup__select,
+  .home-page .home-vehicle-lookup__submit {
+    min-height: 3rem; /* 48px accessible touch target */
+  }
+
+  /* ── Other home grids (behavior unchanged) ── */
   .home-popular-sizes__grid,
   .home-popular-comparisons__inner {
     grid-template-columns: 1fr;
@@ -514,6 +927,107 @@
     grid-template-columns: 1fr;
   }
 
+  /* Comparison "Side by Side Table" tab: on mobile the table renders as
+     tall stacked cards, but the panel body is locked to the visual
+     canvas's 800/320 aspect ratio + centered flex, so the cards were
+     clipped by the panel's overflow:hidden and spilled onto the tabs.
+     Let the table body flow naturally on mobile. */
+  .cmp-page .cmp-viz-panel__table {
+    aspect-ratio: auto;
+    min-height: 0;
+    display: block;
+    padding: 1rem;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Tire Size Calculator mobile polish (design preserved)
+     ══════════════════════════════════════════════════════════ */
+
+  /* Consistent gap between form → visualization → result cards */
+  .calc-page .calc-hero-grid {
+    gap: 1.25rem;
+  }
+
+  /* Visualization: bigger tire, less dead space, never cropped.
+     max-width:100% guards the overflow:hidden viz card on narrow
+     screens so the taller tire can never be clipped. */
+  .calc-page .calc-viz-hero {
+    --calc-viz-tire-height: 250px;
+  }
+
+  .calc-page .calc-viz-hero__stage {
+    min-height: 0;
+    row-gap: 1.25rem;
+  }
+
+  .calc-page .calc-viz-hero__tire--side,
+  .calc-page .calc-viz-hero__tire--front {
+    max-width: 100%;
+  }
+
+  /* Result summary cards: equal comfortable padding + clearer rhythm */
+  .calc-page .calc-spec-grid {
+    gap: 0.75rem;
+  }
+
+  .calc-page .calc-spec-tile {
+    padding: 1rem;
+    gap: 0.375rem;
+  }
+
+  /* Tire specification cards: align the value badge to the heading */
+  .calc-page .calc-understanding__card {
+    align-items: start;
+  }
+
+  .calc-page .calc-understanding__card-body p {
+    margin-top: 0.3125rem;
+  }
+
+  /* Understanding + Performance stack: consistent 24px rhythm */
+  .calc-page .calc-explained-row {
+    gap: 1.5rem;
+  }
+
+  /* Popular tires / feature cards: slightly more compact */
+  .calc-page .calc-feature-card {
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .calc-page .calc-feature-card__pills {
+    margin-top: 12px;
+  }
+
+  .calc-page .calc-feature-card__cta {
+    padding-top: 16px;
+  }
+
+  /* Stack the text + illustration so the heading isn't squished to one
+     word per line and the (wide) image can't overflow / get clipped. */
+  .calc-page .calc-feature-card__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .calc-page .calc-feature-card__visual {
+    justify-content: center;
+    padding-top: 0;
+  }
+
+  .calc-page .calc-feature-card__compare-img,
+  .calc-page .calc-feature-card__vehicle-img {
+    height: auto;
+    max-width: 100%;
+    max-height: 150px;
+  }
+
+  /* FAQ: larger, comfortable tap target (chevron already centered) */
+  .calc-page .calc-faq__question {
+    min-height: 3.25rem;
+  }
+
   /* ── Hub pages ── */
   .ref-275__grid {
     grid-template-columns: 1fr !important;
@@ -527,6 +1041,156 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  /* ── Tire Size page: decision-first mobile section order ──
+     The main column becomes a flex stack so standalone sections can be
+     reordered via `order` without changing the DOM (desktop unchanged).
+     Consistent 24px rhythm between major sections comes from `gap`. */
+  .ref-275 .ref-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Visual order is driven by `order`; drop adjacent-sibling margins so the
+     gap alone controls spacing. */
+  .ref-275 .ref-main > .ref-section,
+  .ref-275 .ref-main > .ref-hero-wrap,
+  .ref-275 .ref-main > .hub-size-sidebar {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  /* Hierarchy: hero + quick specs → practical decision info (vehicles,
+     equivalents, comparisons) → detailed explanations → supplementary → links.
+     The hero already contains the quick spec cards, so specs sit directly below
+     the heading without a separate section. */
+  .ref-275 .ref-main > .ref-hero-wrap {
+    order: 1;
+  }
+  .ref-275 .ref-main > .ref-quick-actions {
+    order: 2;
+  }
+  /* Load & speed ratings act as quick specs directly below the hero. */
+  .ref-275 .ref-main > .ref-section--ratings {
+    order: 3;
+  }
+  /* Vehicles moved higher — practical fitment answer near the top. */
+  .ref-275 .ref-main > #vehicles-fitment {
+    order: 4;
+  }
+  /* Equivalent Sizes kept above the educational/detailed content. */
+  .ref-275 .ref-main > .ref-section--equivalent {
+    order: 5;
+  }
+  .ref-275 .ref-main > .ref-section--compare {
+    order: 6;
+  }
+  .ref-275 .ref-main > .ref-section--quick-compare {
+    order: 7;
+  }
+  .ref-275 .ref-main > .quick-take {
+    order: 8;
+  }
+  /* Detailed explanation sits below the practical information. */
+  .ref-275 .ref-main > .ref-section--impact {
+    order: 9;
+  }
+  .ref-275 .ref-main > .ref-section--faq {
+    order: 10;
+  }
+  /* Trust & editorial disclosure — credibility block near the page footer. */
+  .ref-275 .ref-main > .ref-section--editorial {
+    order: 11;
+  }
+  /* Supplementary block (Popular Upgrades / Insight / etc.) stays below Quick
+     Take, near the bottom with the related links. */
+  .ref-275 .ref-main > .hub-size-sidebar {
+    order: 12;
+  }
+  .ref-275 .ref-main > .ref-section--related {
+    order: 13;
+  }
+
+  /* Reduce repeated text on mobile: the full "Vehicles Using This Size" and the
+     "Equivalent Sizes" / "Related Sizes" sections already appear in the main
+     column, so the duplicate sidebar widgets are suppressed below lg. Desktop
+     (≥1024px) keeps them in the rail. */
+  .ref-275 .hub-size-sidebar .hub-sidebar-widget--vehicles,
+  .ref-275 .hub-size-sidebar .hub-sidebar-widget--similar {
+    display: none;
+  }
+
+  /* Trim leftover whitespace beneath the hero card. */
+  .ref-275 .ref-hero-wrap {
+    padding-bottom: 0.5rem;
+  }
+
+  /* Keep in-page scroll targets clear of the sticky header. */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .ref-275 .ref-section,
+  #vehicles-fitment {
+    scroll-margin-top: 5rem;
+  }
+
+  /* Quick action buttons (mobile only) */
+  .ref-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ref-quick-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4375rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--color-heading);
+    text-align: center;
+  }
+
+  .ref-quick-action:active {
+    background-color: var(--color-surface-subtle);
+  }
+
+  .ref-quick-action__icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  /* Real-World Impact: two-column card grid on mobile, tighter gaps. */
+  .ref-275 .ref-section--impact .impact-section__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  /* Hero spec cards: on mobile they stack in a 2-col grid, so the card must
+     fill its column (override the desktop JS-measured inline width) and the
+     description must wrap instead of overflowing the card edge. */
+  .ref-275 .spec-card-diagram {
+    width: 100% !important;
+  }
+
+  .ref-275 .spec-card-diagram__desc {
+    white-space: normal;
   }
 }
 
@@ -542,6 +1206,11 @@
     display: none;
   }
 
+  /* Quick action buttons are a mobile-only affordance. */
+  .ref-quick-actions {
+    display: none;
+  }
+
   .cmp-spec-table-wrap--desktop,
   .grc-compare-table__wrap--desktop {
     display: block;
@@ -552,5 +1221,9 @@
 @media (prefers-reduced-motion: reduce) {
   .tl-sticky-analyze {
     transition: none;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }

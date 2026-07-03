@@ -1,0 +1,48 @@
+---
+import { EDITORIAL_PROCESS, type EditorialStep } from '../../lib/editorial';
+
+interface Props {
+  heading?: string;
+  intro?: string;
+  steps?: EditorialStep[];
+  policyUrl?: string;
+  class?: string;
+}
+
+const {
+  heading = 'Editorial Process',
+  intro = EDITORIAL_PROCESS.intro,
+  steps = EDITORIAL_PROCESS.steps,
+  policyUrl = EDITORIAL_PROCESS.policyUrl,
+  class: className = '',
+} = Astro.props;
+---
+
+<div class:list={['rounded-card border border-border bg-surface p-4', className]}>
+  <div class="flex items-center gap-2">
+    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-success/10 text-success" aria-hidden="true">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+    </span>
+    <h3 class="text-sm font-bold text-heading">{heading}</h3>
+  </div>
+  {intro && <p class="mt-2 text-xs leading-relaxed text-muted">{intro}</p>}
+  <ul class="mt-3 space-y-2.5">
+    {steps.map((step) => (
+      <li class="flex gap-2.5 text-sm leading-relaxed text-body">
+        <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-success/70" aria-hidden="true"></span>
+        <span><span class="font-semibold text-heading">{step.title}.</span> {step.detail}</span>
+      </li>
+    ))}
+  </ul>
+  {policyUrl && (
+    <a href={policyUrl} class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+      Read our editorial &amp; accuracy policy
+      <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+      </svg>
+    </a>
+  )}
+</div>

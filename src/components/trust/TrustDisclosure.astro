@@ -1,0 +1,50 @@
+---
+import Methodology from './Methodology.astro';
+import DataSources from './DataSources.astro';
+import EditorialProcess from './EditorialProcess.astro';
+import Author from './Author.astro';
+import ReviewedBy from './ReviewedBy.astro';
+import LastUpdated from './LastUpdated.astro';
+import type { EditorialPerson } from '../../lib/editorial';
+
+interface Props {
+  title?: string;
+  subtitle?: string;
+  author?: EditorialPerson;
+  reviewer?: EditorialPerson;
+  updated?: string;
+  /** Extra classes for the wrapping <section> (e.g. hub ordering hooks). */
+  class?: string;
+}
+
+const {
+  title = 'How we research & verify this data',
+  subtitle = 'Every spec and comparison on this page is calculated from documented standards and reviewed for accuracy.',
+  author,
+  reviewer,
+  updated,
+  class: className = '',
+} = Astro.props;
+---
+
+<section class:list={['tl-trust', className]} aria-labelledby="trust-heading">
+  <div class="mb-4">
+    <h2 id="trust-heading" class="text-xl font-bold tracking-tight text-heading sm:text-2xl">{title}</h2>
+    <p class="mt-1 max-w-3xl text-sm leading-relaxed text-body">{subtitle}</p>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-3">
+    <Methodology />
+    <DataSources />
+    <EditorialProcess />
+  </div>
+
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    <Author person={author} variant="card" />
+    <ReviewedBy person={reviewer} variant="card" />
+  </div>
+
+  <div class="mt-3">
+    <LastUpdated date={updated} label="Content last reviewed" />
+  </div>
+</section>

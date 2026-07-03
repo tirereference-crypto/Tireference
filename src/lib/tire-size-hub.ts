@@ -16,6 +16,7 @@ import {
   type TireSpecs,
 } from './tire-math';
 import { comparisonPagePath, hubPagePath } from './tire-size-url';
+import { resolveTireRatings, type ResolvedTireRatings } from './tire-ratings';
 import type { StatDisplay } from './calculator-types';
 import { formatTireSizeResults } from './format-tire-display';
 import {
@@ -96,6 +97,7 @@ export interface TireSizeHubData {
   specs: TireSpecs;
   displaySize: string;
   categoryLabel: string;
+  ratings: ResolvedTireRatings | null;
   intro: string;
   heroHighlights: HeroHighlight[];
   summaryBar: SummaryBarItem[];
@@ -394,6 +396,7 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
     specs,
     displaySize: formatDisplaySize(entry.size),
     categoryLabel,
+    ratings: resolveTireRatings(entry.ratings),
     intro: buildCategoryIntro(entry.size, specs, entry.category, flotation),
     heroHighlights: buildHeroHighlights(specs, flotation),
     summaryBar: buildSummaryBar(

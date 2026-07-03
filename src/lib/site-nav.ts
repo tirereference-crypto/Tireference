@@ -13,19 +13,19 @@ export const NAV_CALCULATORS: readonly NavCalculatorItem[] = [
     emoji: '🧮',
     label: 'Tire Size Calculator',
     description: 'Convert metric tire sizes into diameter, width and circumference.',
-    href: '/tire-size-calculator',
+    href: '/calculators/tire-size-calculator',
   },
   {
     emoji: '⚖️',
     label: 'Tire Comparison Calculator',
     description: 'Compare two tire sizes side-by-side.',
-    href: '/tire-size-comparison',
+    href: '/calculators/tire-comparison-calculator',
   },
   {
     emoji: '📏',
     label: 'Tire Diameter Calculator',
     description: 'Find overall tire diameter and matching tire sizes.',
-    href: '/tire-diameter-calculator',
+    href: '/calculators/tire-diameter-calculator',
   },
   {
     emoji: '⚙️',
@@ -37,7 +37,7 @@ export const NAV_CALCULATORS: readonly NavCalculatorItem[] = [
     emoji: '🛞',
     label: 'Wheel Offset Calculator',
     description: 'Visualize wheel position and fitment.',
-    href: '/wheel-offset-calculator',
+    href: '/calculators/wheel-offset-calculator',
   },
 ] as const;
 
@@ -73,7 +73,7 @@ export const NAV_FITMENT_ITEMS = [
   {
     label: 'Wheel Offset Calculator',
     description: 'Visualize wheel position and fitment.',
-    href: '/wheel-offset-calculator',
+    href: '/calculators/wheel-offset-calculator',
   },
 ] as const;
 
@@ -92,7 +92,7 @@ export const NAV_SEARCH_EXAMPLES: readonly NavSearchExample[] = [
 
 export const NAV_COMPARE = {
   label: 'Compare Sizes',
-  href: '/tire-size-comparison',
+  href: '/calculators/tire-comparison-calculator',
 } as const;
 
 export const NAV_ABOUT = {
@@ -115,10 +115,10 @@ export function getActiveNavItem(pathname: string): string | null {
   if (pathname === NAV_CONTACT.href) {
     return 'contact';
   }
-  if (pathname.startsWith('/compare/') || pathname === '/tire-size-comparison') {
+  if (pathname.startsWith('/compare/') || pathname === '/calculators/tire-comparison-calculator') {
     return 'compare';
   }
-  if (pathname === '/wheel-offset-calculator') {
+  if (pathname === '/calculators/wheel-offset-calculator') {
     return 'fitment';
   }
   if (

@@ -1,23 +1,23 @@
-export const CONTACT_EMAIL = 'hello@tirereference.com';
+export const CONTACT_EMAIL = 'tirereference@gmail.com';
 
 export const ABOUT_BUILD_CARDS = [
   {
     title: 'Tire Size Calculator',
     description:
       'Convert metric tire codes into overall diameter, section width, sidewall height, circumference, and revolutions per mile.',
-    href: '/tire-size-calculator',
+    href: '/calculators/tire-size-calculator',
   },
   {
     title: 'Tire Comparison Calculator',
     description:
       'Compare two tire sizes side by side with diameter change, speedometer impact, and fitment guidance.',
-    href: '/tire-size-comparison',
+    href: '/calculators/tire-comparison-calculator',
   },
   {
     title: 'Wheel Offset Calculator',
     description:
       'Model offset, poke, backspacing, and clearance before committing to a new wheel setup.',
-    href: '/wheel-offset-calculator',
+    href: '/calculators/wheel-offset-calculator',
   },
   {
     title: 'Gear Ratio Calculator',
@@ -29,7 +29,7 @@ export const ABOUT_BUILD_CARDS = [
     title: 'Speedometer Calculator',
     description:
       'See how a tire size change affects indicated speed versus true road speed using our comparison tools.',
-    href: '/tire-size-comparison',
+    href: '/calculators/tire-comparison-calculator',
   },
   {
     title: 'Fitment Resources',

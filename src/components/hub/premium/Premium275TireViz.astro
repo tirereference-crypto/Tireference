@@ -20,7 +20,7 @@ const widthValue = `${specs.sectionWidthIn.toFixed(2)}"`;
 const diameterValue = `${specs.overallDiameterIn.toFixed(2)}"`;
 
 const tireImgClass =
-  'h-[168px] w-auto max-w-full object-contain sm:h-[180px] lg:h-[168px] xl:h-[188px]';
+  'hero-tire-img h-[168px] w-auto max-w-full object-contain sm:h-[180px] lg:h-[168px] xl:h-[188px]';
 const tireSvgClass =
   'h-[168px] sm:h-[180px] lg:h-[168px] xl:h-[188px]';
 const tireColClass =
@@ -73,7 +73,7 @@ const rightContactY =
             decoding="async"
           />
           <svg
-            class="pointer-events-none absolute -top-10 left-0 h-[calc(100%+2.5rem)] w-full overflow-visible"
+            class="hero-tire-svg pointer-events-none absolute -top-10 left-0 h-[calc(100%+2.5rem)] w-full overflow-visible"
             viewBox={`0 0 100 ${frontViewHeight}`}
             preserveAspectRatio="none"
             aria-hidden="true"
@@ -166,7 +166,7 @@ const rightContactY =
             decoding="async"
           />
           <svg
-            class:list={['pointer-events-none absolute inset-0 h-full w-[calc(100%+3.25rem)] overflow-visible sm:w-[calc(100%+3.5rem)]', tireSvgClass]}
+            class:list={['hero-tire-svg pointer-events-none absolute inset-0 h-full w-[calc(100%+3.25rem)] overflow-visible sm:w-[calc(100%+3.5rem)]', tireSvgClass]}
             viewBox={`0 0 ${sideViewWidth} ${tireViewHeight}`}
             preserveAspectRatio="none"
             aria-hidden="true"

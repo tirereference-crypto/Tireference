@@ -3,11 +3,12 @@ import Layout from '../layouts/Layout.astro';
 import InfoPageHero from '../components/info/InfoPageHero.astro';
 import { ABOUT_AUDIENCE, ABOUT_BUILD_CARDS } from '../lib/info-pages';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import TrustDisclosure from '../components/trust/TrustDisclosure.astro';
 import '../styles/info-pages.css';
 
 const title = 'About Tire Reference';
 const description =
-  'Learn about Tire Reference, our mission, and how we build accurate tire size calculators, fitment tools, and technical tire resources for enthusiasts and everyday drivers.';
+  'Learn about Tire Reference — our mission and how we build accurate tire size calculators, wheel fitment tools and technical tire resources for drivers.';
 
 const schema = buildInfoPageSchema(title, description, '/about', 'About');
 ---
@@ -72,6 +73,12 @@ const schema = buildInfoPageSchema(title, description, '/about', 'About');
           ))}
         </ul>
       </section>
+
+      <TrustDisclosure
+        class="info-section"
+        title="How we research & verify our content"
+        subtitle="Trust comes from transparency. Here is how Tire Reference produces, sources, and reviews the data behind every calculator and guide."
+      />
 
       <p class="info-closing">
         We&apos;re continually expanding Tire Reference with new calculators, comparison tools, and educational resources to help drivers make informed decisions. Have a suggestion? <a href="/contact">Get in touch</a>.

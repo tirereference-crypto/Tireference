@@ -3,11 +3,12 @@
 /* Aligns logo with hero headline “Precision…” (x ≈ 96px on 2048px banner art) */
 .site-header {
   --site-hero-text-inset: calc(100% * 96 / 2048);
+  z-index: var(--z-header);
 }
 
 .site-header__bar {
   width: 100%;
-  max-width: 90rem;
+  max-width: var(--tl-container-max);
   min-height: 4.5rem;
   margin: 0 auto;
   padding: 0.5rem 1rem;
@@ -48,7 +49,7 @@
 
 .site-logo {
   display: block;
-  height: 3.15rem;
+  height: 2.75rem;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -169,7 +170,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 60;
+  z-index: var(--z-nav-panel);
   min-width: 18rem;
   padding-top: 0.375rem;
   background: transparent;
@@ -328,7 +329,7 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 @media (min-width: 640px) {
@@ -362,9 +363,11 @@
 .site-nav__mobile-search-popover {
   position: absolute;
   top: calc(100% + 0.5rem);
-  right: 0;
-  z-index: 70;
-  width: min(20rem, calc(100vw - 2rem));
+  left: 1rem;
+  right: 1rem;
+  z-index: var(--z-popover);
+  width: auto;
+  max-width: none;
   padding: 0.75rem;
   border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: var(--radius-card);
@@ -382,7 +385,10 @@
 }
 
 .site-nav__search-toggle-wrap {
-  position: relative;
+  /* Static so the mobile search popover anchors to the header bar
+     (.site-header__bar is position: relative) and spans the viewport width
+     instead of overflowing off the left edge from the tiny toggle button. */
+  position: static;
 }
 
 .site-nav__search-icon {
@@ -430,7 +436,7 @@
   position: absolute;
   top: calc(100% + 0.375rem);
   right: 0;
-  z-index: 60;
+  z-index: var(--z-nav-panel);
   width: max(100%, 14rem);
   padding: 0.625rem;
   border: 1px solid rgb(255 255 255 / 0.1);
@@ -516,7 +522,7 @@
   position: absolute;
   inset-inline: 0;
   top: 100%;
-  z-index: 50;
+  z-index: var(--z-header);
   border-top: 1px solid rgb(255 255 255 / 0.06);
   background: #0f172a;
 }

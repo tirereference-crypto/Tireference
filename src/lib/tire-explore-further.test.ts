@@ -21,7 +21,7 @@ describe('buildExploreFurtherData', () => {
 
     for (const comparison of data.comparisons) {
       expect(comparison.label).toContain('275/70R18 vs');
-      expect(comparison.comparisonHref).toContain('tire-size-comparison');
+      expect(comparison.comparisonHref).toContain('tire-comparison-calculator');
     }
   });
 

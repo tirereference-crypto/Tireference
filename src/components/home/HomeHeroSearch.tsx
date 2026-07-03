@@ -84,7 +84,7 @@ export default function HomeHeroSearch() {
           name="q"
           type="text"
           className="home-hero__search-input"
-          placeholder="Enter a tire size (e.g. 275/70R18)"
+          placeholder="Search tire size (e.g. 275/70R18)"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           autoComplete="off"

@@ -45,10 +45,10 @@ const relatedSizes = buildSidebarRelatedSizes(
 const insight = getInsightForTire(hub.entry.category, hub.entry.size);
 
 const HUB_CALCULATOR_ICONS: Record<string, HubIconName> = {
-  '/tire-size-calculator': 'calculator',
-  '/tire-size-comparison': 'split-square-vertical',
-  '/tire-diameter-calculator': 'ruler',
-  '/wheel-offset-calculator': 'disc',
+  '/calculators/tire-size-calculator': 'calculator',
+  '/calculators/tire-comparison-calculator': 'split-square-vertical',
+  '/calculators/tire-diameter-calculator': 'ruler',
+  '/calculators/wheel-offset-calculator': 'disc',
   '/calculators/gear-ratio-calculator': 'rotate-cw',
 };
 
@@ -96,7 +96,7 @@ const calculators = SITE_CALCULATORS.map((calc) => ({
 
     <!-- 3. Popular Vehicles -->
     {vehicles.length > 0 && (
-      <div class="hub-sidebar-widget">
+      <div class="hub-sidebar-widget hub-sidebar-widget--vehicles">
         <h3 class="hub-sidebar-widget__title">
           <HubIcon name="vehicles" class="h-3.5 w-3.5 text-primary" />
           Popular Vehicles
@@ -121,7 +121,7 @@ const calculators = SITE_CALCULATORS.map((calc) => ({
 
     <!-- 4. Similar Tire Sizes -->
     {relatedSizes.length > 0 && (
-      <div class="hub-sidebar-widget">
+      <div class="hub-sidebar-widget hub-sidebar-widget--similar">
         <h3 class="hub-sidebar-widget__title">
           <HubIcon name="related" class="h-3.5 w-3.5 text-primary" />
           Similar Tire Sizes

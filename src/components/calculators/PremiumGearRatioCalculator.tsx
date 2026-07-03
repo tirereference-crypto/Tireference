@@ -98,10 +98,10 @@ function RelatedIcon({ name }: { name: string }) {
 }
 
 const RELATED_ICON_BY_HREF: Record<string, string> = {
-  '/tire-size-calculator': 'size',
-  '/tire-size-comparison': 'compare',
-  '/tire-diameter-calculator': 'diameter',
-  '/wheel-offset-calculator': 'offset',
+  '/calculators/tire-size-calculator': 'size',
+  '/calculators/tire-comparison-calculator': 'compare',
+  '/calculators/tire-diameter-calculator': 'diameter',
+  '/calculators/wheel-offset-calculator': 'offset',
   '/calculators/gear-ratio-calculator': 'gear',
 };
 
@@ -396,7 +396,7 @@ export default function PremiumGearRatioCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/tire-size-calculator">Calculators</a>
+            <a href="/calculators/tire-size-calculator">Calculators</a>
             <span>/</span>
             <span>Gear Ratio Calculator</span>
           </nav>
@@ -556,7 +556,7 @@ export default function PremiumGearRatioCalculator({
                           ? `You lose only ${result.gearingLossPct.toFixed(1)}% effective gearing. Keep your ${formatRatio(result.input.stockGearRatio)} gears and enjoy the new tires.`
                           : `You lose about ${result.gearingLossPct.toFixed(1)}% effective gearing. A regear to ${formatRatio(result.idealGear)} restores daily response, or ${formatRatio(result.performanceGear)} for towing and trails.`}
                       </p>
-                      <a className="wof-verdict__notes-btn" href="/tire-size-comparison">
+                      <a className="wof-verdict__notes-btn" href="/calculators/tire-comparison-calculator">
                         Compare Tire Sizes
                       </a>
                     </div>

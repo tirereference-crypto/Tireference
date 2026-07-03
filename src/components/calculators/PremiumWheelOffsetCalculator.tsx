@@ -121,9 +121,9 @@ function GuideIcon({ tone }: { tone: string }) {
 }
 
 const RELATED_ICON_BY_HREF: Record<string, string> = {
-  '/tire-size-calculator': 'size',
-  '/tire-size-comparison': 'compare',
-  '/tire-diameter-calculator': 'diameter',
+  '/calculators/tire-size-calculator': 'size',
+  '/calculators/tire-comparison-calculator': 'compare',
+  '/calculators/tire-diameter-calculator': 'diameter',
   '/calculators/gear-ratio-calculator': 'gear',
 };
 
@@ -249,7 +249,7 @@ export default function PremiumWheelOffsetCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/tire-size-calculator">Calculators</a>
+            <a href="/calculators/tire-size-calculator">Calculators</a>
             <span>/</span>
             <span>Wheel Offset Calculator</span>
           </nav>
@@ -393,7 +393,7 @@ export default function PremiumWheelOffsetCalculator({
                             ? `The new wheel pokes ${comparison.outerPositionChangeMm.toFixed(0)} mm farther outward. Check fender lip clearance at ride height and under compression.`
                             : `Offset changed by ${formatSignedMm(comparison.offsetDifferenceMm)} with ${formatSignedMm(comparison.trackWidthChangeMm)} track width impact. Confirm fitment on your exact vehicle before driving.`}
                       </p>
-                      <a className="wof-verdict__notes-btn" href="/tire-size-comparison">
+                      <a className="wof-verdict__notes-btn" href="/calculators/tire-comparison-calculator">
                         How To Check Fitment
                       </a>
                     </div>
@@ -524,7 +524,7 @@ export default function PremiumWheelOffsetCalculator({
           </div>
 
           <aside className="cmp-sidebar-right wof-sidebar-right" aria-label="Fitment guides">
-            <section className="cmp-panel wof-sidebar-panel">
+            <section className="cmp-panel wof-sidebar-panel wof-sidebar-panel--guide">
               <h2 className="cmp-panel__title">Fitment Quick Guide</h2>
               <ul className="wof-guide-list">
                 {FITMENT_QUICK_GUIDE.map((item) => (
@@ -541,13 +541,13 @@ export default function PremiumWheelOffsetCalculator({
               </ul>
             </section>
 
-            <section className="cmp-panel wof-sidebar-panel">
+            <section className="cmp-panel wof-sidebar-panel wof-sidebar-panel--vehicles">
               <h2 className="cmp-panel__title">Popular Vehicle Offsets</h2>
               <ul className="wof-vehicle-list">
                 {VEHICLE_OFFSET_PRESETS.map((group) => (
                   <li key={group.vehicle} className="wof-vehicle-list__item">
                     <div className="wof-vehicle-row wof-vehicle-row--static">
-                      <img className="wof-vehicle-row__img" src={group.image} alt="" decoding="async" loading="lazy" />
+                      <img className="wof-vehicle-row__img" src={group.image} alt="" width={52} height={36} decoding="async" loading="lazy" />
                       <span className="wof-vehicle-row__body">
                         <span className="wof-vehicle-row__name">{group.vehicle}</span>
                       </span>
@@ -570,7 +570,7 @@ export default function PremiumWheelOffsetCalculator({
               </ul>
             </section>
 
-            <section className="cmp-panel wof-sidebar-panel">
+            <section className="cmp-panel wof-sidebar-panel wof-sidebar-panel--related">
               <h2 className="cmp-panel__title">Related Calculators</h2>
               <div className="wof-sidebar-calc__list">
                 {RELATED_CALCULATOR_LINKS.map((link) => (

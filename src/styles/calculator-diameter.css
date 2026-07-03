@@ -260,14 +260,8 @@
 }
 
 @media (max-width: 767px) {
-  .dia-presets--main {
-    order: 3;
-  }
-
-  .dia-discovery {
-    order: 2;
-  }
-
+  /* Quick Diameter Presets → horizontally scrollable chip row with snapping
+     and a hidden scrollbar. (Section ordering lives in mobile-responsive.css.) */
   .dia-presets__grid {
     display: flex;
     overflow-x: auto;
@@ -275,10 +269,17 @@
     gap: 0.625rem;
     padding-bottom: 0.25rem;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .dia-presets__grid::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
   }
 
   .dia-preset-card {
-    flex: 0 0 9.5rem;
+    flex: 0 0 auto;
+    min-width: 120px;
+    max-width: 140px;
     scroll-snap-align: start;
   }
 }

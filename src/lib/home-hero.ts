@@ -53,7 +53,7 @@ export function buildHomeHeroStats(size: string = HOME_HERO_DEMO_SIZE): HomeHero
 /** Route calculator/guide queries; returns null when input should be handled as a tire size. */
 export function resolveNonTireHomeSearch(query: string): string | null {
   const trimmed = query.trim();
-  if (!trimmed) return '/tire-size-calculator';
+  if (!trimmed) return '/calculators/tire-size-calculator';
 
   const normalized = trimmed.toLowerCase();
 
@@ -93,7 +93,7 @@ function resolveTireSizeSearch(size: string): string {
 /** Route a homepage search query to the best matching destination. */
 export function resolveHomeSearch(query: string): string {
   const trimmed = query.trim();
-  if (!trimmed) return '/tire-size-calculator';
+  if (!trimmed) return '/calculators/tire-size-calculator';
 
   const nonTire = resolveNonTireHomeSearch(trimmed);
   if (nonTire) return nonTire;
@@ -116,25 +116,25 @@ export const HOME_QUICK_ACTIONS = [
   {
     title: 'Size Calculator',
     description: 'Convert tire size into diameter, width, and revs per mile',
-    href: '/tire-size-calculator',
+    href: '/calculators/tire-size-calculator',
     icon: 'size' as const,
   },
   {
     title: 'Comparison',
     description: 'Compare two tire sizes side by side',
-    href: '/tire-size-comparison',
+    href: '/calculators/tire-comparison-calculator',
     icon: 'compare' as const,
   },
   {
     title: 'Diameter Calculator',
     description: 'Calculate diameter, circumference and revolutions per mile',
-    href: '/tire-diameter-calculator',
+    href: '/calculators/tire-diameter-calculator',
     icon: 'diameter' as const,
   },
   {
     title: 'Wheel Offset',
     description: 'Calculate offset, backspacing and clearance',
-    href: '/wheel-offset-calculator',
+    href: '/calculators/wheel-offset-calculator',
     icon: 'offset' as const,
   },
   {

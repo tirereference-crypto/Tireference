@@ -15,25 +15,25 @@ export const SITE_CALCULATORS: readonly CalculatorLink[] = [
   {
     label: 'Tire Size Calculator',
     description: 'Convert metric tire size into diameter, width, and revolutions per mile',
-    href: '/tire-size-calculator',
+    href: '/calculators/tire-size-calculator',
     icon: 'size',
   },
   {
     label: 'Tire Comparison Calculator',
     description: 'Compare two tire sizes with fitment score and diameter change',
-    href: '/tire-size-comparison',
+    href: '/calculators/tire-comparison-calculator',
     icon: 'compare',
   },
   {
     label: 'Tire Diameter Calculator',
     description: 'Reverse-search tire sizes by target overall diameter',
-    href: '/tire-diameter-calculator',
+    href: '/calculators/tire-diameter-calculator',
     icon: 'diameter',
   },
   {
     label: 'Wheel Offset Calculator',
     description: 'Compare offset, poke, and clearance before buying wheels',
-    href: '/wheel-offset-calculator',
+    href: '/calculators/wheel-offset-calculator',
     icon: 'offset',
   },
   {

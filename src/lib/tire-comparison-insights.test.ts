@@ -68,7 +68,7 @@ describe('buildComparisonInsights', () => {
       getTireSpecs(sizeB),
     );
 
-    expect(['Excellent Upgrade', 'Good Upgrade', 'Acceptable Fit', 'Requires Modifications', 'Not Recommended']).toContain(
+    expect(['Excellent Upgrade', 'Good Upgrade', 'Consider Carefully', 'Not Recommended']).toContain(
       insights.quickVerdict.label,
     );
     expect(insights.quickVerdict.tone).toMatch(/green|yellow|orange|red/);
@@ -92,5 +92,73 @@ describe('buildComparisonInsights', () => {
 
     expect(a.seo.whatChanges).not.toBe(b.seo.whatChanges);
     expect(a.seo.faqs[0].answer).not.toBe(b.seo.faqs[0].answer);
+  });
+
+  it('pros/cons never contradict the computed dimensional direction', () => {
+    const pairs: [string, string][] = [
+      ['225/45R17', '235/40R18'], // taller + wider
+      ['235/40R18', '225/45R17'], // shorter + narrower
+      ['275/70R18', '285/75R18'], // truck, taller
+      ['265/70R17', '245/70R16'], // smaller diameter
+    ];
+
+    for (const [a, b] of pairs) {
+      const specsA = getTireSpecs(a);
+      const specsB = getTireSpecs(b);
+      const insights = buildComparisonInsights(a, b, compareTires(a, b, 60), specsA, specsB);
+      const pros = insights.personality.pros.join(' | ');
+      const cons = insights.personality.cons.join(' | ');
+
+      const larger = specsB.overallDiameterIn > specsA.overallDiameterIn + 0.05;
+      const smaller = specsB.overallDiameterIn < specsA.overallDiameterIn - 0.05;
+      const wider = specsB.widthMm > specsA.widthMm + 3;
+      const narrower = specsB.widthMm < specsA.widthMm - 3;
+
+      if (larger) expect(cons).not.toContain('Less ground clearance');
+      if (smaller) expect(pros).not.toContain('More ground clearance');
+      if (wider) expect(cons).not.toContain('Smaller contact patch');
+      if (narrower) expect(pros).not.toContain('Larger contact patch');
+    }
+  });
+
+  it('does not recommend overlanding or off-road for performance-class tires', () => {
+    const a = '205/40R17';
+    const b = '225/45R18';
+    const insights = buildComparisonInsights(
+      a,
+      b,
+      compareTires(a, b, 60),
+      getTireSpecs(a),
+      getTireSpecs(b),
+    );
+
+    expect(insights.quickVerdict.bestFor).not.toContain('Overlanding');
+    expect(insights.quickVerdict.bestFor).not.toContain('Off-Road Builds');
+    expect(insights.quickVerdict.bestFor).not.toContain('Towing');
+  });
+
+  it('verdict label and recommendation label agree and follow score bands', () => {
+    const a = '225/45R17';
+    const b = '235/40R18';
+    const insights = buildComparisonInsights(
+      a,
+      b,
+      compareTires(a, b, 60),
+      getTireSpecs(a),
+      getTireSpecs(b),
+    );
+
+    const s = insights.fitmentScore;
+    const expected =
+      s >= 9.5
+        ? 'Excellent Upgrade'
+        : s >= 8
+          ? 'Good Upgrade'
+          : s >= 6
+            ? 'Consider Carefully'
+            : 'Not Recommended';
+
+    expect(insights.quickVerdict.label).toBe(expected);
+    expect(insights.recommendationLabel).toBe(expected);
   });
 });

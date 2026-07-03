@@ -1,13 +1,14 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import PremiumTireDiameterCalculator from '../components/calculators/PremiumTireDiameterCalculator';
+import Layout from '../../layouts/Layout.astro';
+import PremiumTireDiameterCalculator from '../../components/calculators/PremiumTireDiameterCalculator';
 import {
   WHEEL_DIAMETER_OPTIONS,
   type WheelDiameterOption,
-} from '../lib/tire-diameter-search';
-import { DIAMETER_FAQS } from '../lib/tire-diameter-insights';
-import { SEO_DESCRIPTIONS } from '../lib/seo/constants';
-import { buildPageSchema, calculatorBreadcrumbs } from '../lib/seo/page-schemas';
+} from '../../lib/tire-diameter-search';
+import { DIAMETER_FAQS } from '../../lib/tire-diameter-insights';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
+import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
 
 const diameterParam = Astro.url.searchParams.get('diameter');
 const wheelParam = Astro.url.searchParams.get('wheel');
@@ -20,8 +21,8 @@ const validWheels = WHEEL_DIAMETER_OPTIONS as readonly number[];
 const initialWheel = (validWheels.includes(parsedWheel) ? parsedWheel : 18) as WheelDiameterOption;
 
 const rounded = Math.round(initialDiameter);
-const title = 'Tire Diameter Calculator';
-const description = SEO_DESCRIPTIONS.calculator;
+const title = 'Tire Diameter Calculator – Find Sizes';
+const description = SEO_DESCRIPTIONS.diameterCalculator;
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Tire Diameter Calculator'),
@@ -32,7 +33,7 @@ const schema = buildPageSchema({
 <Layout
   title={title}
   description={description}
-  canonical="/tire-diameter-calculator"
+  canonical="/calculators/tire-diameter-calculator"
   schema={schema}
 >
   <PremiumTireDiameterCalculator
@@ -40,4 +41,10 @@ const schema = buildPageSchema({
     initialDiameter={initialDiameter}
     initialWheel={initialWheel}
   />
+  <div class="tl-container pb-10 lg:pb-14">
+    <TrustDisclosure
+      title="How our calculators work"
+      subtitle="Diameter matches are computed from standardized tire-geometry formulas and reviewed for accuracy — here is our methodology, data sources, and editorial process."
+    />
+  </div>
 </Layout>

@@ -1,0 +1,37 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PremiumTireSizeCalculator from '../../components/calculators/PremiumTireSizeCalculator';
+import {
+  SEO_DESCRIPTIONS,
+} from '../../lib/seo/constants';
+import {
+  buildPageSchema,
+  calculatorBreadcrumbs,
+} from '../../lib/seo/page-schemas';
+import { TIRE_SIZE_CALCULATOR_FAQS } from '../../lib/tire-size-calculator-faqs';
+import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
+
+const size = Astro.url.searchParams.get('size') ?? undefined;
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Tire Size Calculator'),
+  faqs: [...TIRE_SIZE_CALCULATOR_FAQS],
+});
+---
+
+<Layout
+  title="Tire Size Calculator – Specs & Diameter"
+  description={SEO_DESCRIPTIONS.tireSizeCalculator}
+  canonical="/calculators/tire-size-calculator"
+  schema={schema}
+>
+  <div class="tl-container py-8 lg:py-10">
+    <PremiumTireSizeCalculator client:load initialSize={size} />
+  </div>
+  <div class="tl-container pb-10 lg:pb-14">
+    <TrustDisclosure
+      title="How our calculators work"
+      subtitle="Every result is computed from standardized tire-geometry formulas and reviewed for accuracy — here is our methodology, data sources, and editorial process."
+    />
+  </div>
+</Layout>

@@ -2853,3 +2853,9 @@
   }
 }
 
+/* "Read more" toggle is a mobile-only affordance; hidden on desktop so the
+   Understanding section renders in full (desktop layout unchanged). */
+.cmp-read-more-toggle {
+  display: none;
+}
+

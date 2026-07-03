@@ -35,6 +35,38 @@
   --shadow-card-hover: 0 6px 20px -4px rgb(15 23 42 / 0.12), 0 2px 6px -2px rgb(15 23 42 / 0.06);
 }
 
+/*
+ * Shared structural design tokens (containers + z-index).
+ * These centralize values that were previously duplicated across pages so the
+ * layout stays consistent without altering the existing visual design.
+ */
+:root {
+  /* Primary content container (home, hub, marketing, footer). */
+  --tl-container-max: 90rem; /* 1440px */
+  --tl-container-pad-x: 1rem; /* matches px-4 */
+
+  /* z-index scale — single source of truth for cross-component stacking. */
+  --z-hide: -1;
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 45;
+  --z-header: 50;
+  --z-nav-panel: 60;
+  --z-popover: 70;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --tl-container-pad-x: 1.5rem; /* matches sm:px-6 */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --tl-container-pad-x: 2rem; /* matches lg:px-8 */
+  }
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
@@ -48,6 +80,14 @@
 }
 
 @layer components {
+  /* Standard page container: one max-width + one responsive horizontal padding. */
+  .tl-container {
+    width: 100%;
+    max-width: var(--tl-container-max);
+    margin-inline: auto;
+    padding-inline: var(--tl-container-pad-x);
+  }
+
   .hub-link-card {
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);

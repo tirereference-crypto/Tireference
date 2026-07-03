@@ -14,17 +14,17 @@ describe('resolveHomeSearch', () => {
   });
 
   it('routes flotation tire sizes without hub pages to the calculator', () => {
-    expect(resolveHomeSearch('33x12.50R17')).toBe('/tire-size-calculator?size=33X12.50R17');
-    expect(resolveHomeSearch('35x12.50R20')).toBe('/tire-size-calculator?size=35X12.50R20');
+    expect(resolveHomeSearch('33x12.50R17')).toBe('/calculators/tire-size-calculator?size=33X12.50R17');
+    expect(resolveHomeSearch('35x12.50R20')).toBe('/calculators/tire-size-calculator?size=35X12.50R20');
   });
 
   it('does not misroute tire sizes to the bare calculator', () => {
-    expect(resolveHomeSearch('265/70R17')).not.toBe('/tire-size-calculator');
-    expect(resolveHomeSearch('285/75R16')).not.toBe('/tire-size-calculator');
+    expect(resolveHomeSearch('265/70R17')).not.toBe('/calculators/tire-size-calculator');
+    expect(resolveHomeSearch('285/75R16')).not.toBe('/calculators/tire-size-calculator');
   });
 
   it('routes calculator names to calculator pages', () => {
-    expect(resolveHomeSearch('tire size')).toBe('/tire-size-calculator');
+    expect(resolveHomeSearch('tire size')).toBe('/calculators/tire-size-calculator');
     expect(resolveHomeSearch('gear ratio')).toBe('/calculators/gear-ratio-calculator');
   });
 
