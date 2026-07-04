@@ -1,4 +1,12 @@
 import type { TireSpecs } from './tire-math';
+import {
+  buildAbsoluteAccelerationCopy,
+  buildAbsoluteFuelEconomyCopy,
+  buildAbsoluteGroundClearanceCopy,
+  buildAbsoluteHandlingCopy,
+  buildAbsoluteRideComfortCopy,
+  formatImpactCopy,
+} from './tire-real-world-impact';
 
 export type ImpactBadge = 'BETTER' | 'MODERATE' | 'NEUTRAL' | 'TRADEOFF';
 
@@ -38,8 +46,8 @@ function handlingRating(aspect: number): number {
   return 1;
 }
 
-function fuelEconomyRating(widthMm: number, diameterIn: number): number {
-  return clampRating(5.6 - (diameterIn - 26) * 0.42 - (widthMm - 195) * 0.009);
+function fuelEconomyRating(revsPerMile: number, widthMm: number): number {
+  return clampRating(5.4 - (revsPerMile - 600) * 0.012 - (widthMm - 195) * 0.008);
 }
 
 function offRoadRating(aspect: number, diameterIn: number): number {
@@ -74,28 +82,47 @@ function groundClearanceRating(diameterIn: number): number {
   return 1;
 }
 
-function fuelEconomyCopy(widthMm: number, diameterIn: number): string {
-  if (widthMm >= 285 || diameterIn >= 33.5) {
-    return 'Wider, taller tires increase rolling resistance and unsprung weight.';
-  }
-  if (widthMm >= 255 || diameterIn >= 31.5) {
-    return 'Moderate footprint — expect a small efficiency tradeoff versus narrow OEM sizes.';
-  }
-  return 'Relatively efficient footprint for daily driving.';
+function offRoadCopy(specs: TireSpecs): string {
+  const parts = {
+    measurement: `Overall diameter is ${specs.overallDiameterIn.toFixed(2)}" with a ${specs.sidewallIn.toFixed(2)}" sidewall (${specs.aspectRatio}% aspect).`,
+    engineering:
+      specs.overallDiameterIn >= 32 && specs.aspectRatio >= 65
+        ? `The tall sidewall and diameter provide more air volume for airing down and obstacle clearance.`
+        : `This diameter and aspect profile is sized primarily for on-road use rather than aggressive trail work.`,
+    practical:
+      specs.overallDiameterIn >= 32 && specs.aspectRatio >= 65
+        ? `Trail clearance and sidewall compliance support moderate off-road use when fitment allows.`
+        : `Pavement-oriented sizing — do not expect rock-crawling clearance from diameter alone.`,
+  };
+  return formatImpactCopy(parts);
 }
 
-function groundClearanceCopy(diameterIn: number): string {
-  if (diameterIn >= 33) {
-    return 'Larger overall diameter raises the axle and improves obstacle clearance.';
-  }
-  if (diameterIn >= 31) {
-    return 'Adds useful clearance without extreme lift requirements.';
-  }
-  return 'Limited diameter gain versus common truck and SUV upgrades.';
+function towingCopy(specs: TireSpecs): string {
+  const parts = {
+    measurement: `Section width is ${specs.sectionWidthIn.toFixed(2)}" (${specs.widthMm} mm) at ${specs.overallDiameterIn.toFixed(2)}" overall diameter.`,
+    engineering: `Wider footprints spread load across a larger contact patch; LT-sized widths (${specs.widthMm} mm) typically pair with higher load ratings in this class.`,
+    practical:
+      specs.widthMm >= 265
+        ? `Suitable for light towing when load index and vehicle placard ratings are met.`
+        : `Verify load index against your placard before towing — narrow passenger widths carry less rated capacity.`,
+  };
+  return formatImpactCopy(parts);
+}
+
+function snowCopy(specs: TireSpecs): string {
+  const parts = {
+    measurement: `Section width is ${specs.sectionWidthIn.toFixed(2)}" (${specs.widthMm} mm).`,
+    engineering: `Narrower sections concentrate vehicle weight over a smaller footprint, which can improve bite in deep snow; tread compound and siping dominate winter grip.`,
+    practical:
+      specs.widthMm <= 235
+        ? `Width is favorable for snow channels — still match compound and 3PMSF rating to your climate.`
+        : `Wider footprint may require deeper tread and compound choice for equivalent snow performance.`,
+  };
+  return formatImpactCopy(parts);
 }
 
 export function buildPerformanceImpactCards(specs: TireSpecs): PerformanceImpactCard[] {
-  const { aspectRatio, widthMm, overallDiameterIn } = specs;
+  const { aspectRatio, widthMm, overallDiameterIn, revsPerMile } = specs;
 
   const cards: Array<Omit<PerformanceImpactCard, 'impact'>> = [
     {
@@ -103,58 +130,49 @@ export function buildPerformanceImpactCards(specs: TireSpecs): PerformanceImpact
       title: 'Ride Comfort',
       icon: 'comfort',
       rating: clampRating(rideComfortRating(aspectRatio)),
-      copy:
-        aspectRatio >= 55
-          ? 'More sidewall helps absorb potholes and rough roads.'
-          : 'Shorter sidewalls feel firmer over bumps and expansion joints.',
+      copy: formatImpactCopy(buildAbsoluteRideComfortCopy(specs)),
     },
     {
       id: 'handling',
       title: 'Handling',
       icon: 'handling',
       rating: clampRating(handlingRating(aspectRatio)),
-      copy:
-        aspectRatio <= 55
-          ? 'Lower profile sharpens steering response on pavement.'
-          : 'Taller tires trade some steering precision for comfort.',
+      copy: formatImpactCopy(buildAbsoluteHandlingCopy(specs)),
     },
     {
       id: 'fuel',
       title: 'Fuel Economy',
       icon: 'fuel',
-      rating: clampRating(fuelEconomyRating(widthMm, overallDiameterIn)),
-      copy: fuelEconomyCopy(widthMm, overallDiameterIn),
+      rating: clampRating(fuelEconomyRating(revsPerMile, widthMm)),
+      copy: formatImpactCopy(buildAbsoluteFuelEconomyCopy(specs)),
     },
     {
       id: 'clearance',
       title: 'Ground Clearance',
       icon: 'clearance',
       rating: clampRating(groundClearanceRating(overallDiameterIn)),
-      copy: groundClearanceCopy(overallDiameterIn),
+      copy: formatImpactCopy(buildAbsoluteGroundClearanceCopy(specs)),
     },
     {
       id: 'offroad',
       title: 'Off-Road Capability',
       icon: 'mountain',
       rating: clampRating(offRoadRating(aspectRatio, overallDiameterIn)),
-      copy:
-        overallDiameterIn >= 32 && aspectRatio >= 65
-          ? 'Taller sidewalls and diameter support airing down and trail clearance.'
-          : 'Better suited to pavement than aggressive off-road work.',
+      copy: offRoadCopy(specs),
     },
     {
       id: 'towing',
       title: 'Towing',
       icon: 'towing',
       rating: clampRating(towingRating(widthMm, aspectRatio)),
-      copy: 'Larger truck sizes often pair with stronger constructions.',
+      copy: towingCopy(specs),
     },
     {
       id: 'snow',
       title: 'Snow Performance',
       icon: 'snow',
       rating: clampRating(snowRating(widthMm)),
-      copy: 'Tread compound matters more than size alone.',
+      copy: snowCopy(specs),
     },
   ];
 
@@ -192,17 +210,20 @@ export function buildPerformanceImpactSummary(cards: PerformanceImpactCard[]): s
     .sort((a, b) => a.rating - b.rating)
     .map((card) => SUMMARY_LABELS[card.id]);
 
-  if (strengths.length > 0 && tradeoffs.length > 0) {
-    return `This tire size prioritizes ${joinPhrases(strengths)} while accepting minor tradeoffs in ${joinPhrases(tradeoffs)}.`;
+  const topCard = cards.find((c) => c.rating >= 4);
+  const lowCard = cards.find((c) => c.rating <= 2);
+
+  if (strengths.length > 0 && tradeoffs.length > 0 && topCard && lowCard) {
+    return `${topCard.copy.split('.')[0]}. Relative strengths: ${joinPhrases(strengths)}; tradeoffs: ${joinPhrases(tradeoffs)}.`;
   }
 
-  if (strengths.length > 0) {
-    return `This tire size delivers strong ${joinPhrases(strengths)} with balanced everyday performance.`;
+  if (topCard) {
+    return topCard.copy;
   }
 
-  if (tradeoffs.length > 0) {
-    return `This tire size is balanced across driving characteristics with modest tradeoffs in ${joinPhrases(tradeoffs)}.`;
+  if (lowCard) {
+    return lowCard.copy;
   }
 
-  return 'This tire size offers a balanced mix of comfort, handling, and everyday drivability.';
+  return cards[0]?.copy ?? '';
 }

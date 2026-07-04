@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import '../../styles/calculator-offset.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import {
   FITMENT_IMPACT_TOPICS,
   FITMENT_QUICK_GUIDE,
@@ -17,6 +18,13 @@ import type { WheelSetupFields } from '../../lib/wheel-offset-math';
 import { WheelOffsetFitmentVisual, WheelOffsetTypesExplainer } from './WheelOffsetVisual';
 import { useWheelOffsetCalculator } from './useWheelOffsetCalculator';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import {
+  CALCULATOR_NAMES,
+  trackCalculatorCompletedOnce,
+  useAnalyticsDedupTracker,
+  useCalculatorStarted,
+} from '../../hooks/useCalculatorAnalytics';
+import { trackRelatedCalculatorClick } from '../../lib/analytics';
 
 export interface PremiumWheelOffsetCalculatorProps {
   initialCurrent?: WheelSetupFields;
@@ -121,10 +129,10 @@ function GuideIcon({ tone }: { tone: string }) {
 }
 
 const RELATED_ICON_BY_HREF: Record<string, string> = {
-  '/calculators/tire-size-calculator': 'size',
-  '/calculators/tire-comparison-calculator': 'compare',
-  '/calculators/tire-diameter-calculator': 'diameter',
-  '/calculators/gear-ratio-calculator': 'gear',
+  [CALCULATOR_PATHS.tireSize]: 'size',
+  [CALCULATOR_PATHS.tireComparison]: 'compare',
+  [CALCULATOR_PATHS.tireDiameter]: 'diameter',
+  [CALCULATOR_PATHS.gearRatio]: 'gear',
 };
 
 function WheelInputBlock({
@@ -232,12 +240,26 @@ export default function PremiumWheelOffsetCalculator({
     converterResult,
   } = useWheelOffsetCalculator({ initialCurrent, initialNew });
 
+  useCalculatorStarted(CALCULATOR_NAMES.wheelOffset);
+  const dedupTracker = useAnalyticsDedupTracker();
+
   const handleAnalyze = useCallback(() => {
     analyze();
+    const signature = [
+      currentFields.widthIn,
+      currentFields.diameterIn,
+      currentFields.offsetMm,
+      newFields.widthIn,
+      newFields.diameterIn,
+      newFields.offsetMm,
+    ].join('|');
+    trackCalculatorCompletedOnce(dedupTracker, signature, {
+      calculator_name: CALCULATOR_NAMES.wheelOffset,
+    });
     requestAnimationFrame(() => {
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }, [analyze]);
+  }, [analyze, currentFields, newFields, dedupTracker]);
 
   const stickyVisible = useStickyAnalyzeButton(formRef, resultsRef, { resultsReady: ready });
   useSingleOpenDetails(faqRef);
@@ -249,7 +271,7 @@ export default function PremiumWheelOffsetCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/calculators/tire-size-calculator">Calculators</a>
+            <a href={CALCULATOR_PATHS.tireSize}>Calculators</a>
             <span>/</span>
             <span>Wheel Offset Calculator</span>
           </nav>
@@ -393,7 +415,7 @@ export default function PremiumWheelOffsetCalculator({
                             ? `The new wheel pokes ${comparison.outerPositionChangeMm.toFixed(0)} mm farther outward. Check fender lip clearance at ride height and under compression.`
                             : `Offset changed by ${formatSignedMm(comparison.offsetDifferenceMm)} with ${formatSignedMm(comparison.trackWidthChangeMm)} track width impact. Confirm fitment on your exact vehicle before driving.`}
                       </p>
-                      <a className="wof-verdict__notes-btn" href="/calculators/tire-comparison-calculator">
+                      <a className="wof-verdict__notes-btn" href={CALCULATOR_PATHS.tireComparison}>
                         How To Check Fitment
                       </a>
                     </div>
@@ -574,7 +596,12 @@ export default function PremiumWheelOffsetCalculator({
               <h2 className="cmp-panel__title">Related Calculators</h2>
               <div className="wof-sidebar-calc__list">
                 {RELATED_CALCULATOR_LINKS.map((link) => (
-                  <a key={link.href} href={link.href} className="wof-sidebar-calc__card">
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="wof-sidebar-calc__card"
+                    onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.wheelOffset)}
+                  >
                     <span className="wof-sidebar-calc__icon">
                       <RelatedIcon name={RELATED_ICON_BY_HREF[link.href] ?? 'size'} />
                     </span>

@@ -26,12 +26,12 @@ describe('buildPerformanceImpactCards', () => {
     }
   });
 
-  it('builds an editorial summary from strengths and tradeoffs', () => {
+  it('builds an editorial summary from card copy', () => {
     const specs = getTireSpecs('275/70R18');
     const cards = buildPerformanceImpactCards(specs);
     const summary = buildPerformanceImpactSummary(cards);
 
-    expect(summary.length).toBeGreaterThan(20);
-    expect(summary.endsWith('.')).toBe(true);
+    expect(summary.length).toBeGreaterThan(40);
+    expect(summary).toMatch(/\d/);
   });
 });

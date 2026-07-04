@@ -81,7 +81,7 @@ describe('searchTiresByDiameter', () => {
 describe('comparisonPagePathCurrent', () => {
   it('prefills current tire size only', () => {
     expect(comparisonPagePathCurrent('275/70R18')).toBe(
-      '/calculators/tire-comparison-calculator?current=275%2F70R18',
+      '/calculators/tire-comparison-calculator/?current=275%2F70R18',
     );
   });
 });

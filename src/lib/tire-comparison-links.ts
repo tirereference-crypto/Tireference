@@ -1,9 +1,19 @@
 import { TIRE_SIZES } from '../data/tire-sizes';
+import { fmtDiffWithPct, fmtPct, fmtSigned } from './tire-comparison-format';
 import { getTireSpecs } from './tire-math';
 import { fieldsToTireSizeString, parseFullSizeToFields } from './tire-size-input';
 import { buildTireSizeHubData, getTireSizeEntry } from './tire-size-hub';
 import { getPremiumOverride } from './tire-size-premium-overrides';
 import { isProductionTireSize, normalizeTireSizeKey } from './tire-size-validation';
+import { isValidComparison } from './tire-comparison-validation';
+import {
+  buildDatasetComparisonCandidates,
+  rankComparisonCandidates,
+  type ComparisonCandidateInput,
+  type ComparisonCandidateSource,
+} from './tire-comparison-relevance';
+
+export const POPULAR_COMPARISON_LIMIT = 6;
 
 export interface PopularComparisonLink {
   current: string;
@@ -34,27 +44,13 @@ export const MOST_SEARCHED_COMPARISON_PAIRS: Array<[string, string]> = [
   ['275/70R18', '305/70R18'],
   ['265/70R17', '285/70R17'],
   ['205/55R16', '215/55R17'],
-  ['285/70R17', '285/75R16'],
+  ['285/70R17', '315/70R17'],
   ['275/70R18', '285/70R17'],
-  ['275/65R18', '285/65R20'],
+  ['275/65R18', '285/55R20'],
   ['225/65R17', '235/65R17'],
   ['265/65R18', '275/65R18'],
   ['235/55R18', '245/60R18'],
 ];
-
-function fmtPct(n: number): string {
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(2)}%`;
-}
-
-function fmtSigned(n: number, digits = 2, suffix = '') {
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(digits)}${suffix}`;
-}
-
-function fmtDiffWithPct(signedIn: number, pct: number): string {
-  return `${fmtSigned(signedIn, 2, '"')} (${fmtPct(pct)})`;
-}
 
 export function sizeToComparisonSlug(size: string): string {
   const normalized = size.trim().toUpperCase();
@@ -108,20 +104,22 @@ export function isFieldBackedTireSize(size: string): boolean {
 }
 
 export function isValidComparisonPair(sizeA: string, sizeB: string): boolean {
-  const keyA = normalizeTireSizeKey(sizeA);
-  const keyB = normalizeTireSizeKey(sizeB);
-  if (!keyA || !keyB || keyA === keyB) return false;
-  if (!isProductionTireSize(sizeA) || !isProductionTireSize(sizeB)) return false;
-  if (!isFieldBackedTireSize(sizeA) || !isFieldBackedTireSize(sizeB)) return false;
-  if (!hasTireSizeHubPage(sizeA) || !hasTireSizeHubPage(sizeB)) return false;
+  return isValidComparison(sizeA, sizeB).valid;
+}
 
-  try {
-    getTireSpecs(sizeA);
-    getTireSpecs(sizeB);
-    return true;
-  } catch {
-    return false;
-  }
+/** Drop comparison links whose size pair fails structural validation. */
+export function filterValidPopularComparisons(
+  links: PopularComparisonLink[],
+): PopularComparisonLink[] {
+  return links.filter((link) => isValidComparisonPair(link.current, link.new));
+}
+
+/** Drop labeled comparison items (label: "A vs B") that fail structural validation. */
+export function filterValidComparisonLabels<T extends { label: string }>(items: T[]): T[] {
+  return items.filter((item) => {
+    const [current, newSize] = item.label.split(' vs ');
+    return Boolean(current && newSize && isValidComparisonPair(current, newSize));
+  });
 }
 
 export function buildCuratedPopularComparisons(limit = 6): PopularComparisonLink[] {
@@ -139,7 +137,7 @@ export function buildCuratedPopularComparisons(limit = 6): PopularComparisonLink
     if (links.length >= limit) break;
   }
 
-  return links;
+  return filterValidPopularComparisons(links);
 }
 
 export function parseComparisonSlug(slug: string): { current: string; new: string } | null {
@@ -162,12 +160,12 @@ function fitmentDifficultyLabel(diamPct: number, widthPct: number): UpgradePathD
   return 'Verify Clearance';
 }
 
-function addComparisonCandidate(
-  candidates: PopularComparisonLink[],
+function addComparisonCandidateInput(
+  inputs: ComparisonCandidateInput[],
   seen: Set<string>,
   current: string,
   newSize: string,
-  priority: number,
+  source: ComparisonCandidateSource,
 ): void {
   if (!isValidComparisonPair(current, newSize)) return;
 
@@ -175,62 +173,77 @@ function addComparisonCandidate(
   if (seen.has(key)) return;
   seen.add(key);
 
-  candidates.push({
-    current,
-    new: newSize,
-    label: `${current} vs ${newSize}`,
-    href: comparisonSlugPath(current, newSize),
-    priority,
-  });
+  inputs.push({ target: newSize, sources: [source] });
 }
 
-export function buildPopularComparisonsForSize(sizeA: string): PopularComparisonLink[] {
+function collectComparisonCandidateInputs(sizeA: string): ComparisonCandidateInput[] {
   if (!isProductionTireSize(sizeA) || !hasTireSizeHubPage(sizeA)) return [];
 
   const hub = buildTireSizeHubData(sizeA);
   if (!hub) return [];
 
-  const candidates: PopularComparisonLink[] = [];
+  const inputs: ComparisonCandidateInput[] = [];
   const seen = new Set<string>();
   const baseKey = normalizeTireSizeKey(sizeA);
 
   for (const [a, b] of MOST_SEARCHED_COMPARISON_PAIRS) {
-    if (normalizeTireSizeKey(a) === baseKey) addComparisonCandidate(candidates, seen, a, b, 1);
-    if (normalizeTireSizeKey(b) === baseKey) addComparisonCandidate(candidates, seen, b, a, 1);
+    if (normalizeTireSizeKey(a) === baseKey) addComparisonCandidateInput(inputs, seen, a, b, 'curated');
+    if (normalizeTireSizeKey(b) === baseKey) addComparisonCandidateInput(inputs, seen, b, a, 'curated');
   }
 
   const override = getPremiumOverride(sizeA);
   for (const target of override?.popularComparisons ?? []) {
-    addComparisonCandidate(candidates, seen, sizeA, target, 1);
+    addComparisonCandidateInput(inputs, seen, sizeA, target, 'override');
   }
 
   for (const path of hub.upgradePathsUp) {
-    addComparisonCandidate(candidates, seen, sizeA, path.size, 2);
+    addComparisonCandidateInput(inputs, seen, sizeA, path.size, 'upgrade-up');
   }
 
   for (const path of hub.upgradePathsDown) {
-    addComparisonCandidate(candidates, seen, sizeA, path.size, 3);
+    addComparisonCandidateInput(inputs, seen, sizeA, path.size, 'upgrade-down');
   }
 
   for (const equivalent of hub.equivalents.slice(0, 6)) {
-    addComparisonCandidate(candidates, seen, sizeA, equivalent.size, 4);
+    addComparisonCandidateInput(inputs, seen, sizeA, equivalent.size, 'equivalent');
   }
 
   for (const row of hub.quickComparisons) {
-    addComparisonCandidate(candidates, seen, sizeA, row.size, 5);
+    addComparisonCandidateInput(inputs, seen, sizeA, row.size, 'quick-comparison');
   }
 
   for (const row of hub.performanceAlternatives.slice(0, 4)) {
-    addComparisonCandidate(candidates, seen, sizeA, row.size, 5);
+    addComparisonCandidateInput(inputs, seen, sizeA, row.size, 'performance-alt');
   }
 
   for (const row of hub.offRoadAlternatives.slice(0, 4)) {
-    addComparisonCandidate(candidates, seen, sizeA, row.size, 5);
+    addComparisonCandidateInput(inputs, seen, sizeA, row.size, 'offroad-alt');
   }
 
-  return candidates
-    .sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label))
-    .slice(0, 6);
+  const exclude = new Set(inputs.map((item) => item.target));
+  inputs.push(...buildDatasetComparisonCandidates(sizeA, hub.entry.category, exclude));
+
+  return inputs;
+}
+
+export function buildPopularComparisonsForSize(
+  sizeA: string,
+  limit = POPULAR_COMPARISON_LIMIT,
+): PopularComparisonLink[] {
+  const inputs = collectComparisonCandidateInputs(sizeA);
+  if (inputs.length === 0) return [];
+
+  const ranked = rankComparisonCandidates(sizeA, inputs, limit);
+
+  return filterValidPopularComparisons(
+    ranked.map((item, index) => ({
+      current: sizeA,
+      new: item.target,
+      label: `${sizeA} vs ${item.target}`,
+      href: comparisonSlugPath(sizeA, item.target),
+      priority: index + 1,
+    })),
+  );
 }
 
 export function buildUpgradePathsFromDatabase(sizeA: string): UpgradePathsData | null {

@@ -6,11 +6,11 @@ import type {
   GearVerdictTone,
   GearImpactRow,
 } from './gear-ratio-math';
-import { getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
+import { CALCULATOR_PATHS, getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
 
 export type { RelatedCalculatorItem };
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/calculators/gear-ratio-calculator');
+export const RELATED_CALCULATOR_LINKS = getRelatedCalculators(CALCULATOR_PATHS.gearRatio);
 
 export interface GearFaq {
   question: string;

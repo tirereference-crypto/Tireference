@@ -2,7 +2,7 @@
 import HubIcon from './HubIcon.astro';
 import HubSidebarUpgrades from './HubSidebarUpgrades.astro';
 import HubSidebarInsight from './HubSidebarInsight.astro';
-import { SITE_CALCULATORS } from '../../lib/calculator-links';
+import { CALCULATOR_PATHS, SITE_CALCULATORS } from '../../lib/calculator-links';
 import type { HubIconName } from '../../lib/hub-icons';
 import type { PremiumUpgradeCard } from '../../lib/tire-size-275-premium';
 import type { TireSizeHubData } from '../../lib/tire-size-hub';
@@ -45,11 +45,11 @@ const relatedSizes = buildSidebarRelatedSizes(
 const insight = getInsightForTire(hub.entry.category, hub.entry.size);
 
 const HUB_CALCULATOR_ICONS: Record<string, HubIconName> = {
-  '/calculators/tire-size-calculator': 'calculator',
-  '/calculators/tire-comparison-calculator': 'split-square-vertical',
-  '/calculators/tire-diameter-calculator': 'ruler',
-  '/calculators/wheel-offset-calculator': 'disc',
-  '/calculators/gear-ratio-calculator': 'rotate-cw',
+  [CALCULATOR_PATHS.tireSize]: 'calculator',
+  [CALCULATOR_PATHS.tireComparison]: 'split-square-vertical',
+  [CALCULATOR_PATHS.tireDiameter]: 'ruler',
+  [CALCULATOR_PATHS.wheelOffset]: 'disc',
+  [CALCULATOR_PATHS.gearRatio]: 'rotate-cw',
 };
 
 const calculators = SITE_CALCULATORS.map((calc) => ({

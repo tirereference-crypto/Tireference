@@ -8,16 +8,19 @@ describe('getActiveNavItem', () => {
   });
 
   it('marks calculator pages', () => {
+    expect(getActiveNavItem('/calculators/tire-size-calculator/')).toBe('calculators');
     expect(getActiveNavItem('/calculators/tire-size-calculator')).toBe('calculators');
-    expect(getActiveNavItem('/calculators/gear-ratio-calculator')).toBe('calculators');
+    expect(getActiveNavItem('/calculators/gear-ratio-calculator/')).toBe('calculators');
   });
 
   it('marks comparison pages', () => {
+    expect(getActiveNavItem('/calculators/tire-comparison-calculator/')).toBe('compare');
     expect(getActiveNavItem('/calculators/tire-comparison-calculator')).toBe('compare');
     expect(getActiveNavItem('/compare/275-70-r18-vs-305-70-r18')).toBe('compare');
   });
 
   it('marks fitment pages', () => {
+    expect(getActiveNavItem('/calculators/wheel-offset-calculator/')).toBe('fitment');
     expect(getActiveNavItem('/calculators/wheel-offset-calculator')).toBe('fitment');
   });
 

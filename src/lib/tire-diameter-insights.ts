@@ -9,12 +9,13 @@ import {
 import {
   comparisonSlugPath,
   buildCuratedPopularComparisons,
+  filterValidComparisonLabels,
   isValidComparisonPair,
   MOST_SEARCHED_COMPARISON_PAIRS,
 } from './tire-comparison-links';
 import { hubPagePath } from './tire-size-url';
 import { getTireSpecs } from './tire-math';
-import { getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
+import { CALCULATOR_PATHS, calculatorPathWithQuery, getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
 
 export type { RelatedCalculatorItem };
 
@@ -129,11 +130,11 @@ export function diameterLandingHref(
     diameter: String(diameterIn),
     wheel: String(wheelIn),
   });
-  return `/calculators/tire-diameter-calculator?${params.toString()}`;
+  return calculatorPathWithQuery(CALCULATOR_PATHS.tireDiameter, params);
 }
 
-export const POPULAR_COMPARISONS: PopularComparisonItem[] = buildCuratedPopularComparisons(6).map(
-  ({ label, href }) => ({ label, href }),
+export const POPULAR_COMPARISONS: PopularComparisonItem[] = filterValidComparisonLabels(
+  buildCuratedPopularComparisons(6).map(({ label, href }) => ({ label, href })),
 );
 
 export function tireMatchesDiameterSearch(
@@ -215,12 +216,12 @@ export function buildPopularComparisonsForDiameterSearch(
     };
   });
 
-  if (curated.length >= limit) return curated;
+  if (curated.length >= limit) return filterValidComparisonLabels(curated);
 
-  return [
+  return filterValidComparisonLabels([
     ...curated,
     ...buildMatchDerivedComparisons(params, limit - curated.length, seen),
-  ];
+  ]);
 }
 
 /** Popular hub-linked sizes closest to a target diameter (cross-wheel, for internal linking). */
@@ -247,7 +248,7 @@ export function buildPopularSizesNearDiameter(
     }));
 }
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/calculators/tire-diameter-calculator');
+export const RELATED_CALCULATOR_LINKS = getRelatedCalculators(CALCULATOR_PATHS.tireDiameter);
 
 export const DIAMETER_FAQS: DiameterFaq[] = [
   {

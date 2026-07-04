@@ -1,3 +1,5 @@
+import { CALCULATOR_PATHS } from './calculator-links';
+
 export const CONTACT_EMAIL = 'tirereference@gmail.com';
 
 export const ABOUT_BUILD_CARDS = [
@@ -5,31 +7,31 @@ export const ABOUT_BUILD_CARDS = [
     title: 'Tire Size Calculator',
     description:
       'Convert metric tire codes into overall diameter, section width, sidewall height, circumference, and revolutions per mile.',
-    href: '/calculators/tire-size-calculator',
+    href: CALCULATOR_PATHS.tireSize,
   },
   {
     title: 'Tire Comparison Calculator',
     description:
       'Compare two tire sizes side by side with diameter change, speedometer impact, and fitment guidance.',
-    href: '/calculators/tire-comparison-calculator',
+    href: CALCULATOR_PATHS.tireComparison,
   },
   {
     title: 'Wheel Offset Calculator',
     description:
       'Model offset, poke, backspacing, and clearance before committing to a new wheel setup.',
-    href: '/calculators/wheel-offset-calculator',
+    href: CALCULATOR_PATHS.wheelOffset,
   },
   {
     title: 'Gear Ratio Calculator',
     description:
       'Estimate how a taller or shorter tire changes effective gearing, cruise RPM, and regear needs.',
-    href: '/calculators/gear-ratio-calculator',
+    href: CALCULATOR_PATHS.gearRatio,
   },
   {
-    title: 'Speedometer Calculator',
+    title: 'Tire Diameter Calculator',
     description:
-      'See how a tire size change affects indicated speed versus true road speed using our comparison tools.',
-    href: '/calculators/tire-comparison-calculator',
+      'Measure overall diameter from width, aspect ratio, and wheel size — includes speedometer error from circumference change.',
+    href: CALCULATOR_PATHS.tireDiameter,
   },
   {
     title: 'Fitment Resources',

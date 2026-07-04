@@ -15,14 +15,14 @@ const schema = buildPageSchema({
 <Layout
   title="Gear Ratio Calculator – Tire Size & RPM"
   description={SEO_DESCRIPTIONS.gearRatioCalculator}
-  canonical="/calculators/gear-ratio-calculator"
+  canonical="/calculators/gear-ratio-calculator/"
   schema={schema}
 >
   <PremiumGearRatioCalculator client:load />
   <div class="tl-container pb-10 lg:pb-14">
     <TrustDisclosure
       title="How our calculators work"
-      subtitle="Gear-ratio and RPM results are computed from standardized tire-geometry formulas and reviewed for accuracy — here is our methodology, data sources, and editorial process."
+      subtitle="RPM and effective gearing use rolling circumference from parsed tire specs — methodology, data sources, and validation steps below."
     />
   </div>
 </Layout>

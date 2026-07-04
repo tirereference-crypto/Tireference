@@ -1,5 +1,6 @@
 ---
 import SiteLogo from './SiteLogo.astro';
+import { SITE_CALCULATORS } from '../lib/calculator-links';
 import {
   FOOTER_COMPANY_LINKS,
   FOOTER_LEGAL_LINKS,
@@ -8,11 +9,10 @@ import { SITE_NAME, SITE_TAGLINE } from '../lib/site-brand';
 
 const calculatorLinks = [
   { label: 'Tire Sizes Index', href: '/tire-sizes' },
-  { label: 'Tire Size Calculator', href: '/calculators/tire-size-calculator' },
-  { label: 'Tire Size Comparison', href: '/calculators/tire-comparison-calculator' },
-  { label: 'Tire Diameter Calculator', href: '/calculators/tire-diameter-calculator' },
-  { label: 'Wheel Offset Calculator', href: '/calculators/wheel-offset-calculator' },
-  { label: 'Gear Ratio Calculator', href: '/calculators/gear-ratio-calculator' },
+  ...SITE_CALCULATORS.map((calc) => ({
+    label: calc.label,
+    href: calc.href,
+  })),
 ];
 ---
 

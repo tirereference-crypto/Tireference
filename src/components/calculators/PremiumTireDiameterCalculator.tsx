@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/calculator-diameter.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import {
   ABOUT_DIAMETER_AFFECTS,
   buildPopularComparisonsForDiameterSearch,
@@ -34,6 +35,14 @@ import { comparisonPagePathCurrent, tireSizeCalculatorPath } from '../../lib/tir
 import { DiameterVsWheelVisual } from './DiameterVsWheelVisual';
 import { MeasureDiameterVisual } from './MeasureDiameterVisual';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import {
+  CALCULATOR_NAMES,
+  trackCalculatorCompletedOnce,
+  useAnalyticsDedupTracker,
+  useCalculatorStarted,
+  useUserInteractionFlag,
+} from '../../hooks/useCalculatorAnalytics';
+import { trackRelatedCalculatorClick } from '../../lib/analytics';
 
 export interface PremiumTireDiameterCalculatorProps {
   initialDiameter?: number;
@@ -493,6 +502,10 @@ export default function PremiumTireDiameterCalculator({
   const resultsRef = useRef<HTMLDivElement>(null);
   const faqRef = useRef<HTMLElement>(null);
 
+  useCalculatorStarted(CALCULATOR_NAMES.tireDiameter);
+  const { markInteracted, interacted } = useUserInteractionFlag();
+  const dedupTracker = useAnalyticsDedupTracker();
+
   const targetDiameterIn = useMemo(() => {
     const parsed = Number(diameterInput);
     if (!Number.isFinite(parsed) || parsed <= 0) return null;
@@ -576,9 +589,18 @@ export default function PremiumTireDiameterCalculator({
   }, []);
 
   const runSearch = useCallback(() => {
+    markInteracted();
     setHasSearched(true);
     scrollToResults();
-  }, [scrollToResults]);
+  }, [markInteracted, scrollToResults]);
+
+  useEffect(() => {
+    if (!interacted || !targetDiameterIn || !hasSearched) return;
+    const signature = `${targetDiameterIn}|${wheelDiameter}|${tolerance}`;
+    trackCalculatorCompletedOnce(dedupTracker, signature, {
+      calculator_name: CALCULATOR_NAMES.tireDiameter,
+    });
+  }, [interacted, targetDiameterIn, wheelDiameter, tolerance, hasSearched, dedupTracker]);
 
   useEffect(() => {
     if (!targetDiameterIn) return;
@@ -587,12 +609,13 @@ export default function PremiumTireDiameterCalculator({
 
   const applyPreset = useCallback(
     (diameterIn: number) => {
+      markInteracted();
       setDiameterInput(String(diameterIn));
       setDiameterUnit('imperial');
       setHasSearched(true);
       scrollToResults();
     },
-    [scrollToResults],
+    [markInteracted, scrollToResults],
   );
 
   const hasResults = Boolean(searchResult && searchResult.matches.length > 0);
@@ -606,7 +629,7 @@ export default function PremiumTireDiameterCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/calculators/tire-size-calculator">Calculators</a>
+            <a href={CALCULATOR_PATHS.tireSize}>Calculators</a>
             <span>/</span>
             <span>Tire Diameter Calculator</span>
           </nav>
@@ -675,21 +698,30 @@ export default function PremiumTireDiameterCalculator({
                       min={1}
                       step={0.1}
                       value={diameterInput}
-                      onChange={(e) => setDiameterInput(e.target.value)}
+                      onChange={(e) => {
+                        markInteracted();
+                        setDiameterInput(e.target.value);
+                      }}
                       placeholder="33"
                     />
                     <div className="dia-unit-toggle" role="group" aria-label="Diameter unit">
                       <button
                         type="button"
                         className={`dia-unit-toggle__btn ${diameterUnit === 'imperial' ? 'dia-unit-toggle__btn--active' : ''}`}
-                        onClick={() => setDiameterUnit('imperial')}
+                        onClick={() => {
+                          markInteracted();
+                          setDiameterUnit('imperial');
+                        }}
                       >
                         in
                       </button>
                       <button
                         type="button"
                         className={`dia-unit-toggle__btn ${diameterUnit === 'metric' ? 'dia-unit-toggle__btn--active' : ''}`}
-                        onClick={() => setDiameterUnit('metric')}
+                        onClick={() => {
+                          markInteracted();
+                          setDiameterUnit('metric');
+                        }}
                       >
                         cm
                       </button>
@@ -708,7 +740,10 @@ export default function PremiumTireDiameterCalculator({
                         id="dia-wheel"
                         className="h-14 w-full rounded-xl border border-border bg-white px-4 text-base font-semibold text-heading transition-all duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                         value={wheelDiameter}
-                        onChange={(e) => setWheelDiameter(Number(e.target.value) as WheelDiameterOption)}
+                        onChange={(e) => {
+                          markInteracted();
+                          setWheelDiameter(Number(e.target.value) as WheelDiameterOption);
+                        }}
                       >
                         {WHEEL_DIAMETER_OPTIONS.map((wheel) => (
                           <option key={wheel} value={wheel}>
@@ -736,7 +771,10 @@ export default function PremiumTireDiameterCalculator({
                               ? 'border-transparent bg-gradient-to-br from-primary to-primary-hover text-white shadow-[0_4px_14px_rgb(91_79_230/0.35)]'
                               : 'border-border bg-white text-body hover:border-primary hover:bg-primary-light'
                           }`}
-                          onClick={() => setTolerance(option)}
+                          onClick={() => {
+                            markInteracted();
+                            setTolerance(option);
+                          }}
                         >
                           ±{option}&quot;
                         </button>
@@ -890,7 +928,12 @@ export default function PremiumTireDiameterCalculator({
               <h2 className="cmp-panel__title">Related Calculators</h2>
               <div className="dia-sidebar-calc__list">
                 {RELATED_CALCULATOR_LINKS.map((link) => (
-                  <a key={link.href} href={link.href} className="dia-sidebar-calc__card">
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="dia-sidebar-calc__card"
+                    onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.tireDiameter)}
+                  >
                     <p className="dia-sidebar-calc__title">{link.label}</p>
                     <p className="dia-sidebar-calc__desc">{link.description}</p>
                   </a>

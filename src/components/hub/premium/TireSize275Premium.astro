@@ -1,4 +1,5 @@
 ---
+import { CALCULATOR_PATHS } from '../../../lib/calculator-links';
 import HubBreadcrumb from '../HubBreadcrumb.astro';
 import CompareThisSize from './CompareThisSize';
 import Premium275Hero from './Premium275Hero.astro';
@@ -61,7 +62,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
           <HubIcon name="split-square-vertical" class="ref-quick-action__icon" />
           <span>Compare</span>
         </a>
-        <a href="/calculators/tire-size-calculator" class="ref-quick-action">
+        <a href={CALCULATOR_PATHS.tireSize} class="ref-quick-action">
           <HubIcon name="calculator" class="ref-quick-action__icon" />
           <span>Calculator</span>
         </a>

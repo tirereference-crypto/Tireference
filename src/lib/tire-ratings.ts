@@ -61,7 +61,7 @@ function kmhToMph(kmh: number): number {
 }
 
 /** Parse the primary (single-application) index from "123/120" or "91". */
-function parsePrimaryLoadIndex(loadIndex: string): number | null {
+export function parsePrimaryLoadIndex(loadIndex: string): number | null {
   const first = loadIndex.split('/')[0]?.trim();
   const value = Number(first);
   return Number.isFinite(value) ? value : null;

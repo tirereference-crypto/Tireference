@@ -12,12 +12,20 @@ import { buildPerformanceImpactCards, buildPerformanceImpactSummary } from '../.
 import { comparisonPagePath, hubPagePath } from '../../lib/tire-size-url';
 import { metricToFlotation } from '../../lib/tire-math';
 import type { TireSpecs } from '../../lib/tire-math';
-import { getRelatedCalculatorLinks } from '../../lib/calculator-links';
+import { CALCULATOR_PATHS, getRelatedCalculatorLinks } from '../../lib/calculator-links';
 import { TIRE_SIZE_CALCULATOR_FAQS } from '../../lib/tire-size-calculator-faqs';
 import { ExploreTireSizeFurtherSection } from './ExploreTireSizeFurtherSection';
 import { TireSizeValidationBanner } from './TireSizeValidationBanner';
 import { useTireSizeCalculator } from './useTireSizeCalculator';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import {
+  CALCULATOR_NAMES,
+  trackCalculatorCompletedOnce,
+  useAnalyticsDedupTracker,
+  useCalculatorStarted,
+  useUserInteractionFlag,
+} from '../../hooks/useCalculatorAnalytics';
+import { trackRelatedCalculatorClick, trackTireSizeSelected } from '../../lib/analytics';
 
 const TIRE_COMPARE_PAIR_SRC = '/images/tires/tire-compare-pair.png';
 type TireLabelArc = {
@@ -97,7 +105,7 @@ const FEATURE_FACTS = [
   'A wider tire does not always improve snow traction.',
 ];
 
-const RELATED_CALCULATORS = getRelatedCalculatorLinks('/calculators/tire-size-calculator').map(
+const RELATED_CALCULATORS = getRelatedCalculatorLinks(CALCULATOR_PATHS.tireSize).map(
   ({ label, description, href }) => ({ title: label, description, href }),
 );
 
@@ -237,9 +245,15 @@ function SpecIcon({ iconKey }: { iconKey: string }) {
 function CalculatorPanel({
   calculator,
   sizeLabel,
+  onUserInteraction,
+  onSelectSuggestion,
+  onCalculateClick,
 }: {
   calculator: ReturnType<typeof useTireSizeCalculator>;
   sizeLabel: string;
+  onUserInteraction?: () => void;
+  onSelectSuggestion?: (size: string) => void;
+  onCalculateClick?: () => void;
 }) {
   const {
     fields,
@@ -253,10 +267,16 @@ function CalculatorPanel({
   } = calculator;
 
   const handleClear = () => {
+    onUserInteraction?.();
     handleFullSizePaste('');
     updateField('width', '');
     updateField('aspectRatio', '');
     updateField('wheelDiameter', '');
+  };
+
+  const handleSuggestionSelect = (size: string) => {
+    onUserInteraction?.();
+    (onSelectSuggestion ?? selectTireSize)(size);
   };
 
   const dimFields = [
@@ -283,7 +303,10 @@ function CalculatorPanel({
             type="button"
             className={`calc-enter-panel__segment-btn ${unitSystem === 'imperial' ? 'calc-enter-panel__segment-btn--active' : ''}`}
             aria-pressed={unitSystem === 'imperial'}
-            onClick={() => setUnitSystem('imperial')}
+            onClick={() => {
+              onUserInteraction?.();
+              setUnitSystem('imperial');
+            }}
           >
             Standard
           </button>
@@ -291,7 +314,10 @@ function CalculatorPanel({
             type="button"
             className={`calc-enter-panel__segment-btn ${unitSystem === 'metric' ? 'calc-enter-panel__segment-btn--active' : ''}`}
             aria-pressed={unitSystem === 'metric'}
-            onClick={() => setUnitSystem('metric')}
+            onClick={() => {
+              onUserInteraction?.();
+              setUnitSystem('metric');
+            }}
           >
             Metric
           </button>
@@ -310,7 +336,10 @@ function CalculatorPanel({
             inputMode="text"
             autoComplete="off"
             value={fullSizePaste}
-            onChange={(e) => handleFullSizePaste(e.target.value)}
+            onChange={(e) => {
+              onUserInteraction?.();
+              handleFullSizePaste(e.target.value);
+            }}
           />
           <button
             type="button"
@@ -339,7 +368,10 @@ function CalculatorPanel({
                 inputMode="numeric"
                 placeholder={placeholder}
                 value={fields[key]}
-                onChange={(e) => updateField(key, e.target.value)}
+                onChange={(e) => {
+                  onUserInteraction?.();
+                  updateField(key, e.target.value);
+                }}
                 className="calc-enter-panel__dim-input"
               />
               <span className="calc-enter-panel__dim-unit">{unit}</span>
@@ -350,7 +382,7 @@ function CalculatorPanel({
 
       <TireSizeValidationBanner
         validation={validation}
-        onSelectSuggestion={selectTireSize}
+        onSelectSuggestion={handleSuggestionSelect}
       />
 
       <div className="calc-enter-panel__tip">
@@ -365,7 +397,14 @@ function CalculatorPanel({
         </p>
       </div>
 
-      <button type="button" className="calc-enter-panel__cta">
+      <button
+        type="button"
+        className="calc-enter-panel__cta"
+        onClick={() => {
+          onUserInteraction?.();
+          onCalculateClick?.();
+        }}
+      >
         Calculate Size
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect width="16" height="20" x="4" y="2" rx="2" />
@@ -741,7 +780,7 @@ function CalculatorFeatureCards({ sizeLabel }: { sizeLabel: string }) {
               />
             </div>
           </div>
-          <a href="/calculators/tire-comparison-calculator" className="calc-feature-card__cta">
+          <a href={CALCULATOR_PATHS.tireComparison} className="calc-feature-card__cta">
             Open Comparison Tool →
           </a>
         </article>
@@ -1096,7 +1135,11 @@ function FitmentDashboardSection({ specs, sizeLabel }: { specs: TireSpecs; sizeL
           <ul className="calc-dashboard__links">
             {RELATED_CALCULATORS.map((calc) => (
               <li key={calc.title}>
-                <a href={calc.href} className="calc-dashboard__link">
+                <a
+                  href={calc.href}
+                  className="calc-dashboard__link"
+                  onClick={() => trackRelatedCalculatorClick(calc.href, CALCULATOR_NAMES.tireSize)}
+                >
                   <span className="calc-dashboard__link-icon" aria-hidden="true">
                     <Icon name="arrow" />
                   </span>
@@ -1182,11 +1225,41 @@ export default function PremiumTireSizeCalculator({
   initialSize?: string;
 } = {}) {
   const calculator = useTireSizeCalculator(initialSize);
-  const { specs, unitSystem, message } = calculator;
+  const { specs, unitSystem, message, builtSizeLabel, fields, selectTireSize } = calculator;
   const liveInsights = useLiveTireInsights(calculator);
   const formRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const [stickySummaryVisible, setStickySummaryVisible] = useState(false);
+
+  useCalculatorStarted(CALCULATOR_NAMES.tireSize);
+  const { markInteracted, interacted } = useUserInteractionFlag();
+  const dedupTracker = useAnalyticsDedupTracker();
+
+  const handleSelectTireSize = useCallback(
+    (size: string) => {
+      selectTireSize(size);
+      trackTireSizeSelected(size, CALCULATOR_NAMES.tireSize);
+    },
+    [selectTireSize],
+  );
+
+  useEffect(() => {
+    if (!interacted) return;
+    if (message.status !== 'ready' || !builtSizeLabel) return;
+    const signature = `${builtSizeLabel}|${fields.width}|${fields.aspectRatio}|${fields.wheelDiameter}`;
+    trackCalculatorCompletedOnce(dedupTracker, signature, {
+      calculator_name: CALCULATOR_NAMES.tireSize,
+      current_tire_size: builtSizeLabel,
+    });
+  }, [
+    interacted,
+    message.status,
+    builtSizeLabel,
+    fields.width,
+    fields.aspectRatio,
+    fields.wheelDiameter,
+    dedupTracker,
+  ]);
 
   const displaySpecs = liveInsights?.specs ?? FALLBACK_SPECS;
   const displayLabel = liveInsights?.sizeLabel ?? EDUCATION_SIZE_LABEL;
@@ -1225,7 +1298,13 @@ export default function PremiumTireSizeCalculator({
 
         <div className="calc-hero-grid">
           <div ref={formRef}>
-            <CalculatorPanel calculator={calculator} sizeLabel={displayLabel} />
+            <CalculatorPanel
+              calculator={calculator}
+              sizeLabel={displayLabel}
+              onUserInteraction={markInteracted}
+              onSelectSuggestion={handleSelectTireSize}
+              onCalculateClick={scrollToResults}
+            />
           </div>
           <TireVisualization specs={displaySpecs} sizeLabel={displayLabel} parts={tireParts} />
           <div ref={resultsRef}>

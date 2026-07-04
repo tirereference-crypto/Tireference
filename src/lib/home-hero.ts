@@ -1,5 +1,5 @@
 import { TIRE_SIZES } from '../data/tire-sizes';
-import { SITE_CALCULATORS } from './calculator-links';
+import { CALCULATOR_PATHS, SITE_CALCULATORS } from './calculator-links';
 import { compareTires, getTireSpecs, parseTireSize } from './tire-math';
 import { hubPagePath, sizeToSlug, tireSizeCalculatorPath } from './tire-size-url';
 import { normalizeTireSizeInput } from './tire-size-validation';
@@ -53,7 +53,7 @@ export function buildHomeHeroStats(size: string = HOME_HERO_DEMO_SIZE): HomeHero
 /** Route calculator/guide queries; returns null when input should be handled as a tire size. */
 export function resolveNonTireHomeSearch(query: string): string | null {
   const trimmed = query.trim();
-  if (!trimmed) return '/calculators/tire-size-calculator';
+  if (!trimmed) return CALCULATOR_PATHS.tireSize;
 
   const normalized = trimmed.toLowerCase();
 
@@ -93,7 +93,7 @@ function resolveTireSizeSearch(size: string): string {
 /** Route a homepage search query to the best matching destination. */
 export function resolveHomeSearch(query: string): string {
   const trimmed = query.trim();
-  if (!trimmed) return '/calculators/tire-size-calculator';
+  if (!trimmed) return CALCULATOR_PATHS.tireSize;
 
   const nonTire = resolveNonTireHomeSearch(trimmed);
   if (nonTire) return nonTire;
@@ -116,31 +116,31 @@ export const HOME_QUICK_ACTIONS = [
   {
     title: 'Size Calculator',
     description: 'Convert tire size into diameter, width, and revs per mile',
-    href: '/calculators/tire-size-calculator',
+    href: CALCULATOR_PATHS.tireSize,
     icon: 'size' as const,
   },
   {
     title: 'Comparison',
     description: 'Compare two tire sizes side by side',
-    href: '/calculators/tire-comparison-calculator',
+    href: CALCULATOR_PATHS.tireComparison,
     icon: 'compare' as const,
   },
   {
     title: 'Diameter Calculator',
     description: 'Calculate diameter, circumference and revolutions per mile',
-    href: '/calculators/tire-diameter-calculator',
+    href: CALCULATOR_PATHS.tireDiameter,
     icon: 'diameter' as const,
   },
   {
     title: 'Wheel Offset',
     description: 'Calculate offset, backspacing and clearance',
-    href: '/calculators/wheel-offset-calculator',
+    href: CALCULATOR_PATHS.wheelOffset,
     icon: 'offset' as const,
   },
   {
     title: 'Gear Ratio Calculator',
     description: 'Find the ideal gear ratio after changing tire size',
-    href: '/calculators/gear-ratio-calculator',
+    href: CALCULATOR_PATHS.gearRatio,
     icon: 'gear' as const,
   },
 ] as const;

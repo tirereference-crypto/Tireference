@@ -1,4 +1,5 @@
 import { TIRE_SIZES } from '../data/tire-sizes';
+import { CALCULATOR_PATHS, SITE_CALCULATORS } from './calculator-links';
 import { hubPagePath, tireSizeCalculatorPath } from './tire-size-url';
 
 export interface NavCalculatorItem {
@@ -8,38 +9,38 @@ export interface NavCalculatorItem {
   href: string;
 }
 
-export const NAV_CALCULATORS: readonly NavCalculatorItem[] = [
+const NAV_CALCULATOR_META: readonly Omit<NavCalculatorItem, 'href'>[] = [
   {
     emoji: '🧮',
     label: 'Tire Size Calculator',
     description: 'Convert metric tire sizes into diameter, width and circumference.',
-    href: '/calculators/tire-size-calculator',
   },
   {
     emoji: '⚖️',
     label: 'Tire Comparison Calculator',
     description: 'Compare two tire sizes side-by-side.',
-    href: '/calculators/tire-comparison-calculator',
   },
   {
     emoji: '📏',
     label: 'Tire Diameter Calculator',
     description: 'Find overall tire diameter and matching tire sizes.',
-    href: '/calculators/tire-diameter-calculator',
   },
   {
     emoji: '⚙️',
     label: 'Gear Ratio Calculator',
     description: 'Calculate ideal axle gearing after changing tire sizes.',
-    href: '/calculators/gear-ratio-calculator',
   },
   {
     emoji: '🛞',
     label: 'Wheel Offset Calculator',
     description: 'Visualize wheel position and fitment.',
-    href: '/calculators/wheel-offset-calculator',
   },
 ] as const;
+
+export const NAV_CALCULATORS: readonly NavCalculatorItem[] = SITE_CALCULATORS.map((calc, index) => ({
+  ...NAV_CALCULATOR_META[index],
+  href: calc.href,
+}));
 
 export const NAV_POPULAR_TIRE_SIZE_LABELS = [
   '275/70R18',
@@ -73,7 +74,7 @@ export const NAV_FITMENT_ITEMS = [
   {
     label: 'Wheel Offset Calculator',
     description: 'Visualize wheel position and fitment.',
-    href: '/calculators/wheel-offset-calculator',
+    href: CALCULATOR_PATHS.wheelOffset,
   },
 ] as const;
 
@@ -92,7 +93,7 @@ export const NAV_SEARCH_EXAMPLES: readonly NavSearchExample[] = [
 
 export const NAV_COMPARE = {
   label: 'Compare Sizes',
-  href: '/calculators/tire-comparison-calculator',
+  href: CALCULATOR_PATHS.tireComparison,
 } as const;
 
 export const NAV_ABOUT = {
@@ -107,18 +108,28 @@ export const NAV_CONTACT = {
 
 export const NAV_ALL_TIRE_SIZES_HREF = '/tire-sizes';
 
+/** Strip trailing slashes and query strings for nav path comparison. */
+export function normalizeNavPathname(pathname: string): string {
+  const base = pathname.split('?')[0].replace(/\/+$/, '') || '/';
+  return base;
+}
+
+function navPathMatches(pathname: string, target: string): boolean {
+  return normalizeNavPathname(pathname) === normalizeNavPathname(target);
+}
+
 /** Determine which primary nav item is active for a pathname. */
 export function getActiveNavItem(pathname: string): string | null {
-  if (pathname === NAV_ABOUT.href) {
+  if (navPathMatches(pathname, NAV_ABOUT.href)) {
     return 'about';
   }
-  if (pathname === NAV_CONTACT.href) {
+  if (navPathMatches(pathname, NAV_CONTACT.href)) {
     return 'contact';
   }
-  if (pathname.startsWith('/compare/') || pathname === '/calculators/tire-comparison-calculator') {
+  if (pathname.startsWith('/compare/') || navPathMatches(pathname, CALCULATOR_PATHS.tireComparison)) {
     return 'compare';
   }
-  if (pathname === '/calculators/wheel-offset-calculator') {
+  if (navPathMatches(pathname, CALCULATOR_PATHS.wheelOffset)) {
     return 'fitment';
   }
   if (
@@ -127,7 +138,7 @@ export function getActiveNavItem(pathname: string): string | null {
   ) {
     return 'calculators';
   }
-  if (pathname.startsWith('/tire-size/') || pathname === '/tire-sizes') {
+  if (pathname.startsWith('/tire-size/') || navPathMatches(pathname, NAV_ALL_TIRE_SIZES_HREF)) {
     return 'tire-sizes';
   }
   return null;

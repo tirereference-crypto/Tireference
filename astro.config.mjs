@@ -9,6 +9,16 @@ import tailwindcss from '@tailwindcss/vite';
 
 import sitemap from '@astrojs/sitemap';
 
+/** Permanent redirects from legacy root-level calculator routes. */
+const LEGACY_CALCULATOR_REDIRECTS = {
+  '/tire-size-calculator': '/calculators/tire-size-calculator/',
+  '/tire-diameter-calculator': '/calculators/tire-diameter-calculator/',
+  '/tire-size-comparison': '/calculators/tire-comparison-calculator/',
+  '/tire-comparison-calculator': '/calculators/tire-comparison-calculator/',
+  '/wheel-offset-calculator': '/calculators/wheel-offset-calculator/',
+  '/gear-ratio-calculator': '/calculators/gear-ratio-calculator/',
+};
+
 /** Copy generated sitemap-0.xml to /sitemap.xml for robots.txt */
 function sitemapXmlAlias() {
   return {
@@ -29,7 +39,14 @@ function sitemapXmlAlias() {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://tirereference.com',
+  trailingSlash: 'always',
   integrations: [react(), sitemap(), sitemapXmlAlias()],
+  redirects: Object.fromEntries(
+    Object.entries(LEGACY_CALCULATOR_REDIRECTS).map(([source, destination]) => [
+      source,
+      { status: 301, destination },
+    ]),
+  ),
 
   vite: {
     plugins: [tailwindcss()],

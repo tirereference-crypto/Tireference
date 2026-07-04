@@ -1,5 +1,5 @@
 import type { WheelOffsetComparison } from './wheel-offset-math';
-import { getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
+import { CALCULATOR_PATHS, getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
 
 export type { RelatedCalculatorItem };
 
@@ -134,7 +134,7 @@ export const POPULAR_VEHICLE_OFFSET_LINKS = [
   { label: 'F-150', vehicle: 'Ford F-150' },
 ];
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators('/calculators/wheel-offset-calculator');
+export const RELATED_CALCULATOR_LINKS = getRelatedCalculators(CALCULATOR_PATHS.wheelOffset);
 
 export const OFFSET_FAQS: OffsetFaq[] = [
   {

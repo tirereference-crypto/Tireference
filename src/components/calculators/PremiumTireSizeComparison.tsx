@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import '../../styles/calculator-comparison.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
-import { getRelatedCalculatorLinks } from '../../lib/calculator-links';
+import { CALCULATOR_PATHS, getRelatedCalculatorLinks } from '../../lib/calculator-links';
 import {
   buildComparisonPageIntro,
   COMPARISON_PAGE_INTRO_FALLBACK,
@@ -23,14 +23,16 @@ import { useTireSizeComparison,
   type UseTireSizeComparisonOptions,
 } from './useTireSizeComparison';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import {
+  CALCULATOR_NAMES,
+  trackComparisonCompletedOnce,
+  useAnalyticsDedupTracker,
+  useCalculatorStarted,
+  useUserInteractionFlag,
+} from '../../hooks/useCalculatorAnalytics';
+import { trackRelatedCalculatorClick, trackTireSizeSelected } from '../../lib/analytics';
 
-const CALCULATOR_LINKS = getRelatedCalculatorLinks('/calculators/tire-comparison-calculator');
-
-const GUIDE_LINKS = [
-  { label: 'Understanding Tire Sizes', href: '/calculators/tire-size-calculator#understanding' },
-  { label: 'How Plus Sizing Works', href: '/calculators/tire-size-calculator#plus-size' },
-  { label: 'Speedometer Accuracy Guide', href: '/calculators/tire-size-calculator#speedometer' },
-];
+const CALCULATOR_LINKS = getRelatedCalculatorLinks(CALCULATOR_PATHS.tireComparison);
 
 function UpgradePathCardView({ card }: { card: UpgradePathCard }) {
   const content = (
@@ -175,6 +177,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     vehicleSpeed,
     unitSystem,
     message,
+    comparison,
     insights,
     specsA,
     specsB,
@@ -200,6 +203,51 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
   const metric = unitSystem === 'metric';
   const speedUnit = metric ? 'km/h' : 'mph';
 
+  useCalculatorStarted(CALCULATOR_NAMES.tireComparison);
+  const { markInteracted, interacted } = useUserInteractionFlag();
+  const dedupTracker = useAnalyticsDedupTracker();
+
+  const trackComparisonIfReady = useCallback(() => {
+    if (message.status !== 'ready' || !currentSizeLabel || !newSizeLabel || !comparison) return;
+    const signature = `${currentSizeLabel}|${newSizeLabel}|${vehicleSpeed}`;
+    trackComparisonCompletedOnce(dedupTracker, signature, {
+      calculator_name: CALCULATOR_NAMES.tireComparison,
+      current_tire_size: currentSizeLabel,
+      new_tire_size: newSizeLabel,
+      diameter_difference_percent: comparison.diameterDiffPercent,
+    });
+  }, [
+    message.status,
+    currentSizeLabel,
+    newSizeLabel,
+    comparison,
+    vehicleSpeed,
+    dedupTracker,
+  ]);
+
+  useEffect(() => {
+    if (!interacted) return;
+    trackComparisonIfReady();
+  }, [interacted, trackComparisonIfReady]);
+
+  const handleSelectCurrentTireSize = useCallback(
+    (size: string) => {
+      markInteracted();
+      selectCurrentTireSize(size);
+      trackTireSizeSelected(size, CALCULATOR_NAMES.tireComparison);
+    },
+    [markInteracted, selectCurrentTireSize],
+  );
+
+  const handleSelectNewTireSize = useCallback(
+    (size: string) => {
+      markInteracted();
+      selectNewTireSize(size);
+      trackTireSizeSelected(size, CALCULATOR_NAMES.tireComparison);
+    },
+    [markInteracted, selectNewTireSize],
+  );
+
   useEffect(() => {
     if (!insights) return;
     document.title = insights.seo.title;
@@ -208,8 +256,10 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
   }, [insights]);
 
   const scrollToResults = useCallback(() => {
+    markInteracted();
+    trackComparisonIfReady();
     resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
+  }, [markInteracted, trackComparisonIfReady]);
 
   const displaySizeA = currentSizeLabel ?? (currentPaste.trim() || null);
   const displaySizeB = newSizeLabel ?? (newPaste.trim() || null);
@@ -230,7 +280,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/calculators/tire-comparison-calculator">Tire Compare</a>
+            <a href={CALCULATOR_PATHS.tireComparison}>Tire Compare</a>
             <span>/</span>
             <span>{breadcrumbLabel}</span>
           </nav>
@@ -250,14 +300,14 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   {(['width', 'aspectRatio', 'wheelDiameter'] as const).map((key) => (
                     <div key={key} className="cmp-tire-input-block__field">
                       <label htmlFor={`current-${key}`}>{key === 'width' ? 'Width' : key === 'aspectRatio' ? 'Aspect' : 'Rim'}</label>
-                      <input id={`current-${key}`} value={currentFields[key]} onChange={(e) => updateCurrentField(key, e.target.value)} />
+                      <input id={`current-${key}`} value={currentFields[key]} onChange={(e) => { markInteracted(); updateCurrentField(key, e.target.value); }} />
                     </div>
                   ))}
                 </div>
-                <input className="cmp-tire-input-block__paste" value={currentPaste} onChange={(e) => handleCurrentPaste(e.target.value)} placeholder="225/45R17" aria-label="Current tire size paste" />
+                <input className="cmp-tire-input-block__paste" value={currentPaste} onChange={(e) => { markInteracted(); handleCurrentPaste(e.target.value); }} placeholder="225/45R17" aria-label="Current tire size paste" />
                 <TireSizeValidationBanner
                   validation={currentValidation}
-                  onSelectSuggestion={selectCurrentTireSize}
+                  onSelectSuggestion={handleSelectCurrentTireSize}
                 />
               </div>
 
@@ -270,14 +320,14 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   {(['width', 'aspectRatio', 'wheelDiameter'] as const).map((key) => (
                     <div key={key} className="cmp-tire-input-block__field">
                       <label htmlFor={`new-${key}`}>{key === 'width' ? 'Width' : key === 'aspectRatio' ? 'Aspect' : 'Rim'}</label>
-                      <input id={`new-${key}`} value={newFields[key]} onChange={(e) => updateNewField(key, e.target.value)} />
+                      <input id={`new-${key}`} value={newFields[key]} onChange={(e) => { markInteracted(); updateNewField(key, e.target.value); }} />
                     </div>
                   ))}
                 </div>
-                <input className="cmp-tire-input-block__paste" value={newPaste} onChange={(e) => handleNewPaste(e.target.value)} placeholder="235/40R18" aria-label="New tire size paste" />
+                <input className="cmp-tire-input-block__paste" value={newPaste} onChange={(e) => { markInteracted(); handleNewPaste(e.target.value); }} placeholder="235/40R18" aria-label="New tire size paste" />
                 <TireSizeValidationBanner
                   validation={newValidation}
-                  onSelectSuggestion={selectNewTireSize}
+                  onSelectSuggestion={handleSelectNewTireSize}
                 />
               </div>
 
@@ -518,14 +568,16 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                 <div className="cmp-panel cmp-panel--calc-network">
                   <p className="cmp-sidebar-block__title">Calculator Network</p>
                   <ul className="cmp-link-list">
-                    {CALCULATOR_LINKS.map((link) => (<li key={link.href}><a href={link.href}>{link.label}</a></li>))}
-                  </ul>
-                </div>
-
-                <div className="cmp-panel cmp-panel--guides">
-                  <p className="cmp-sidebar-block__title">Helpful Tire Guides</p>
-                  <ul className="cmp-link-list">
-                    {GUIDE_LINKS.map((link) => (<li key={link.href}><a href={link.href}>{link.label}</a></li>))}
+                    {CALCULATOR_LINKS.map((link) => (
+                      <li key={link.href}>
+                        <a
+                          href={link.href}
+                          onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.tireComparison)}
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
                   </ul>
                 </div>
 

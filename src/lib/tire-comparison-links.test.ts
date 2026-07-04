@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
+import { TIRE_SIZES } from '../data/tire-sizes';
+import { buildPopularComparisonCards } from './home-sections';
 import {
   buildCuratedPopularComparisons,
   buildPopularComparisonsForSize,
-  buildUpgradePathsFromDatabase,
   comparisonSlugFromSizes,
   comparisonSlugPath,
+  filterValidComparisonLabels,
+  getAllComparisonSlugs,
   isFieldBackedTireSize,
   isValidComparisonPair,
   MOST_SEARCHED_COMPARISON_PAIRS,
   parseComparisonSlug,
 } from './tire-comparison-links';
+import { buildPopularComparisons } from './tire-size-premium';
+import { buildTireSizeHubData } from './tire-size-hub';
+import {
+  buildPopularComparisonsForDiameterSearch,
+  POPULAR_COMPARISONS,
+} from './tire-diameter-insights';
+import { getTireSpecs } from './tire-math';
+import { buildExploreFurtherData } from './tire-explore-further';
 
 describe('tire-comparison-links', () => {
   it('only links production database sizes with hub pages', () => {
@@ -24,15 +35,21 @@ describe('tire-comparison-links', () => {
     }
   });
 
-  it('builds upgrade paths from database hub tiers only', () => {
-    const paths = buildUpgradePathsFromDatabase('225/45R17');
-    expect(paths).not.toBeNull();
+  it('filters invalid pairs out of per-size popular comparisons', () => {
+    const links = buildPopularComparisonsForSize('275/70R18');
+    expect(links.length).toBeGreaterThan(0);
 
-    for (const card of paths!.cards) {
-      if (card.id === 'current') continue;
-      expect(isValidComparisonPair('225/45R17', card.size)).toBe(true);
-      expect(card.href).toMatch(/^\/compare\//);
+    for (const link of links) {
+      expect(isValidComparisonPair(link.current, link.new)).toBe(true);
     }
+
+    expect(links.some((link) => link.new === '225/45R17')).toBe(false);
+  });
+
+  it('ranks closer same-class sizes ahead of distant alternatives', () => {
+    const links = buildPopularComparisonsForSize('265/70R17');
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0].new).toMatch(/285\/70R17|275\/70R18|265\/65R18/);
   });
 
   it('round-trips comparison slugs for valid pairs', () => {
@@ -68,6 +85,68 @@ describe('tire-comparison-links', () => {
         current: link.current,
         new: link.new,
       });
+    }
+  });
+
+  it('only generates validated comparison slugs for static paths', () => {
+    const slugs = getAllComparisonSlugs();
+    expect(slugs.length).toBeGreaterThan(0);
+    expect(slugs.length).toBeLessThan(216);
+
+    for (const entry of slugs) {
+      expect(isValidComparisonPair(entry.current, entry.new)).toBe(true);
+    }
+  });
+});
+
+describe('popular comparisons surfaces', () => {
+  it('homepage cards only show valid comparisons', () => {
+    for (const card of buildPopularComparisonCards()) {
+      const [current, newSize] = card.label.split(' vs ');
+      expect(isValidComparisonPair(current, newSize)).toBe(true);
+    }
+  });
+
+  it('diameter POPULAR_COMPARISONS constant is fully valid', () => {
+    expect(filterValidComparisonLabels(POPULAR_COMPARISONS)).toEqual(POPULAR_COMPARISONS);
+  });
+
+  it('hub popular comparison chips are valid for every hub size', () => {
+    for (const entry of TIRE_SIZES) {
+      const hub = buildTireSizeHubData(entry.size);
+      if (!hub) continue;
+      for (const { target } of buildPopularComparisons(hub)) {
+        expect(isValidComparisonPair(hub.entry.size, target)).toBe(true);
+      }
+    }
+  });
+
+  it('explore-further comparison suggestions are valid pairs', () => {
+    for (const entry of TIRE_SIZES) {
+      let specs;
+      try {
+        specs = getTireSpecs(entry.size);
+      } catch {
+        continue;
+      }
+      const data = buildExploreFurtherData(entry.size, specs);
+      for (const comparison of data.comparisons) {
+        expect(isValidComparisonPair(entry.size, comparison.targetSize)).toBe(true);
+      }
+      for (const path of data.upgradePaths) {
+        expect(isValidComparisonPair(entry.size, path.size)).toBe(true);
+      }
+    }
+  });
+
+  it('diameter search popular comparisons are valid', () => {
+    for (const diameter of [31, 33, 35, 37]) {
+      const links = buildPopularComparisonsForDiameterSearch({
+        targetDiameterIn: diameter,
+        wheelDiameterIn: 18,
+        toleranceIn: 1,
+      });
+      expect(filterValidComparisonLabels(links)).toEqual(links);
     }
   });
 });

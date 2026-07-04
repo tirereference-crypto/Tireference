@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { SITE_NAME } from './site-brand';
 import { ORGANIZATION_LOGO_URL, SITE_URL } from './seo/constants';
-import { buildHomePageJsonLd } from './home-seo';
+import { buildHomePageSchema } from './seo/schema';
 
-describe('buildHomePageJsonLd', () => {
+describe('buildHomePageSchema', () => {
   it('returns WebSite and Organization graph with SearchAction', () => {
-    const data = buildHomePageJsonLd();
+    const data = buildHomePageSchema();
     const graph = (data as { '@graph': Record<string, unknown>[] })['@graph'];
 
     expect(data['@context']).toBe('https://schema.org');
@@ -32,7 +32,6 @@ describe('buildHomePageJsonLd', () => {
       name: SITE_NAME,
       url: `${SITE_URL}/`,
       logo: ORGANIZATION_LOGO_URL,
-      sameAs: [],
     });
   });
 });

@@ -1,3 +1,4 @@
+import { CALCULATOR_PATHS } from '../calculator-links';
 import {
   buildBreadcrumbSchema,
   buildFaqPageSchema,
@@ -35,7 +36,7 @@ export function calculatorBreadcrumbs(label: string): BreadcrumbItem[] {
 export function comparisonBreadcrumbs(current: string, next: string, slug: string): BreadcrumbItem[] {
   return [
     { name: 'Home', item: '/' },
-    { name: 'Compare', item: '/calculators/tire-comparison-calculator' },
+    { name: 'Compare', item: CALCULATOR_PATHS.tireComparison },
     { name: `${current} vs ${next}`, item: `/compare/${slug}` },
   ];
 }

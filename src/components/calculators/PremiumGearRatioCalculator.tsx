@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import '../../styles/calculator-gear.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import {
   computeGearRatio,
   formatRatio,
@@ -21,6 +22,13 @@ import {
 import { EffectiveGearRatioExplained, GearCompareInstallRow, GearRatioComparisonTable } from './GearRatioVisual';
 import { useGearRatioCalculator } from './useGearRatioCalculator';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import {
+  CALCULATOR_NAMES,
+  trackCalculatorCompletedOnce,
+  useAnalyticsDedupTracker,
+  useCalculatorStarted,
+} from '../../hooks/useCalculatorAnalytics';
+import { trackRelatedCalculatorClick } from '../../lib/analytics';
 
 export interface PremiumGearRatioCalculatorProps {
   initialFields?: GearRatioFields;
@@ -98,11 +106,11 @@ function RelatedIcon({ name }: { name: string }) {
 }
 
 const RELATED_ICON_BY_HREF: Record<string, string> = {
-  '/calculators/tire-size-calculator': 'size',
-  '/calculators/tire-comparison-calculator': 'compare',
-  '/calculators/tire-diameter-calculator': 'diameter',
-  '/calculators/wheel-offset-calculator': 'offset',
-  '/calculators/gear-ratio-calculator': 'gear',
+  [CALCULATOR_PATHS.tireSize]: 'size',
+  [CALCULATOR_PATHS.tireComparison]: 'compare',
+  [CALCULATOR_PATHS.tireDiameter]: 'diameter',
+  [CALCULATOR_PATHS.wheelOffset]: 'offset',
+  [CALCULATOR_PATHS.gearRatio]: 'gear',
 };
 
 function SetupCardIcon({ variant }: { variant: 'current' | 'new' }) {
@@ -373,12 +381,28 @@ export default function PremiumGearRatioCalculator({
     initialFields,
   });
 
+  useCalculatorStarted(CALCULATOR_NAMES.gearRatio);
+  const dedupTracker = useAnalyticsDedupTracker();
+
   const handleAnalyze = useCallback(() => {
     analyze();
+    const signature = [
+      fields.currentDiameterIn,
+      fields.stockGearRatio,
+      fields.transTopGear,
+      fields.newDiameterIn,
+      fields.speed,
+      fields.speedUnit,
+      fields.cruiseRpm,
+      fields.desiredRpm,
+    ].join('|');
+    trackCalculatorCompletedOnce(dedupTracker, signature, {
+      calculator_name: CALCULATOR_NAMES.gearRatio,
+    });
     requestAnimationFrame(() => {
       resultsAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }, [analyze]);
+  }, [analyze, fields, dedupTracker]);
 
   const stickyVisible = useStickyAnalyzeButton(formRef, resultsAnchorRef, { resultsReady: ready });
   useSingleOpenDetails(faqRef);
@@ -396,7 +420,7 @@ export default function PremiumGearRatioCalculator({
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>/</span>
-            <a href="/calculators/tire-size-calculator">Calculators</a>
+            <a href={CALCULATOR_PATHS.tireSize}>Calculators</a>
             <span>/</span>
             <span>Gear Ratio Calculator</span>
           </nav>
@@ -556,7 +580,7 @@ export default function PremiumGearRatioCalculator({
                           ? `You lose only ${result.gearingLossPct.toFixed(1)}% effective gearing. Keep your ${formatRatio(result.input.stockGearRatio)} gears and enjoy the new tires.`
                           : `You lose about ${result.gearingLossPct.toFixed(1)}% effective gearing. A regear to ${formatRatio(result.idealGear)} restores daily response, or ${formatRatio(result.performanceGear)} for towing and trails.`}
                       </p>
-                      <a className="wof-verdict__notes-btn" href="/calculators/tire-comparison-calculator">
+                      <a className="wof-verdict__notes-btn" href={CALCULATOR_PATHS.tireComparison}>
                         Compare Tire Sizes
                       </a>
                     </div>
@@ -641,7 +665,12 @@ export default function PremiumGearRatioCalculator({
                   <h2 className="cmp-panel__title">Related Calculators</h2>
                   <div className="wof-sidebar-calc__list">
                     {RELATED_CALCULATOR_LINKS.map((link) => (
-                      <a key={link.href} href={link.href} className="wof-sidebar-calc__card">
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        className="wof-sidebar-calc__card"
+                        onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.gearRatio)}
+                      >
                         <span className="wof-sidebar-calc__icon">
                           <RelatedIcon name={RELATED_ICON_BY_HREF[link.href] ?? 'compare'} />
                         </span>

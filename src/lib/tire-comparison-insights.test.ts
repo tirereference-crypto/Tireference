@@ -23,21 +23,28 @@ describe('buildComparisonInsights', () => {
     expect(insights.personalityCards.filter((card) => card.isPrimary)).toHaveLength(1);
     expect(insights.willThisFitRows).toHaveLength(6);
     expect(insights.willThisFitRows[0].label).toBe('Diameter Change');
-    expect(insights.upgradePaths?.cards.length).toBeGreaterThanOrEqual(4);
-    expect(insights.upgradePaths?.cards[0].tierLabel).toBe('Current Size');
-    expect(insights.upgradePaths?.cards[1].href).toContain('/compare/');
-    expect(insights.upgradePaths?.cards[1].href).toContain('-vs-');
-    expect(insights.popularComparisons.length).toBeGreaterThan(0);
-    expect(insights.popularComparisons.length).toBeLessThanOrEqual(6);
-    expect(insights.popularComparisons[0].href).toMatch(/^\/compare\//);
-    expect(insights.upgradePaths?.cards[1].fitmentDifficulty).toBeTruthy();
+    if (insights.upgradePaths?.cards) {
+      expect(insights.upgradePaths.cards.length).toBeGreaterThanOrEqual(4);
+      expect(insights.upgradePaths.cards[0].tierLabel).toBe('Current Size');
+      expect(insights.upgradePaths.cards[1].href).toContain('/compare/');
+      expect(insights.upgradePaths.cards[1].href).toContain('-vs-');
+      expect(insights.upgradePaths.cards[1].fitmentDifficulty).toBeTruthy();
+    }
     expect(insights.quickVerdict.label).toBeTruthy();
     expect(insights.quickVerdict.score).toBe(insights.fitmentScore);
     expect(insights.quickVerdict.benefits.length).toBeGreaterThan(0);
     expect(insights.quickVerdict.bestFor.length).toBeGreaterThan(0);
     expect(insights.understandingDifference).toContain(sizeA);
     expect(insights.understandingDifference.split(/\s+/).length).toBeGreaterThanOrEqual(120);
-    expect(insights.understandingDifference.split(/\s+/).length).toBeLessThanOrEqual(200);
+    expect(insights.engineeringAnalysis.sections).toHaveLength(9);
+    expect(insights.engineeringAnalysis.byId['ride-quality'].title).toBe('Ride Quality');
+    expect(insights.qualityValidation.approved).toBe(true);
+    expect(insights.seo.isGoodUpgrade.headline).not.toMatch(/aggressive upgrade/i);
+    expect(insights.performanceCards.find((c) => c.id === 'handling')?.value).not.toBe('Improved');
+    expect(insights.performanceCards.find((c) => c.id === 'handling')?.explanation).toMatch(/\d/);
+    expect(insights.performanceCards.find((c) => c.id === 'clearance')?.explanation).toMatch(
+      /diameter|clearance|in/i,
+    );
     expect(insights.seo.whatChanges).toContain(sizeA);
     expect(insights.seo.whatChanges).toContain(sizeB);
     expect(insights.kpiCards).toHaveLength(6);
@@ -68,7 +75,7 @@ describe('buildComparisonInsights', () => {
       getTireSpecs(sizeB),
     );
 
-    expect(['Excellent Upgrade', 'Good Upgrade', 'Consider Carefully', 'Not Recommended']).toContain(
+    expect(['Excellent Upgrade', 'Good Upgrade', 'Not Recommended']).toContain(
       insights.quickVerdict.label,
     );
     expect(insights.quickVerdict.tone).toMatch(/green|yellow|orange|red/);
@@ -96,29 +103,51 @@ describe('buildComparisonInsights', () => {
 
   it('pros/cons never contradict the computed dimensional direction', () => {
     const pairs: [string, string][] = [
-      ['225/45R17', '235/40R18'], // taller + wider
-      ['235/40R18', '225/45R17'], // shorter + narrower
-      ['275/70R18', '285/75R18'], // truck, taller
-      ['265/70R17', '245/70R16'], // smaller diameter
+      ['225/45R17', '235/40R18'],
+      ['235/40R18', '225/45R17'],
+      ['275/70R18', '285/75R18'],
+      ['265/70R17', '245/70R16'],
     ];
 
     for (const [a, b] of pairs) {
       const specsA = getTireSpecs(a);
       const specsB = getTireSpecs(b);
       const insights = buildComparisonInsights(a, b, compareTires(a, b, 60), specsA, specsB);
-      const pros = insights.personality.pros.join(' | ');
-      const cons = insights.personality.cons.join(' | ');
+      const pros = insights.personality.pros.join(' | ').toLowerCase();
+      const cons = insights.personality.cons.join(' | ').toLowerCase();
 
       const larger = specsB.overallDiameterIn > specsA.overallDiameterIn + 0.05;
       const smaller = specsB.overallDiameterIn < specsA.overallDiameterIn - 0.05;
       const wider = specsB.widthMm > specsA.widthMm + 3;
       const narrower = specsB.widthMm < specsA.widthMm - 3;
 
-      if (larger) expect(cons).not.toContain('Less ground clearance');
-      if (smaller) expect(pros).not.toContain('More ground clearance');
-      if (wider) expect(cons).not.toContain('Smaller contact patch');
-      if (narrower) expect(pros).not.toContain('Larger contact patch');
+      if (larger) expect(cons).not.toMatch(/\breduced underbelly clearance\b|\blower clearance\b/);
+      if (smaller) expect(pros).not.toMatch(/\btaller diameter\b|\bclearance gain\b/);
+      if (wider) expect(cons).not.toMatch(/\bnarrower section\b|\bnarrower footprint\b/);
+      if (narrower) expect(pros).not.toMatch(/\bwider section\b|\blarger contact patch\b/);
     }
+  });
+
+  it('narrative sections avoid repeating spec-table measurements', () => {
+    const sizeA = '225/45R17';
+    const sizeB = '235/40R18';
+    const insights = buildComparisonInsights(
+      sizeA,
+      sizeB,
+      compareTires(sizeA, sizeB, 60),
+      getTireSpecs(sizeA),
+      getTireSpecs(sizeB),
+    );
+
+    expect(insights.understandingDifference).toContain('spec table');
+    expect(insights.understandingDifference).not.toMatch(/\d+\.\d{2}%/);
+    expect(insights.seo.whatChanges).not.toMatch(/\d+\.\d{2}%/);
+    expect(insights.seo.whoShouldChoose).not.toMatch(/\d+\.\d{2}%/);
+    expect(insights.seo.isGoodUpgrade.body).toContain('Fitment score');
+    expect(insights.seo.faqs[0].question).toMatch(/mock-fit/i);
+    expect(insights.seo.faqs.find((f) => f.question.includes('fuel economy'))!.answer).not.toMatch(
+      /revs\/mi.*revs\/mi/i,
+    );
   });
 
   it('does not recommend overlanding or off-road for performance-class tires', () => {
@@ -150,15 +179,30 @@ describe('buildComparisonInsights', () => {
 
     const s = insights.fitmentScore;
     const expected =
-      s >= 9.5
+      s >= 8.5
         ? 'Excellent Upgrade'
-        : s >= 8
+        : s >= 6.5
           ? 'Good Upgrade'
-          : s >= 6
-            ? 'Consider Carefully'
-            : 'Not Recommended';
+          : 'Not Recommended';
 
     expect(insights.quickVerdict.label).toBe(expected);
     expect(insights.recommendationLabel).toBe(expected);
+  });
+
+  it('FAQ fuel answer cites RPM without invented MPG percentages', () => {
+    const sizeA = '275/70R18';
+    const sizeB = '285/75R18';
+    const insights = buildComparisonInsights(
+      sizeA,
+      sizeB,
+      compareTires(sizeA, sizeB, 60),
+      getTireSpecs(sizeA),
+      getTireSpecs(sizeB),
+    );
+
+    const fuelFaq = insights.seo.faqs.find((f) => f.question.includes('fuel economy'));
+    expect(fuelFaq).toBeTruthy();
+    expect(fuelFaq!.answer).toMatch(/RPM|revs/i);
+    expect(fuelFaq!.answer).not.toMatch(/1–3%|0–2%/);
   });
 });

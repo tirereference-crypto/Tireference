@@ -1,4 +1,5 @@
 /** URL slug helpers for tire size hub pages. */
+import { CALCULATOR_PATHS, calculatorPathWithQuery } from './calculator-links';
 
 /** "275/70R18" → "275-70r18" */
 export function sizeToSlug(size: string): string {
@@ -23,21 +24,18 @@ export function hubPagePath(size: string): string {
 }
 
 export function comparisonPagePath(sizeA: string, sizeB: string): string {
-  const params = new URLSearchParams({
+  return calculatorPathWithQuery(CALCULATOR_PATHS.tireComparison, {
     current: sizeA,
     new: sizeB,
   });
-  return `/calculators/tire-comparison-calculator?${params.toString()}`;
 }
 
 /** Open comparison with the selected size as the current tire. */
 export function comparisonPagePathCurrent(size: string): string {
-  const params = new URLSearchParams({ current: size });
-  return `/calculators/tire-comparison-calculator?${params.toString()}`;
+  return calculatorPathWithQuery(CALCULATOR_PATHS.tireComparison, { current: size });
 }
 
 /** Open tire size calculator with the size pre-filled. */
 export function tireSizeCalculatorPath(size: string): string {
-  const params = new URLSearchParams({ size });
-  return `/calculators/tire-size-calculator?${params.toString()}`;
+  return calculatorPathWithQuery(CALCULATOR_PATHS.tireSize, { size });
 }

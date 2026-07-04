@@ -1,6 +1,11 @@
 import { TIRE_SIZES, inferTireCategory, type TireCategory } from '../data/tire-sizes';
 import { getPopularTireModels, type PopularTireModel } from '../data/tire-popular-models';
 import { compareTires, getTireSpecs, type TireSpecs } from './tire-math';
+import { isValidComparisonPair } from './tire-comparison-links';
+import {
+  rankComparisonCandidates,
+  type ComparisonCandidateInput,
+} from './tire-comparison-relevance';
 import { comparisonPagePath } from './tire-size-url';
 
 export interface UpgradePathSuggestion {
@@ -109,6 +114,17 @@ function pickTieredSizes(candidates: SizedCandidate[], count = 3): SizedCandidat
   return indices.map((index) => candidates[index]);
 }
 
+function pickValidTieredSizes(
+  baseSize: string,
+  candidates: SizedCandidate[],
+  count = 3,
+): SizedCandidate[] {
+  return pickTieredSizes(
+    candidates.filter((candidate) => isValidComparisonPair(baseSize, candidate.size)),
+    count,
+  );
+}
+
 function buildSyntheticFlotationUpgrade(
   baseSpecs: TireSpecs,
   existing: SizedCandidate[],
@@ -152,11 +168,13 @@ function buildUpgradePaths(
   baseSpecs: TireSpecs,
   candidates: SizedCandidate[],
 ): UpgradePathSuggestion[] {
-  let picks = pickTieredSizes(candidates, 3);
+  let picks = pickValidTieredSizes(baseSize, candidates, 3);
 
   if (picks.length < 3) {
     const synthetic = buildSyntheticFlotationUpgrade(baseSpecs, picks);
-    if (synthetic) picks = [...picks, synthetic];
+    if (synthetic && isValidComparisonPair(baseSize, synthetic.size)) {
+      picks = [...picks, synthetic];
+    }
   }
 
   return picks.slice(0, 3).map((item) => ({
@@ -174,12 +192,21 @@ function buildComparisons(
   upgradePaths: UpgradePathSuggestion[],
   allCandidates: SizedCandidate[],
 ): SizeComparisonSuggestion[] {
-  const targets =
-    upgradePaths.length >= 3
-      ? upgradePaths.map((path) => path.size)
-      : pickTieredSizes(allCandidates, 3).map((item) => item.size);
+  const inputs: ComparisonCandidateInput[] = [];
 
-  return targets.slice(0, 3).map((targetSize) => {
+  for (const path of upgradePaths) {
+    inputs.push({ target: path.size, sources: ['upgrade-up'] });
+  }
+
+  for (const candidate of allCandidates) {
+    if (inputs.some((item) => item.target === candidate.size)) continue;
+    inputs.push({
+      target: candidate.size,
+      sources: candidate.sameWheel ? ['equivalent', 'dataset'] : ['dataset'],
+    });
+  }
+
+  return rankComparisonCandidates(baseSize, inputs, 3).map(({ target: targetSize }) => {
     const cmp = compareTires(baseSize, targetSize, INDICATED_SPEED);
     const targetSpecs = getTireSpecs(targetSize);
 

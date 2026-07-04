@@ -7,6 +7,7 @@ import {
   getAllComparisonSlugs,
   parseComparisonSlug,
 } from '../../lib/tire-comparison-links';
+import { isComparisonPublishable } from '../../lib/tire-comparison-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import {
   buildPageSchema,
@@ -15,10 +16,12 @@ import {
 import { compareTires, getTireSpecs } from '../../lib/tire-math';
 
 export function getStaticPaths() {
-  return getAllComparisonSlugs().map(({ slug, current, new: newSize }) => ({
-    params: { slug },
-    props: { current, newSize },
-  }));
+  return getAllComparisonSlugs()
+    .filter(({ current, new: newSize }) => isComparisonPublishable(current, newSize))
+    .map(({ slug, current, new: newSize }) => ({
+      params: { slug },
+      props: { current, newSize },
+    }));
 }
 
 const { slug } = Astro.params;

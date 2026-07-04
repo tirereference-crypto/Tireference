@@ -1,12 +1,26 @@
 import type { TireCategory } from '../data/tire-sizes';
-import { compareTires, type TireComparison, type TireSpecs } from './tire-math';
+import { compareTires, getTireSpecs, type TireComparison, type TireSpecs } from './tire-math';
 import type { PremiumSpecCard } from './tire-size-hub-content';
 import { hubPagePath, comparisonPagePath } from './tire-size-url';
 import type { TireSizeHubData } from './tire-size-hub';
+import {
+  buildAbsoluteRideComfortCopy,
+  buildAbsoluteFuelEconomyCopy,
+  buildAbsoluteGroundClearanceCopy,
+  buildAbsoluteHandlingCopy,
+  buildFuelEconomyImpactCopy,
+  buildGroundClearanceImpactCopy,
+  buildHandlingImpactCopy,
+  buildRideComfortImpactCopy,
+  buildRpmImpactCopy,
+  buildSpeedometerImpactCopy,
+  formatImpactCopy,
+} from './tire-real-world-impact';
+import { rpmAtSpeed } from './tire-comparison-units';
 import { getTireSizeEntry } from './tire-size-hub';
 import type { HubIconName } from './hub-icons';
 import { getPremiumOverride } from './tire-size-premium-overrides';
-import { isValidComparisonPair } from './tire-comparison-links';
+import { buildPopularComparisonsForSize, isValidComparisonPair } from './tire-comparison-links';
 import { classifyTireBadge, parseLoadIndex } from './tire-classification';
 
 export interface PremiumUpgradeCard {
@@ -86,13 +100,9 @@ export function buildAftermarketUpgradeCards(hub: TireSizeHubData): PremiumUpgra
 }
 
 export function buildPopularComparisons(hub: TireSizeHubData): { target: string }[] {
-  const override = getPremiumOverride(hub.entry.size);
-  const targets = (
-    override?.popularComparisons ??
-    hub.quickComparisons.slice(0, 3).map((q) => q.size)
-  ).filter((target) => isValidComparisonPair(hub.entry.size, target));
-
-  return targets.map((target) => ({ target }));
+  return buildPopularComparisonsForSize(hub.entry.size, 3).map((link) => ({
+    target: link.new,
+  }));
 }
 
 export function buildDefaultCompareTarget(
@@ -214,150 +224,108 @@ function buildFitmentNotes(hub: TireSizeHubData) {
   }
 }
 
-function signedPctText(n: number): string {
-  return `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(1)}%`;
-}
-
-function magnitudeWord(
-  abs: number,
-  small: number,
-  large: number,
-  words: [string, string, string],
+function meaningFromComparison(
+  refSize: string,
+  size: string,
+  specs: TireSpecs,
+  cmp: TireComparison,
+  builder: (
+    sizeA: string,
+    sizeB: string,
+    comparison: TireComparison,
+    specsA: TireSpecs,
+    specsB: TireSpecs,
+  ) => { measurement: string; engineering: string; practical: string },
 ): string {
-  if (abs < small) return words[0];
-  if (abs < large) return words[1];
-  return words[2];
+  const specsA = getTireSpecs(refSize);
+  return formatImpactCopy(builder(refSize, size, cmp, specsA, specs));
 }
 
-/**
- * Real-World Impact card explanations. Each is generated from the calculated
- * dimensional deltas versus the reference size (`cmp`). When no reference size
- * exists the text is derived from the size's own absolute specs — never a
- * generic hardcoded sentence.
- */
 function meaningGroundClearance(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    return `An overall diameter of ${specs.overallDiameterIn.toFixed(2)} in sets the baseline ride height and axle-to-ground clearance for this size.`;
+    return formatImpactCopy(buildAbsoluteGroundClearanceCopy(specs));
   }
-  const gc = cmp.groundClearanceChangeIn;
-  if (Math.abs(gc) < 0.05) {
-    return `Overall diameter stays within ${signedPctText(cmp.diameterDiffPercent)} of ${refSize}, so ride height and obstacle clearance are essentially unchanged.`;
-  }
-  const mag = magnitudeWord(Math.abs(gc), 0.4, 0.9, ['marginally', 'noticeably', 'significantly']);
-  return `Ground clearance ${gc > 0 ? 'rises' : 'drops'} by ${Math.abs(gc).toFixed(2)} in (${Math.abs(gc * 25.4).toFixed(0)} mm) at the axle versus ${refSize} — about half the diameter change — ${mag} ${gc > 0 ? 'improving approach and break-over angles' : 'lowering stance and trimming off-road margin'}.`;
+  return meaningFromComparison(refSize, size, specs, cmp, buildGroundClearanceImpactCopy);
 }
 
 function meaningSpeedometer(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    return `On the factory calibration, indicated and true speed line up at this size's ${specs.overallDiameterIn.toFixed(2)} in diameter baseline.`;
+    return formatImpactCopy({
+      measurement: `Overall diameter ${specs.overallDiameterIn.toFixed(2)} in sets the speedometer calibration baseline.`,
+      engineering: `Revs per mile are ${specs.revsPerMile.toFixed(1)} at ${specs.circumferenceIn.toFixed(2)} in circumference per revolution.`,
+      practical: `Indicated and true speed align when this size is the factory reference.`,
+    });
   }
-  const err = cmp.speedometer.errorPercent;
-  if (Math.abs(err) < 0.1) {
-    return `Diameter tracks ${refSize} closely enough that indicated speed stays within 0.1% of true speed — no recalibration needed.`;
-  }
-  const readsLow = err > 0;
-  return `At 60 mph indicated, true speed is ${cmp.speedometer.trueSpeed.toFixed(1)} mph — the speedometer reads about ${Math.abs(err).toFixed(1)}% ${readsLow ? 'low, so you travel faster than the dial shows' : 'high, so you travel slower than the dial shows'}${Math.abs(err) > 3 ? ', enough to be worth recalibrating' : ''}.`;
+  const specsA = getTireSpecs(refSize);
+  return formatImpactCopy(buildSpeedometerImpactCopy(refSize, size, cmp, specsA, specs, 'imperial'));
 }
 
 function meaningRpm(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    return `At ${Math.round(specs.revsPerMile)} revolutions per mile, this size sets the baseline cruising RPM, effective gearing, and acceleration feel.`;
+    return formatImpactCopy({
+      measurement: `${Math.round(specs.revsPerMile)} revs/mile at ${specs.overallDiameterIn.toFixed(2)} in diameter.`,
+      engineering: `Rolling radius ${(specs.overallDiameterIn / 2).toFixed(2)} in sets baseline cruising RPM and effective gearing.`,
+      practical: `Highway engine load and acceleration feel reference this revs/mile value.`,
+    });
   }
-  const d = cmp.revsPerMileDiff;
-  if (Math.abs(d) < 3) {
-    return `Revs per mile land within ${Math.round(Math.abs(d))} of ${refSize}, so cruising RPM, gearing, and acceleration feel are effectively unchanged.`;
-  }
-  const fewer = d < 0;
-  const mag = magnitudeWord(Math.abs(cmp.revsPerMileDiffPercent), 1.5, 3.5, ['marginally', 'noticeably', 'substantially']);
-  return `Revs per mile ${fewer ? 'fall' : 'rise'} by ${Math.round(Math.abs(d))} (${signedPctText(cmp.revsPerMileDiffPercent)}) versus ${refSize}, ${mag} ${fewer ? 'taller effective gearing — calmer highway RPM but slightly softer acceleration' : 'shorter effective gearing — quicker acceleration but higher highway RPM'}.`;
+  const specsA = getTireSpecs(refSize);
+  const rpmA = Math.round(rpmAtSpeed(60, specsA, 'imperial'));
+  const rpmB = Math.round(rpmAtSpeed(60, specs, 'imperial'));
+  return formatImpactCopy(
+    buildRpmImpactCopy(refSize, size, cmp, specsA, specs, 'imperial', 60, rpmA, rpmB, rpmB - rpmA),
+  );
 }
 
 function meaningFuel(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    return `Rolling resistance here is driven by ${Math.round(specs.revsPerMile)} revs/mile and a ${specs.sectionWidthIn.toFixed(2)} in tread width, which set steady-state fuel use.`;
+    return formatImpactCopy(buildAbsoluteFuelEconomyCopy(specs));
   }
-  const revPct = cmp.revsPerMileDiffPercent;
-  const widthMm = cmp.widthDiffMm;
-  const parts: string[] = [];
-  if (Math.abs(revPct) >= 0.5) {
-    const fewer = revPct < 0;
-    parts.push(
-      `${Math.abs(revPct).toFixed(1)}% ${fewer ? 'fewer' : 'more'} revs/mile ${fewer ? 'eases highway RPM and can nudge mpg up' : 'raises highway RPM and can nudge mpg down'}`,
-    );
-  }
-  if (Math.abs(widthMm) >= 5) {
-    parts.push(
-      `the ${Math.abs(widthMm).toFixed(0)} mm ${widthMm > 0 ? 'wider tread adds rolling resistance and mass' : 'narrower tread cuts rolling resistance'}`,
-    );
-  }
-  if (parts.length === 0) {
-    return `Revs per mile and tread width barely move versus ${refSize}, so real-world fuel economy should stay flat.`;
-  }
-  return `Versus ${refSize}, ${parts.join(', while ')} — net highway economy typically shifts within about 3%.`;
+  const specsA = getTireSpecs(refSize);
+  return formatImpactCopy(buildFuelEconomyImpactCopy(refSize, size, cmp, specsA, specs, 'imperial'));
 }
 
 function meaningComfort(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    const tall = specs.aspectRatio >= 60;
-    return `A ${specs.sidewallIn.toFixed(2)} in sidewall (${Math.round(specs.aspectRatio)}% aspect) gives this size a ${tall ? 'compliant, comfort-oriented' : 'firm, response-oriented'} baseline ride.`;
+    return formatImpactCopy(buildAbsoluteRideComfortCopy(specs));
   }
-  const swMm = cmp.sidewallDiffMm;
-  if (Math.abs(swMm) < 2) {
-    return `Sidewall height sits within ${Math.abs(swMm).toFixed(0)} mm of ${refSize}, so ride comfort and impact absorption feel familiar.`;
-  }
-  const taller = swMm > 0;
-  const mag = magnitudeWord(Math.abs(swMm), 8, 18, ['slightly', 'noticeably', 'significantly']);
-  return `Sidewall height ${taller ? 'increases' : 'decreases'} by ${Math.abs(swMm).toFixed(0)} mm versus ${refSize}, ${mag} ${taller ? 'improving impact absorption over rough roads and potholes' : 'firming the ride and transmitting more road texture'}.`;
+  return meaningFromComparison(refSize, size, specs, cmp, buildRideComfortImpactCopy);
 }
 
 function meaningHandling(
   specs: TireSpecs,
   cmp: TireComparison | null,
   refSize: string | null,
+  size: string,
 ): string {
   if (!cmp || !refSize) {
-    return `A ${specs.sectionWidthIn.toFixed(2)} in contact patch on a ${Math.round(specs.aspectRatio)}% sidewall sets the grip and steering response for this size.`;
+    return formatImpactCopy(buildAbsoluteHandlingCopy(specs));
   }
-  const widthMm = cmp.widthDiffMm;
-  const swMm = cmp.sidewallDiffMm;
-  const parts: string[] = [];
-  if (Math.abs(widthMm) >= 5) {
-    const wider = widthMm > 0;
-    parts.push(
-      `${Math.abs(widthMm).toFixed(0)} mm ${wider ? 'more tread widens the contact patch for stronger grip and braking bite' : 'less tread narrows the contact patch, lightening steering and easing tramlining'}`,
-    );
-  }
-  if (Math.abs(swMm) >= 3) {
-    const shorter = swMm < 0;
-    parts.push(
-      `${Math.abs(swMm).toFixed(0)} mm ${shorter ? 'less sidewall sharpens turn-in and cuts flex under load' : 'more sidewall adds flex and softens turn-in'}`,
-    );
-  }
-  if (parts.length === 0) {
-    return `Width and sidewall stay close to ${refSize}, so handling balance and steering response carry over.`;
-  }
-  const suffix = widthMm > 5 ? ' Expect slightly higher steering effort and standing-water sensitivity.' : '';
-  return `Versus ${refSize}, ${parts.join(' and ')}.${suffix}`;
+  return meaningFromComparison(refSize, size, specs, cmp, buildHandlingImpactCopy);
 }
 
 /** Premium extras for any tire size — computed metrics + category templates. */
@@ -385,7 +353,7 @@ export function buildPremiumExtras(hub: TireSizeHubData) {
       value: ref
         ? `${ref.groundClearanceChangeIn >= 0 ? '+' : ''}${ref.groundClearanceChangeIn.toFixed(2)} in`
         : 'Baseline',
-      meaning: meaningGroundClearance(specs, cmp, refSize),
+      meaning: meaningGroundClearance(specs, cmp, refSize, size),
     },
     {
       icon: 'gauge',
@@ -394,14 +362,14 @@ export function buildPremiumExtras(hub: TireSizeHubData) {
       value: ref
         ? `${ref.speedoErrorPercent >= 0 ? '+' : ''}${ref.speedoErrorPercent.toFixed(1)}%`
         : '0% (baseline)',
-      meaning: meaningSpeedometer(specs, cmp, refSize),
+      meaning: meaningSpeedometer(specs, cmp, refSize, size),
     },
     {
       icon: 'activity',
       label: 'Highway RPM',
       tone: 'rpm',
       value: `${Math.round(specs.revsPerMile)} revs/mi`,
-      meaning: meaningRpm(specs, cmp, refSize),
+      meaning: meaningRpm(specs, cmp, refSize, size),
     },
     {
       icon: 'fuel',
@@ -410,7 +378,7 @@ export function buildPremiumExtras(hub: TireSizeHubData) {
       value: ref && cmp
         ? `${cmp.revsPerMileDiffPercent >= 0 ? '+' : ''}${cmp.revsPerMileDiffPercent.toFixed(1)}% revs`
         : 'Baseline',
-      meaning: meaningFuel(specs, cmp, refSize),
+      meaning: meaningFuel(specs, cmp, refSize, size),
     },
     {
       icon: 'arrow-up-down',
@@ -419,14 +387,14 @@ export function buildPremiumExtras(hub: TireSizeHubData) {
       value: ref
         ? `${ref.sidewallDiffIn >= 0 ? '+' : ''}${ref.sidewallDiffIn.toFixed(2)} in sidewall`
         : specs.aspectRatio >= 60 ? 'Taller profile' : 'Lower profile',
-      meaning: meaningComfort(specs, cmp, refSize),
+      meaning: meaningComfort(specs, cmp, refSize, size),
     },
     {
       icon: capabilityBadge.icon,
       label: 'Capability Class',
       tone: 'positive',
       value: capabilityBadge.label,
-      meaning: meaningHandling(specs, cmp, refSize),
+      meaning: meaningHandling(specs, cmp, refSize, size),
     },
   ];
 
@@ -493,5 +461,3 @@ export function buildHeroSpecCards(specs: TireSpecs): HeroSpecCard[] {
 }
 
 // Backward-compatible aliases
-export const build275PremiumExtras = buildPremiumExtras;
-export const build275HeroSpecCards = buildHeroSpecCards;

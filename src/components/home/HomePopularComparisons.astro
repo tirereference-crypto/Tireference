@@ -1,5 +1,6 @@
 ---
 import { buildPopularComparisonCards } from '../../lib/home-sections';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 
 const comparisons = buildPopularComparisonCards();
 ---
@@ -15,7 +16,7 @@ const comparisons = buildPopularComparisonCards();
           Side-by-side fitment checks for the most searched tire size upgrades.
         </p>
       </div>
-      <a href="/calculators/tire-comparison-calculator" class="home-popular-comparisons__view-all">
+      <a href={CALCULATOR_PATHS.tireComparison} class="home-popular-comparisons__view-all">
         Open comparison tool
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
           <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />

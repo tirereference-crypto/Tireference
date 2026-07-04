@@ -49,14 +49,24 @@ describe('truncateDescription', () => {
 
 describe('resolveCanonical', () => {
   it('builds absolute URLs from tirereference.com', () => {
-    expect(resolveCanonical('/calculators/tire-size-calculator')).toBe(
-      'https://tirereference.com/calculators/tire-size-calculator',
+    expect(resolveCanonical('/calculators/tire-size-calculator/')).toBe(
+      'https://tirereference.com/calculators/tire-size-calculator/',
     );
     expect(resolveCanonical('/')).toBe('https://tirereference.com/');
   });
 
-  it('strips trailing slashes', () => {
-    expect(resolveCanonical('/tire-sizes/')).toBe('https://tirereference.com/tire-sizes');
+  it('preserves trailing slashes when present in the input', () => {
+    expect(resolveCanonical('/tire-sizes/')).toBe('https://tirereference.com/tire-sizes/');
+    expect(resolveCanonical('/calculators/tire-size-calculator/?size=275-45r17')).toBe(
+      'https://tirereference.com/calculators/tire-size-calculator/?size=275-45r17',
+    );
+  });
+
+  it('does not add trailing slashes when absent from the input', () => {
+    expect(resolveCanonical('/calculators/tire-size-calculator')).toBe(
+      'https://tirereference.com/calculators/tire-size-calculator',
+    );
+    expect(resolveCanonical('/tire-sizes')).toBe('https://tirereference.com/tire-sizes');
   });
 });
 
