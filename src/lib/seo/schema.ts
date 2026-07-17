@@ -1,4 +1,6 @@
 import { SITE_NAME } from '../site-brand';
+import { CONTACT_EMAIL } from '../info-pages';
+import { toSchemaDateTime } from '../eeat-metadata';
 import {
   DEFAULT_OG_IMAGE,
   ORGANIZATION_LOGO_URL,
@@ -17,6 +19,14 @@ export interface BreadcrumbItem {
   item?: string;
 }
 
+export interface SchemaPersonRef {
+  name: string;
+  url: string;
+  type?: 'Organization' | 'Person';
+  image?: string;
+  id?: string;
+}
+
 export interface ArticleSchemaInput {
   headline: string;
   description: string;
@@ -26,12 +36,16 @@ export interface ArticleSchemaInput {
   type?: 'Article' | 'TechArticle';
   /** Optional PropertyValue nodes (e.g. tire load index, speed rating). */
   additionalProperty?: Array<Record<string, unknown>>;
-  /** Credited author name (defaults to the organization). */
+  /** @deprecated Prefer authorRef */
   authorName?: string;
+  /** @deprecated Prefer authorRef */
   authorType?: 'Organization' | 'Person';
-  /** Credited reviewer/contributor name for E-E-A-T. */
+  /** @deprecated Prefer reviewerRef */
   reviewerName?: string;
+  /** @deprecated Prefer reviewerRef */
   reviewerType?: 'Organization' | 'Person';
+  authorRef?: SchemaPersonRef;
+  reviewerRef?: SchemaPersonRef;
 }
 
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
@@ -66,7 +80,12 @@ export function buildOrganizationSchema(): Record<string, unknown> {
     name: SITE_NAME,
     url: `${SITE_URL}/`,
     logo: ORGANIZATION_LOGO_URL,
-    sameAs: [],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: CONTACT_EMAIL,
+      url: `${SITE_URL}/contact/`,
+    },
   };
 }
 
@@ -79,14 +98,6 @@ export function buildWebSiteSchema(): Record<string, unknown> {
     name: SITE_NAME,
     description: SEO_DESCRIPTIONS.homepage,
     publisher: { '@id': ORGANIZATION_ID },
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
-    },
   };
 }
 
@@ -120,9 +131,20 @@ export function buildFaqPageSchema(faqs: FaqItem[]): Record<string, unknown> | u
       name: faq.question,
       acceptedAnswer: {
         '@type': 'Answer',
-        text: faq.answer,
+        // Keep the same wording as the visible FAQ; normalize blank lines to spaces for JSON text.
+        text: faq.answer.replace(/\s*\n+\s*/g, ' ').trim(),
       },
     })),
+  };
+}
+
+function schemaPersonNode(ref: SchemaPersonRef): Record<string, unknown> {
+  return {
+    '@type': ref.type ?? 'Person',
+    name: ref.name,
+    url: ref.url,
+    ...(ref.id ? { '@id': ref.id } : {}),
+    ...(ref.image ? { image: ref.image } : {}),
   };
 }
 
@@ -138,10 +160,29 @@ export function buildArticleSchema({
   authorType = 'Organization',
   reviewerName,
   reviewerType = 'Organization',
+  authorRef,
+  reviewerRef,
 }: ArticleSchemaInput): Record<string, unknown> {
   const published = datePublished ?? buildDefaultPublishDate();
   const modified = dateModified ?? published;
   const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+
+  const author = authorRef
+    ? schemaPersonNode(authorRef)
+    : {
+        '@type': authorType,
+        name: authorName,
+        url: `${SITE_URL}/`,
+      };
+
+  const contributor = reviewerRef
+    ? schemaPersonNode(reviewerRef)
+    : reviewerName
+      ? {
+          '@type': reviewerType,
+          name: reviewerName,
+        }
+      : undefined;
 
   return {
     '@context': 'https://schema.org',
@@ -151,19 +192,8 @@ export function buildArticleSchema({
     ...(additionalProperty && additionalProperty.length > 0
       ? { additionalProperty }
       : {}),
-    author: {
-      '@type': authorType,
-      name: authorName,
-      url: `${SITE_URL}/`,
-    },
-    ...(reviewerName
-      ? {
-          contributor: {
-            '@type': reviewerType,
-            name: reviewerName,
-          },
-        }
-      : {}),
+    author,
+    ...(contributor ? { contributor } : {}),
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
@@ -208,5 +238,68 @@ export function buildWebPageSchema({
     url: pageUrl,
     isPartOf: { '@id': WEBSITE_ID },
     publisher: { '@id': ORGANIZATION_ID },
+  };
+}
+
+export interface WebApplicationSchemaInput {
+  name: string;
+  description: string;
+  url: string;
+  applicationCategory?: string;
+  /** Only pass when genuinely maintained (YYYY-MM or YYYY-MM-DD). */
+  dateModified?: string;
+  /** Fragment id for @id, e.g. tire-size-calculator */
+  id?: string;
+}
+
+export function buildWebApplicationSchema({
+  name,
+  description,
+  url,
+  applicationCategory = 'UtilitiesApplication',
+  dateModified,
+  id = 'web-application',
+}: WebApplicationSchemaInput): Record<string, unknown> {
+  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    '@id': `${pageUrl}#${id}`,
+    name,
+    description,
+    url: pageUrl,
+    applicationCategory,
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript. Runs in a modern web browser.',
+    creator: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    ...(dateModified
+      ? { dateModified: toSchemaDateTime(dateModified) }
+      : {}),
+  };
+}
+
+export function buildAboutPageSchema({
+  name,
+  description,
+  url,
+}: {
+  name: string;
+  description: string;
+  url: string;
+}): Record<string, unknown> {
+  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    '@id': `${pageUrl}#about`,
+    name,
+    description,
+    url: pageUrl,
+    isPartOf: { '@id': WEBSITE_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    about: { '@id': ORGANIZATION_ID },
   };
 }

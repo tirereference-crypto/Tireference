@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import '../../styles/calculator-premium.css';
+import '../../styles/tire-size-calculator-page.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
 import { inferTireCategory, TIRE_CATEGORY_LABELS } from '../../data/tire-sizes';
@@ -9,12 +10,11 @@ import { getTireDiagramImages } from '../../lib/tire-diagram-images';
 import { buildAtAGlanceProfile } from '../../lib/tire-at-a-glance';
 import { buildDynamicQuickFacts } from '../../lib/tire-calculator-insights';
 import { buildPerformanceImpactCards, buildPerformanceImpactSummary } from '../../lib/tire-performance-impact';
-import { comparisonPagePath, hubPagePath } from '../../lib/tire-size-url';
+import { comparisonPagePathCurrent, hubPagePath } from '../../lib/tire-size-url';
 import { metricToFlotation } from '../../lib/tire-math';
 import type { TireSpecs } from '../../lib/tire-math';
 import { CALCULATOR_PATHS, getRelatedCalculatorLinks } from '../../lib/calculator-links';
 import { TIRE_SIZE_CALCULATOR_FAQS } from '../../lib/tire-size-calculator-faqs';
-import { ExploreTireSizeFurtherSection } from './ExploreTireSizeFurtherSection';
 import { TireSizeValidationBanner } from './TireSizeValidationBanner';
 import { useTireSizeCalculator } from './useTireSizeCalculator';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
@@ -26,6 +26,19 @@ import {
   useUserInteractionFlag,
 } from '../../hooks/useCalculatorAnalytics';
 import { trackRelatedCalculatorClick, trackTireSizeSelected } from '../../lib/analytics';
+import { CalculatorHeroInput } from './tire-size-calculator/CalculatorHeroInput';
+import { CalculatorResults } from './tire-size-calculator/CalculatorResults';
+import { CalculatorNotice } from './tire-size-calculator/CalculatorNotice';
+import { CalculatorActions } from './tire-size-calculator/CalculatorActions';
+import { TireSizeSnapshot } from './tire-size-calculator/TireSizeSnapshot';
+import { TireCodeExplanation } from './tire-size-calculator/TireCodeExplanation';
+import { PopularTiresBySize } from './tire-size-calculator/PopularTiresBySize';
+import { RelatedTireSizes } from './tire-size-calculator/RelatedTireSizes';
+import { CalculatorFaq } from './tire-size-calculator/CalculatorFaq';
+import { CalculatorTrustStrip } from './tire-size-calculator/CalculatorTrustStrip';
+import { RelatedCalculators } from './tire-size-calculator/RelatedCalculators';
+import { StickyCompareBar } from './tire-size-calculator/StickyCompareBar';
+import { useStickyCompareBar } from '../../hooks/useStickyCompareBar';
 
 const TIRE_COMPARE_PAIR_SRC = '/images/tires/tire-compare-pair.png';
 type TireLabelArc = {
@@ -543,29 +556,31 @@ function TireVisualization({
 
         <div className="calc-viz-hero__stage">
           <div className="calc-viz-hero__tire-col calc-viz-hero__tire-col--side">
-            <div className={`calc-viz-hero__tire-wrap calc-viz-hero__tire-wrap--side ${pulse ? 'calc-viz-hero__tire-wrap--pulse' : ''}`}>
-              <div className="calc-viz-hero__tire-frame">
-                <img
-                  src={images.side}
-                  alt={images.sideAlt}
-                  width={TIRE_LABEL_VIEWBOX.width}
-                  height={TIRE_LABEL_VIEWBOX.height}
-                  className="calc-viz-hero__tire calc-viz-hero__tire--side"
-                  decoding="async"
-                />
-                <TireSidewallLabel
-                  sizeLabel={sizeLabel}
-                  pathId="calc-viz-size-arc"
-                  animate={pulse}
-                />
+            <div className="calc-viz-hero__side-stack">
+              <div className={`calc-viz-hero__tire-wrap calc-viz-hero__tire-wrap--side ${pulse ? 'calc-viz-hero__tire-wrap--pulse' : ''}`}>
+                <div className="calc-viz-hero__tire-frame">
+                  <img
+                    src={images.side}
+                    alt={images.sideAlt}
+                    width={TIRE_LABEL_VIEWBOX.width}
+                    height={TIRE_LABEL_VIEWBOX.height}
+                    className="calc-viz-hero__tire calc-viz-hero__tire--side"
+                    decoding="async"
+                  />
+                  <TireSidewallLabel
+                    sizeLabel={sizeLabel}
+                    pathId="calc-viz-size-arc"
+                    animate={pulse}
+                  />
+                </div>
               </div>
-            </div>
-            <div className={`calc-viz-hero__width-measure ${pulse ? 'calc-viz-hero__width-measure--animate' : ''}`}>
-              <span className="calc-viz-hero__line-h">
-                <span className="calc-viz-hero__cap calc-viz-hero__cap--left" />
-                <span className="calc-viz-hero__cap calc-viz-hero__cap--right" />
-              </span>
-              <VizMeasure value={specs.overallDiameterIn} label="Overall Diameter" animate={pulse} />
+              <div className={`calc-viz-hero__width-measure calc-viz-hero__width-measure--side ${pulse ? 'calc-viz-hero__width-measure--animate' : ''}`}>
+                <span className="calc-viz-hero__line-h">
+                  <span className="calc-viz-hero__cap calc-viz-hero__cap--left" />
+                  <span className="calc-viz-hero__cap calc-viz-hero__cap--right" />
+                </span>
+                <VizMeasure value={specs.overallDiameterIn} label="Overall Diameter" animate={pulse} />
+              </div>
             </div>
           </div>
 
@@ -756,7 +771,7 @@ function CalculatorFeatureCards({ sizeLabel }: { sizeLabel: string }) {
               );
             })}
           </div>
-          <a href="/tire-sizes" className="calc-feature-card__cta">
+          <a href="/tire-sizes/" className="calc-feature-card__cta">
             View all popular sizes →
           </a>
         </article>
@@ -804,7 +819,7 @@ type TireSizePart = {
   value: string;
   title: string;
   copy: string;
-  color: 'purple' | 'orange' | 'green' | 'blue';
+  color: 'blue' | 'orange' | 'green';
 };
 
 function getTireSizeParts(sizeLabel: string, specs: TireSpecs): TireSizePart[] {
@@ -818,7 +833,7 @@ function getTireSizeParts(sizeLabel: string, specs: TireSpecs): TireSizePart[] {
         value: diameter,
         title: 'Overall Diameter',
         copy: 'The tire height in inches from the ground to the top of the tread.',
-        color: 'purple',
+        color: 'blue',
       },
       {
         id: 'aspect',
@@ -850,7 +865,7 @@ function getTireSizeParts(sizeLabel: string, specs: TireSpecs): TireSizePart[] {
       value: String(Math.round(specs.widthMm)),
       title: 'Width',
       copy: 'The width of the tire in millimeters from sidewall to sidewall.',
-      color: 'purple',
+      color: 'blue',
     },
     {
       id: 'aspect',
@@ -1225,11 +1240,20 @@ export default function PremiumTireSizeCalculator({
   initialSize?: string;
 } = {}) {
   const calculator = useTireSizeCalculator(initialSize);
-  const { specs, unitSystem, message, builtSizeLabel, fields, selectTireSize } = calculator;
+  const {
+    specs,
+    displayUnits,
+    message,
+    builtSizeLabel,
+    fields,
+    flotationFields,
+    selectTireSize,
+    queryParseFailed,
+  } = calculator;
   const liveInsights = useLiveTireInsights(calculator);
   const formRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const [stickySummaryVisible, setStickySummaryVisible] = useState(false);
+  const resultsCardsRef = useRef<HTMLDivElement>(null);
 
   useCalculatorStarted(CALCULATOR_NAMES.tireSize);
   const { markInteracted, interacted } = useUserInteractionFlag();
@@ -1246,7 +1270,7 @@ export default function PremiumTireSizeCalculator({
   useEffect(() => {
     if (!interacted) return;
     if (message.status !== 'ready' || !builtSizeLabel) return;
-    const signature = `${builtSizeLabel}|${fields.width}|${fields.aspectRatio}|${fields.wheelDiameter}`;
+    const signature = `${builtSizeLabel}|${fields.width}|${fields.aspectRatio}|${fields.wheelDiameter}|${flotationFields.overallDiameter}`;
     trackCalculatorCompletedOnce(dedupTracker, signature, {
       calculator_name: CALCULATOR_NAMES.tireSize,
       current_tire_size: builtSizeLabel,
@@ -1258,13 +1282,15 @@ export default function PremiumTireSizeCalculator({
     fields.width,
     fields.aspectRatio,
     fields.wheelDiameter,
+    flotationFields.overallDiameter,
     dedupTracker,
   ]);
 
   const displaySpecs = liveInsights?.specs ?? FALLBACK_SPECS;
   const displayLabel = liveInsights?.sizeLabel ?? EDUCATION_SIZE_LABEL;
   const tireParts = getTireSizeParts(displayLabel, displaySpecs);
-  const compareHref = comparisonPagePath(displayLabel, DEFAULT_COMPARE);
+  const compareHref = comparisonPagePathCurrent(displayLabel);
+  const ready = message.status === 'ready' && specs && liveInsights;
 
   const scrollToResults = useCallback(() => {
     resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1274,75 +1300,105 @@ export default function PremiumTireSizeCalculator({
     resultsReady: message.status === 'ready',
   });
 
-  useEffect(() => {
-    const el = formRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setStickySummaryVisible(!entry.isIntersecting && message.status === 'ready'),
-      { threshold: 0, rootMargin: '0px 0px -40px 0px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [message.status]);
+  const stickyCompareVisible = useStickyCompareBar(
+    resultsCardsRef,
+    message.status === 'ready' && !!specs,
+  );
 
   return (
-    <div className="calc-page tl-has-sticky-analyze space-y-5 pb-20">
-      <section className="calc-hero">
-        <div className="calc-hero__intro">
-          <p className="calc-hero__intro-eyebrow">Tire Reference Calculator</p>
-          <h1 className="calc-hero__intro-title">Tire Size Calculator</h1>
-          <p className="calc-hero__intro-desc">
-            Enter a tire size to calculate dimensions and visualize how it fits and performs.
+    <div className="tsc-page calc-page tl-has-sticky-analyze">
+      <section className="tsc-hero" aria-label="Tire size calculator">
+        <div className="tsc-hero__intro">
+          <h1 className="tsc-hero__title">Tire Size Calculator</h1>
+          <p className="tsc-hero__desc">
+            Calculate diameter, width, sidewall height, circumference and revolutions per mile
+            for any tire size.
           </p>
         </div>
 
-        <div className="calc-hero-grid">
+        <div className="tsc-hero__grid">
           <div ref={formRef}>
-            <CalculatorPanel
+            <CalculatorHeroInput
               calculator={calculator}
-              sizeLabel={displayLabel}
               onUserInteraction={markInteracted}
               onSelectSuggestion={handleSelectTireSize}
               onCalculateClick={scrollToResults}
             />
           </div>
-          <TireVisualization specs={displaySpecs} sizeLabel={displayLabel} parts={tireParts} />
-          <div ref={resultsRef}>
-            <KeySpecs specs={displaySpecs} unitSystem={unitSystem} />
+
+          <div className="tsc-viz-card">
+            <header className="tsc-viz-card__header">
+              <h2 className="tsc-viz-card__title">
+                <span className="tsc-viz-card__step" aria-hidden="true">
+                  2
+                </span>
+                Tire Visualization
+              </h2>
+            </header>
+            <div className="tsc-viz-card__body">
+              <TireVisualization specs={displaySpecs} sizeLabel={displayLabel} parts={tireParts} />
+            </div>
           </div>
         </div>
       </section>
 
-      <CalculatorFeatureCards sizeLabel={displayLabel} />
-      <div className="calc-explained-row">
-        <UnderstandingTireSizes specs={displaySpecs} sizeLabel={displayLabel} />
-        {liveInsights && (
-          <PerformanceImpactSection
-            key={liveInsights.signature}
-            specs={liveInsights.specs}
-            sizeLabel={liveInsights.sizeLabel}
-          />
-        )}
+      <div ref={resultsRef} className="tsc-stack">
+        <div aria-live="polite" aria-atomic="true" className="tsc-status-region">
+          {queryParseFailed || message.status === 'invalid' ? (
+            <p className="tsc-invalid" role="alert">
+              {message.text ||
+                'Enter a valid tire size. Metric example: 275/70R18. Flotation example: 33x12.50R17.'}
+            </p>
+          ) : null}
+
+          {ready ? null : message.status === 'empty' && !queryParseFailed ? (
+            <p className="tsc-empty" role="status">
+              Enter a tire size above to calculate dimensions and explore related options. The
+              visualization shows an example size until you enter your own.
+            </p>
+          ) : null}
+        </div>
+
+        {ready ? (
+          <>
+            <CalculatorResults
+              ref={resultsCardsRef}
+              specs={specs}
+              displayUnits={displayUnits}
+              shareTitle={`Tire Size Calculator — ${liveInsights.sizeLabel}`}
+            />
+            <CalculatorNotice />
+            <CalculatorActions sizeLabel={liveInsights.sizeLabel} />
+            <TireSizeSnapshot specs={specs} sizeLabel={liveInsights.sizeLabel} />
+            <TireCodeExplanation specs={specs} sizeLabel={liveInsights.sizeLabel} />
+            <PopularTiresBySize sizeLabel={liveInsights.sizeLabel} />
+            <RelatedTireSizes sizeLabel={liveInsights.sizeLabel} />
+          </>
+        ) : null}
       </div>
-      {liveInsights && (
-        <FitmentDashboardSection
-          specs={liveInsights.specs}
-          sizeLabel={liveInsights.sizeLabel}
-        />
-      )}
-      {liveInsights && (
-        <ExploreTireSizeFurtherSection
-          specs={liveInsights.specs}
-          sizeLabel={liveInsights.sizeLabel}
-        />
-      )}
-      <Faq />
 
-      {message.status === 'ready' && specs && liveInsights && (
-        <StickyResultsBar visible={stickySummaryVisible} sizeLabel={liveInsights.sizeLabel} specs={specs} compareHref={compareHref} />
-      )}
+      <CalculatorFaq />
+      <CalculatorTrustStrip
+        sizeLabel={ready ? liveInsights.sizeLabel : null}
+        hasCalculatedSize={!!ready}
+      />
+      <RelatedCalculators />
 
-      <StickyAnalyzeButton visible={analyzeStickyVisible} label="Analyze" onClick={scrollToResults} ariaLabel="View tire size results" />
+      {ready ? (
+        <StickyCompareBar
+          visible={stickyCompareVisible}
+          sizeLabel={liveInsights.sizeLabel}
+          specs={specs}
+          compareHref={compareHref}
+        />
+      ) : null}
+
+      <StickyAnalyzeButton
+        visible={analyzeStickyVisible}
+        label="Analyze"
+        onClick={scrollToResults}
+        ariaLabel="View tire size results"
+      />
     </div>
   );
 }

@@ -3,7 +3,6 @@ import type { CostTier } from './tire-size-premium';
 import type { QuickTakeData } from './tire-size-quick-take';
 
 export interface PremiumSizeOverride {
-  typicalUsesExplanation?: string;
   fitmentNotes?: { title: string; points: string[] };
   costTiers?: CostTier[];
   quickTake?: QuickTakeData;
@@ -14,8 +13,6 @@ export interface PremiumSizeOverride {
 
 const OVERRIDES: Record<string, PremiumSizeOverride> = {
   '275/70R18': {
-    typicalUsesExplanation:
-      '275/70R18 is the sweet spot for overlanders who want 33-inch capability without the rubbing and gearing headaches of a full 35-inch build.',
     fitmentNotes: {
       title: 'Will 275/70R18 Fit My Vehicle?',
       points: [

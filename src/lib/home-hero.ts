@@ -69,7 +69,7 @@ export function resolveNonTireHomeSearch(query: string): string | null {
   });
   if (calculator) return calculator.href;
 
-  if (/guide|tire sizes|sizes/i.test(normalized)) return '/tire-sizes';
+  if (/guide|tire sizes|sizes/i.test(normalized)) return '/tire-sizes/';
 
   try {
     const canonical = normalizeTireSizeInput(trimmed);
@@ -112,35 +112,4 @@ export function popularSearchHref(size: string): string {
   return tireSizeCalculatorPath(size);
 }
 
-export const HOME_QUICK_ACTIONS = [
-  {
-    title: 'Size Calculator',
-    description: 'Convert tire size into diameter, width, and revs per mile',
-    href: CALCULATOR_PATHS.tireSize,
-    icon: 'size' as const,
-  },
-  {
-    title: 'Comparison',
-    description: 'Compare two tire sizes side by side',
-    href: CALCULATOR_PATHS.tireComparison,
-    icon: 'compare' as const,
-  },
-  {
-    title: 'Diameter Calculator',
-    description: 'Calculate diameter, circumference and revolutions per mile',
-    href: CALCULATOR_PATHS.tireDiameter,
-    icon: 'diameter' as const,
-  },
-  {
-    title: 'Wheel Offset',
-    description: 'Calculate offset, backspacing and clearance',
-    href: CALCULATOR_PATHS.wheelOffset,
-    icon: 'offset' as const,
-  },
-  {
-    title: 'Gear Ratio Calculator',
-    description: 'Find the ideal gear ratio after changing tire size',
-    href: CALCULATOR_PATHS.gearRatio,
-    icon: 'gear' as const,
-  },
-] as const;
+export { HOME_QUICK_ACTIONS } from './home-landing';

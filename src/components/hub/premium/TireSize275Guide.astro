@@ -1,0 +1,15 @@
+---
+/**
+ * @deprecated Prefer TireSizeGuide.astro — kept as a thin wrapper for old imports.
+ */
+import TireSizeGuide from './TireSizeGuide.astro';
+import type { TireSizeHubData } from '../../../lib/tire-size-hub';
+
+interface Props {
+  hub: TireSizeHubData;
+}
+
+const { hub } = Astro.props;
+---
+
+<TireSizeGuide hub={hub} />

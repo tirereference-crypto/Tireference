@@ -4,31 +4,42 @@ import HomeSectionHeader from './HomeSectionHeader.astro';
 import { HOME_BROWSE_CATEGORIES } from '../../lib/home-sections';
 ---
 
-<section class="home-section home-section--alt home-reveal home-categories" aria-labelledby="home-categories-title">
-  <HomeSectionHeader
-    id="home-categories-title"
-    title="Browse by Category"
-    description="Explore tire sizes grouped by how they're used — category hubs are coming soon."
-  />
+<section class="home-section home-reveal home-categories" aria-labelledby="home-categories-title">
+  <div class="home-categories__panel">
+    <HomeSectionHeader
+      id="home-categories-title"
+      title="Browse by Vehicle Type"
+      description="Choose how you drive to explore relevant tire sizes, calculators and guides."
+    />
 
-  <div class="home-categories__grid">
-    {
-      HOME_BROWSE_CATEGORIES.map((category) => (
-        <a href={category.href} class="home-categories__card hub-link-card">
-          <span class="home-categories__icon-wrap">
-            <HomeCategoryIcon name={category.icon} />
-          </span>
-          <span class="home-categories__body">
-            <h3 class="home-categories__title">{category.title}</h3>
-            <p class="home-categories__desc">{category.description}</p>
-          </span>
-          <span class="home-categories__arrow" aria-hidden="true">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
-              <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </span>
-        </a>
-      ))
-    }
+    <div class="home-categories__grid">
+      {
+        HOME_BROWSE_CATEGORIES.map((category) => (
+          <a
+            href={category.href}
+            class={`home-categories__card hub-link-card home-categories__card--${category.accent}`}
+          >
+            <img
+              class="home-categories__image"
+              src={category.imageSrc}
+              alt={category.imageAlt}
+              width={category.imageWidth}
+              height={category.imageHeight}
+              sizes="(max-width: 719px) 50vw, (max-width: 1199px) 25vw, 12.5vw"
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="home-categories__scrim" aria-hidden="true" />
+            <span class={`home-categories__icon-wrap home-categories__icon-wrap--${category.accent}`}>
+              <HomeCategoryIcon name={category.icon} />
+            </span>
+            <span class="home-categories__body">
+              <span class="home-categories__label">{category.title}</span>
+              <span class="home-categories__desc">{category.description}</span>
+            </span>
+          </a>
+        ))
+      }
+    </div>
   </div>
 </section>

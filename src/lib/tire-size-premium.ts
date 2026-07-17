@@ -1,7 +1,8 @@
 import type { TireCategory } from '../data/tire-sizes';
 import { compareTires, getTireSpecs, type TireComparison, type TireSpecs } from './tire-math';
 import type { PremiumSpecCard } from './tire-size-hub-content';
-import { hubPagePath, comparisonPagePath } from './tire-size-url';
+import { hubPagePath } from './tire-size-url';
+import { comparisonPagePath } from './tire-comparison-paths';
 import type { TireSizeHubData } from './tire-size-hub';
 import {
   buildAbsoluteRideComfortCopy,
@@ -55,7 +56,7 @@ export interface ImpactMetric {
   tone: ImpactMetricTone;
 }
 
-export type HeroSpecCard = PremiumSpecCard & {
+export type HeroSpecCard = Omit<PremiumSpecCard, 'icon'> & {
   icon: PremiumSpecCard['icon'] | 'wheel';
 };
 
@@ -65,8 +66,11 @@ function upgradeDifficulty(pct: number): PremiumUpgradeCard['difficulty'] {
   return 'Advanced';
 }
 
-function buildUpgradeCard(baseSize: string, target: string): PremiumUpgradeCard {
+function buildUpgradeCard(baseSize: string, target: string): PremiumUpgradeCard | null {
   const cmp = compareTires(baseSize, target, 60);
+  const comparisonHref = comparisonPagePath(baseSize, target);
+  if (!comparisonHref) return null;
+
   const pct = cmp.diameterDiffPercent;
   const hasHub = !!getTireSizeEntry(target);
   return {
@@ -75,8 +79,8 @@ function buildUpgradeCard(baseSize: string, target: string): PremiumUpgradeCard 
     groundClearanceGainIn: cmp.groundClearanceChangeIn,
     speedoErrorPercent: cmp.speedometer.errorPercent,
     difficulty: upgradeDifficulty(pct),
-    href: hasHub ? hubPagePath(target) : comparisonPagePath(baseSize, target),
-    comparisonHref: comparisonPagePath(baseSize, target),
+    href: hasHub ? hubPagePath(target) : comparisonHref,
+    comparisonHref,
   };
 }
 
@@ -93,10 +97,13 @@ export function buildAftermarketUpgradeCards(hub: TireSizeHubData): PremiumUpgra
       .slice(0, 3)
       .map((q) => q.size)
       .filter((target) => isValidComparisonPair(hub.entry.size, target))
-      .map((t) => buildUpgradeCard(hub.entry.size, t));
+      .map((t) => buildUpgradeCard(hub.entry.size, t))
+      .filter((card): card is PremiumUpgradeCard => card !== null);
   }
 
-  return targets.map((t) => buildUpgradeCard(hub.entry.size, t));
+  return targets
+    .map((t) => buildUpgradeCard(hub.entry.size, t))
+    .filter((card): card is PremiumUpgradeCard => card !== null);
 }
 
 export function buildPopularComparisons(hub: TireSizeHubData): { target: string }[] {
@@ -109,13 +116,14 @@ export function buildDefaultCompareTarget(
   hub: TireSizeHubData,
   allSizes: string[],
 ): string {
+  const validSizes = allSizes.filter((size) => isValidComparisonPair(hub.entry.size, size));
   const preferred =
-    hub.quickComparisons[0]?.size ??
-    hub.equivalents[0]?.size ??
-    hub.upgradePathsUp[0]?.size;
+    hub.quickComparisons.find((row) => isValidComparisonPair(hub.entry.size, row.size))?.size ??
+    hub.equivalents.find((eq) => isValidComparisonPair(hub.entry.size, eq.size))?.size ??
+    hub.upgradePathsUp.find((path) => path.comparisonHref)?.size;
 
-  if (preferred && allSizes.includes(preferred)) return preferred;
-  return allSizes[0] ?? hub.entry.size;
+  if (preferred && validSizes.includes(preferred)) return preferred;
+  return validSizes[0] ?? hub.entry.size;
 }
 
 const COST_TIERS_BY_CATEGORY: Record<TireCategory, CostTier[]> = {
@@ -145,27 +153,6 @@ const COST_TIERS_BY_CATEGORY: Record<TireCategory, CostTier[]> = {
     { label: 'Premium', perTire: '$320 – $420', setOfFour: '$1,280 – $1,680', note: 'Load Range E, 3PMSF-rated, or dedicated mud-terrain compounds.' },
   ],
 };
-
-function buildTypicalUsesExplanation(hub: TireSizeHubData): string {
-  const override = getPremiumOverride(hub.entry.size);
-  if (override?.typicalUsesExplanation) return override.typicalUsesExplanation;
-
-  const size = hub.displaySize;
-  const category = hub.entry.category;
-
-  switch (category) {
-    case 'off-road':
-      return `${size} is a practical upgrade for owners who want more trail capability and stance without jumping into extreme lift-and-gear builds that punish daily driving.`;
-    case 'light-truck':
-      return `${size} suits truck owners who need confident load and towing performance while keeping reasonable highway manners and replacement availability.`;
-    case 'SUV':
-      return `${size} fits crossover and SUV drivers who want a balanced mix of comfort, all-weather confidence, and light trail versatility in one daily setup.`;
-    case 'performance':
-      return `${size} targets enthusiasts who prioritize steering response and cornering grip over maximum ride softness or all-terrain versatility.`;
-    default:
-      return `${size} is a strong daily-driver choice when comfort, efficiency, and predictable wet-weather behavior matter more than off-road clearance or track-focused grip.`;
-  }
-}
 
 function buildFitmentNotes(hub: TireSizeHubData) {
   const override = getPremiumOverride(hub.entry.size);
@@ -408,7 +395,6 @@ export function buildPremiumExtras(hub: TireSizeHubData) {
     costTiers,
     vehicles,
     fitmentNotes: buildFitmentNotes(hub),
-    typicalUsesExplanation: buildTypicalUsesExplanation(hub),
   };
 }
 

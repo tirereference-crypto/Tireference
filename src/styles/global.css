@@ -146,6 +146,100 @@
     outline-offset: 2px;
   }
 
+  .calc-copy-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-heading);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .calc-copy-link:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+  }
+
+  .calc-copy-link--copied {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+    color: var(--color-primary);
+  }
+
+  .calc-copy-link__icon {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .calc-copy-link__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .calc-copy-link-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+
+  .calc-link-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .calc-share-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-heading);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .calc-share-link:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+  }
+
+  .calc-share-link--shared {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+    color: var(--color-primary);
+  }
+
+  .calc-share-link__icon {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .calc-share-link__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
   .tl-btn-secondary {
     display: inline-flex;
     align-items: center;

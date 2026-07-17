@@ -50,6 +50,9 @@ describe('expert FAQ for 275/70R18', () => {
 
   it('wires expert FAQ into hub data for 275/70R18', () => {
     const hub = buildTireSizeHubData('275/70R18');
-    expect(hub!.faq[0].question).toBe('Is 275/70R18 worth upgrading to?');
+    const questions = hub!.faq.map((item) => item.question);
+    expect(questions.some((q) => q.includes('Which brands make'))).toBe(true);
+    expect(questions.some((q) => q.includes('worth upgrading') || q.includes('fuel economy') || q.includes('without a lift'))).toBe(true);
+    expect(hub!.faq.length).toBeLessThanOrEqual(6);
   });
 });

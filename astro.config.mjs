@@ -8,6 +8,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 
 import sitemap from '@astrojs/sitemap';
+import vercel from '@astrojs/vercel';
 
 /** Permanent redirects from legacy root-level calculator routes. */
 const LEGACY_CALCULATOR_REDIRECTS = {
@@ -16,6 +17,7 @@ const LEGACY_CALCULATOR_REDIRECTS = {
   '/tire-size-comparison': '/calculators/tire-comparison-calculator/',
   '/tire-comparison-calculator': '/calculators/tire-comparison-calculator/',
   '/wheel-offset-calculator': '/calculators/wheel-offset-calculator/',
+  '/speedometer-error-calculator': '/calculators/speedometer-error-calculator/',
   '/gear-ratio-calculator': '/calculators/gear-ratio-calculator/',
 };
 
@@ -24,6 +26,9 @@ function sitemapXmlAlias() {
   return {
     name: 'sitemap-xml-alias',
     hooks: {
+      /**
+       * @param {{ dir: URL }} opts
+       */
       'astro:build:done': ({ dir }) => {
         const outDir = fileURLToPath(dir);
         const generated = join(outDir, 'sitemap-0.xml');
@@ -40,6 +45,7 @@ function sitemapXmlAlias() {
 export default defineConfig({
   site: 'https://tirereference.com',
   trailingSlash: 'always',
+  adapter: vercel(),
   integrations: [react(), sitemap(), sitemapXmlAlias()],
   redirects: Object.fromEntries(
     Object.entries(LEGACY_CALCULATOR_REDIRECTS).map(([source, destination]) => [
@@ -50,5 +56,10 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    // Keep React JSX runtime on the development build during `astro dev`.
+    // A poisoned production optimizeDeps cache sets `jsxDEV` to undefined and blanks client islands.
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-dom/client'],
+    },
   },
 });

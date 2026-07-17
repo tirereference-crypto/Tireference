@@ -1,0 +1,102 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"src": "^/\\.well-known(?:/.*)?$"
+		},
+		{
+			"src": "^/((?:[^/]+/)*[^/\\.]+)$",
+			"headers": {
+				"Location": "/$1/"
+			},
+			"status": 308
+		},
+		{
+			"src": "^/((?:[^/]+/)*[^/]+\\.\\w+)/$",
+			"headers": {
+				"Location": "/$1"
+			},
+			"status": 308
+		},
+		{
+			"src": "^/gear-ratio-calculator$",
+			"headers": {
+				"Location": "/calculators/gear-ratio-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/speedometer-error-calculator$",
+			"headers": {
+				"Location": "/calculators/speedometer-error-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/tire-comparison-calculator$",
+			"headers": {
+				"Location": "/calculators/tire-comparison-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/tire-diameter-calculator$",
+			"headers": {
+				"Location": "/calculators/tire-diameter-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/tire-size-calculator$",
+			"headers": {
+				"Location": "/calculators/tire-size-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/tire-size-comparison$",
+			"headers": {
+				"Location": "/calculators/tire-comparison-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"src": "^/wheel-offset-calculator$",
+			"headers": {
+				"Location": "/calculators/wheel-offset-calculator/"
+			},
+			"status": 301
+		},
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/og/compare\\.png$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/og/tire\\.png$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/.*$",
+			"dest": "/404.html",
+			"status": 404
+		}
+	]
+}

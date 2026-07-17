@@ -7,21 +7,21 @@ import {
   getAllComparisonSlugs,
   parseComparisonSlug,
 } from '../../lib/tire-comparison-links';
-import { isComparisonPublishable } from '../../lib/tire-comparison-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import {
   buildPageSchema,
   comparisonBreadcrumbs,
 } from '../../lib/seo/page-schemas';
+import { buildEditorialArticleSchema } from '../../lib/seo/editorial-schema';
+import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
+import { prebuiltCompareOgImageUrl } from '../../lib/og/og-image-url';
 import { compareTires, getTireSpecs } from '../../lib/tire-math';
 
 export function getStaticPaths() {
-  return getAllComparisonSlugs()
-    .filter(({ current, new: newSize }) => isComparisonPublishable(current, newSize))
-    .map(({ slug, current, new: newSize }) => ({
-      params: { slug },
-      props: { current, newSize },
-    }));
+  return getAllComparisonSlugs().map(({ slug, current, new: newSize }) => ({
+    params: { slug },
+    props: { current, newSize },
+  }));
 }
 
 const { slug } = Astro.params;
@@ -53,9 +53,19 @@ try {
 const canonicalSlug = comparisonSlugFromSizes(current, newSize);
 const canonical = `/compare/${canonicalSlug}`;
 
+const ogImage = prebuiltCompareOgImageUrl(canonicalSlug);
+
 const schema = buildPageSchema({
   breadcrumbs: comparisonBreadcrumbs(current, newSize, canonicalSlug),
   faqs,
+  extra: [
+    buildEditorialArticleSchema({
+      headline: title,
+      description,
+      url: canonical,
+      dateModified: SITE_CONTENT_UPDATED,
+    }),
+  ],
 });
 ---
 
@@ -63,6 +73,7 @@ const schema = buildPageSchema({
   title={title}
   description={description}
   canonical={canonical}
+  image={ogImage}
   schema={schema}
 >
   <PremiumTireSizeComparison

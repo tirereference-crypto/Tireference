@@ -1,16 +1,18 @@
-import type {
-  GearRatioFields,
-  GearRatioResult,
-  GearVerdict,
-  GearVerdictLabel,
-  GearVerdictTone,
-  GearImpactRow,
-} from './gear-ratio-math';
+import type { GearRatioFields, GearRatioResult } from './gear-ratio-math';
+import { commonAxleRatiosAround, formatAxleRatio } from './gear-ratio-math';
 import { CALCULATOR_PATHS, getRelatedCalculators, type RelatedCalculatorItem } from './calculator-links';
 
 export type { RelatedCalculatorItem };
 
-export const RELATED_CALCULATOR_LINKS = getRelatedCalculators(CALCULATOR_PATHS.gearRatio);
+/** Prefer gearing-adjacent tools; exclude broken/unpublished routes. */
+export const RELATED_CALCULATOR_LINKS: RelatedCalculatorItem[] = [
+  CALCULATOR_PATHS.tireSize,
+  CALCULATOR_PATHS.tireComparison,
+  CALCULATOR_PATHS.wheelOffset,
+  CALCULATOR_PATHS.tireDiameter,
+]
+  .map((href) => getRelatedCalculators(CALCULATOR_PATHS.gearRatio).find((item) => item.href === href))
+  .filter((item): item is RelatedCalculatorItem => Boolean(item));
 
 export interface GearFaq {
   question: string;
@@ -20,516 +22,714 @@ export interface GearFaq {
 export const DEFAULT_GEAR_FIELDS: GearRatioFields = {
   currentDiameterIn: '31',
   stockGearRatio: '3.73',
-  transTopGear: '1.00',
   newDiameterIn: '35',
-  speed: '65',
+  transTopGear: '',
+  firstGearRatio: '',
+  transferLowRatio: '',
+  speed: '',
   speedUnit: 'mph',
-  cruiseRpm: '2000',
-  desiredRpm: '2000',
-  squatEnabled: true,
-  squatPercent: '3',
-  crawlEnabled: false,
-  firstGearRatio: '4.00',
-  transferLowRatio: '2.72',
+  lowSpeedBiasPercent: '5',
 };
 
 export const GEAR_RATIO_OPTIONS = [
   '3.08',
-  '3.23',
+  '3.21',
+  '3.31',
   '3.42',
   '3.55',
   '3.73',
-  '3.92',
+  '3.90',
   '4.10',
+  '4.11',
   '4.30',
   '4.56',
   '4.88',
   '5.13',
+  '5.38',
 ];
 
-export const BEFORE_INSTALL_EXPECTATIONS = [
-  { icon: 'launch', text: 'Slower launches & acceleration' },
-  { icon: 'towing', text: 'Weaker towing & hill climbing' },
-  { icon: 'rpm', text: 'Lower engine RPM at highway speeds' },
-  { icon: 'downshift', text: 'More transmission downshifts' },
+export const LOW_SPEED_BIAS_OPTIONS_LABELS = [
+  { value: '0', label: '0%' },
+  { value: '3', label: '3%' },
+  { value: '5', label: '5%' },
+  { value: '8', label: '8%' },
+  { value: '10', label: '10%' },
 ] as const;
 
-function impactStatus(lossPct: number): 'pass' | 'warning' | 'fail' {
-  const abs = Math.abs(lossPct);
-  if (abs < 5) return 'pass';
-  if (abs < 10) return 'warning';
-  return 'fail';
+export type GearingChangeMagnitude =
+  | 'Minimal Gearing Change'
+  | 'Small Gearing Change'
+  | 'Noticeable Gearing Change'
+  | 'Large Gearing Change'
+  | 'Very Large Gearing Change';
+
+export type GearingChangeTone = 'neutral' | 'info' | 'caution';
+
+export interface GearingChangeSummary {
+  eyebrow: string;
+  heading: GearingChangeMagnitude;
+  summary: string;
+  tone: GearingChangeTone;
+  absChangePct: number;
 }
 
-export function buildGearVerdict(result: GearRatioResult): GearVerdict {
-  const loss = result.gearingLossPct;
+export function buildGearingChangeSummary(result: GearRatioResult): GearingChangeSummary {
+  const abs = Math.abs(result.effectiveChangePercent);
+  const current = formatDiameterLabel(result.currentDiameterIn);
+  const next = formatDiameterLabel(result.newDiameterIn);
+  const stock = formatAxleRatio(result.input.stockGearRatio);
+  const pct = abs.toFixed(1);
+  const direction = result.effectiveChangePercent < 0 ? 'taller' : 'deeper';
 
-  let label: GearVerdictLabel;
-  let tone: GearVerdictTone;
-  let summary: string;
-
-  if (loss < 3) {
-    label = 'Stock Gears Are Fine';
-    tone = 'green';
-    summary =
-      loss <= 0
-        ? 'Your new tire is the same size or smaller, so effective gearing is unchanged. Keep your current gears and enjoy the new tires.'
-        : 'The size change is small enough that you barely lose any effective gearing. Most drivers will be perfectly happy on stock gears.';
-  } else if (loss < 7) {
-    label = 'Mild Performance Loss';
-    tone = 'yellow';
-    summary =
-      'You give up a noticeable bit of effective gearing. Daily driving still feels fine — acceleration and towing just feel a touch softer. A regear is optional.';
-  } else if (loss < 12) {
-    label = 'Worth Regearing';
-    tone = 'orange';
-    summary =
-      'The larger tire takes a real bite out of your effective gearing. Acceleration, towing, and throttle response all suffer enough that a regear is worth the money.';
+  let heading: GearingChangeMagnitude;
+  let tone: GearingChangeTone;
+  if (abs < 3) {
+    heading = 'Minimal Gearing Change';
+    tone = 'neutral';
+  } else if (abs < 6) {
+    heading = 'Small Gearing Change';
+    tone = 'info';
+  } else if (abs < 10) {
+    heading = 'Noticeable Gearing Change';
+    tone = 'info';
+  } else if (abs < 15) {
+    heading = 'Large Gearing Change';
+    tone = 'caution';
   } else {
-    label = 'Regear Recommended';
-    tone = 'red';
-    summary =
-      'This is a big jump in tire size and your effective gearing drops well past the comfortable range. Expect sluggish launches and constant downshifts until you regear.';
+    heading = 'Very Large Gearing Change';
+    tone = 'caution';
   }
 
-  const accelStatus = impactStatus(loss);
-  const towStatus = impactStatus(loss * 1.1);
-  const rpmStatus: GearImpactRow['status'] =
-    Math.abs(result.rpmChangePct) < 5 ? 'pass' : Math.abs(result.rpmChangePct) < 10 ? 'warning' : 'fail';
-  const fuelStatus = impactStatus(loss * 0.7);
+  const summary =
+    abs < 0.05
+      ? `Current and new tire diameters are effectively the same with ${stock} axle gears, so effective gearing is unchanged.`
+      : `Moving from ${current}-inch to ${next}-inch tires with ${stock} axle gears makes the effective gearing approximately ${pct}% ${direction}. This ${
+          direction === 'taller' ? 'lowers' : 'raises'
+        } engine RPM and wheel multiplication at the same road speed. Regearing may be worth considering when acceleration, towing or low-speed control are priorities.`;
 
-  const rows: GearImpactRow[] = [
-    {
-      id: 'acceleration',
-      icon: 'acceleration',
-      label: 'Acceleration',
-      status: accelStatus,
-      detail:
-        loss < 3
-          ? 'Essentially unchanged from stock — launches feel the same.'
-          : `Roughly ${loss.toFixed(0)}% less torque multiplication off the line.`,
-    },
-    {
-      id: 'fuel',
-      icon: 'fuel',
-      label: 'Fuel Economy',
-      status: fuelStatus,
-      detail:
-        loss < 5
-          ? 'Highway fuel economy stays roughly the same.'
-          : 'More downshifts and engine load can lower real-world mpg until regeared.',
-    },
-    {
-      id: 'towing',
-      icon: 'towing',
-      label: 'Towing',
-      status: towStatus,
-      detail:
-        loss < 5
-          ? 'Towing capability stays close to stock.'
-          : 'Less low-end torque makes towing and grades harder in the higher gears.',
-    },
-    {
-      id: 'highway',
-      icon: 'highway',
-      label: 'Highway Driving',
-      status: rpmStatus,
-      detail:
-        result.rpmChange < -25
-          ? `Cruise RPM drops about ${Math.abs(Math.round(result.rpmChange))} at the same speed on stock gears.`
-          : 'Cruise RPM stays close to your current comfortable range.',
-    },
-    {
-      id: 'offroad',
-      icon: 'offroad',
-      label: 'Off-Road',
-      status: loss < 5 ? 'pass' : 'warning',
-      detail:
-        result.currentCrawlRatio && result.performanceCrawlRatio
-          ? `Crawl ratio recovers from ${result.currentCrawlRatio.toFixed(1)}:1 toward ${result.performanceCrawlRatio.toFixed(1)}:1 with a performance regear.`
-          : 'Bigger tires raise effective crawl gearing — deeper gears restore low-speed control.',
-    },
-  ];
-
-  return { label, tone, summary, rows };
-}
-
-export type GearStarTone = 'red' | 'orange' | 'green';
-
-export interface GearStarRating {
-  filled: number;
-  tone: GearStarTone;
-}
-
-export interface GearComparisonSetup {
-  key: 'current' | 'ideal' | 'performance';
-  name: string;
-  gear: number;
-  effective: number;
-  barTone: 'red' | 'green' | 'orange';
-  ratings: {
-    acceleration: GearStarRating;
-    towing: GearStarRating;
-    fuelEconomy: GearStarRating;
-    highwayRpm: GearStarRating;
+  return {
+    eyebrow: 'Effective Gearing Change',
+    heading,
+    summary,
+    tone,
+    absChangePct: abs,
   };
 }
 
-export interface GearComparisonMatrix {
-  tireDiameterIn: number;
-  setups: GearComparisonSetup[];
-  barMin: number;
-  barMax: number;
+function formatDiameterLabel(inches: number): string {
+  return Number.isInteger(inches) || Math.abs(inches - Math.round(inches)) < 0.05
+    ? String(Math.round(inches))
+    : inches.toFixed(1);
 }
 
-function gearStarRating(filled: number, tone: GearStarTone): GearStarRating {
-  return { filled: Math.min(5, Math.max(1, filled)), tone };
+export function formatDiameterInchesLabel(inches: number): string {
+  return formatDiameterLabel(inches);
 }
 
-function accelerationStars(ratioToStock: number): GearStarRating {
-  if (ratioToStock < 0.97) return gearStarRating(2, 'red');
-  if (ratioToStock < 1.03) return gearStarRating(3, 'orange');
-  if (ratioToStock < 1.12) return gearStarRating(4, 'green');
-  return gearStarRating(5, 'green');
+export interface NearbyRatioExample {
+  ratio: number;
+  comparison: string;
+  direction: 'taller' | 'deeper' | 'match';
+  side: 'below' | 'above';
+  /** True only when this example is uniquely closest to the exact target. */
+  isClosest: boolean;
 }
 
-function towingStars(ratioToStock: number): GearStarRating {
-  if (ratioToStock < 0.93) return gearStarRating(1, 'red');
-  if (ratioToStock < 0.98) return gearStarRating(2, 'red');
-  if (ratioToStock < 1.05) return gearStarRating(3, 'orange');
-  if (ratioToStock < 1.13) return gearStarRating(4, 'orange');
-  return gearStarRating(5, 'green');
+/** Compact nearby common-ratio chips for the primary answer panel. */
+export function buildNearbyRatioExamples(result: GearRatioResult): NearbyRatioExample[] {
+  const { below, above } = commonAxleRatiosAround(result.stockLikeTarget);
+  const sides: Array<{ ratio: number; side: 'below' | 'above' }> = [];
+  if (below != null) sides.push({ ratio: below, side: 'below' });
+  if (above != null) sides.push({ ratio: above, side: 'above' });
+  if (sides.length === 0) return [];
+
+  const distances = sides.map((item) => Math.abs(item.ratio - result.stockLikeTarget));
+  const minDistance = Math.min(...distances);
+  const closestCount = distances.filter((d) => Math.abs(d - minDistance) < 1e-9).length;
+
+  return sides.map((item) => {
+    const pct = effectiveVsOriginalPercent(item.ratio, result);
+    let comparison = 'Matches original';
+    let direction: NearbyRatioExample['direction'] = 'match';
+    if (Math.abs(pct) >= 0.05) {
+      const abs = Math.abs(pct).toFixed(1);
+      if (pct < 0) {
+        comparison = `${abs}% taller than original`;
+        direction = 'taller';
+      } else {
+        comparison = `${abs}% deeper than original`;
+        direction = 'deeper';
+      }
+    }
+    return {
+      ratio: item.ratio,
+      comparison,
+      direction,
+      side: item.side,
+      isClosest:
+        closestCount === 1 &&
+        Math.abs(Math.abs(item.ratio - result.stockLikeTarget) - minDistance) < 1e-9,
+    };
+  });
 }
 
-function highwayRpmStars(rpmRatio: number): GearStarRating {
-  if (rpmRatio < 0.88) return gearStarRating(3, 'orange');
-  if (rpmRatio < 0.97) return gearStarRating(4, 'green');
-  if (rpmRatio <= 1.06) return gearStarRating(5, 'green');
-  if (rpmRatio <= 1.12) return gearStarRating(4, 'orange');
-  if (rpmRatio <= 1.18) return gearStarRating(3, 'orange');
-  return gearStarRating(2, 'red');
+export type GearScaleRole =
+  | 'current-effective'
+  | 'nearby-lower'
+  | 'exact'
+  | 'nearby-higher'
+  | 'deeper';
+
+export interface GearScaleMarker {
+  id: string;
+  role: GearScaleRole;
+  value: number;
+  label: string;
+  /** Signed percent vs original effective gearing for axle-target markers; for current-effective uses result change. */
+  percentFromOriginal: number;
+  percentLabel: string;
+  /** 0–100 position along the numerical scale. */
+  positionPercent: number;
 }
 
-export function buildGearComparisonMatrix(result: GearRatioResult): GearComparisonMatrix {
-  const { input } = result;
-  const scale = result.effectiveCurrentDiameterIn / result.effectiveNewDiameterIn;
-  const stock = input.stockGearRatio;
-  const stockRpm = result.currentRpm;
+/** Ordered markers for the visual gear-ratio scale (numerical position only). */
+export function buildGearRatioScaleMarkers(result: GearRatioResult): GearScaleMarker[] {
+  const { below, above } = commonAxleRatiosAround(result.stockLikeTarget);
 
-  const currentEffective = result.effectiveRatio;
-  const idealEffective = result.idealGear * scale;
-  const performanceEffective = result.performanceGear * scale;
+  const percentLabelFor = (pct: number): string => {
+    if (Math.abs(pct) < 0.05) return 'Matches original';
+    const abs = Math.abs(pct).toFixed(1);
+    return pct < 0 ? `${abs}% taller than original` : `${abs}% deeper than original`;
+  };
 
-  const currentRpmRatio = stockRpm > 0 ? result.newRpmSameGear / stockRpm : 1;
-  const idealRpmRatio = stockRpm > 0 ? result.idealRpm / stockRpm : 1;
-  const performanceRpmRatio = stockRpm > 0 ? result.performanceRpm / stockRpm : 1;
-
-  const setups: GearComparisonSetup[] = [
+  const raw: Array<Omit<GearScaleMarker, 'positionPercent'>> = [
     {
-      key: 'current',
-      name: 'Keep Current',
-      gear: stock,
-      effective: currentEffective,
-      barTone: 'red',
-      ratings: {
-        acceleration: accelerationStars(currentEffective / stock),
-        towing: towingStars(currentEffective / stock),
-        fuelEconomy: highwayRpmStars(currentRpmRatio),
-        highwayRpm: highwayRpmStars(currentRpmRatio),
-      },
-    },
-    {
-      key: 'ideal',
-      name: 'Ideal',
-      gear: result.idealGear,
-      effective: idealEffective,
-      barTone: 'green',
-      ratings: {
-        acceleration: accelerationStars(idealEffective / stock),
-        towing: towingStars(idealEffective / stock),
-        fuelEconomy: highwayRpmStars(idealRpmRatio),
-        highwayRpm: highwayRpmStars(idealRpmRatio),
-      },
-    },
-    {
-      key: 'performance',
-      name: 'Performance',
-      gear: result.performanceGear,
-      effective: performanceEffective,
-      barTone: 'orange',
-      ratings: {
-        acceleration: accelerationStars(performanceEffective / stock),
-        towing: towingStars(performanceEffective / stock),
-        fuelEconomy: highwayRpmStars(performanceRpmRatio),
-        highwayRpm: highwayRpmStars(performanceRpmRatio),
-      },
+      id: 'current-effective',
+      role: 'current-effective',
+      value: result.effectiveRatio,
+      label: 'Current effective',
+      percentFromOriginal: result.effectiveChangePercent,
+      percentLabel: percentLabelFor(result.effectiveChangePercent),
     },
   ];
+  if (below != null) {
+    const pct = effectiveVsOriginalPercent(below, result);
+    raw.push({
+      id: `nearby-lower-${below}`,
+      role: 'nearby-lower',
+      value: below,
+      label: 'Nearby example',
+      percentFromOriginal: pct,
+      percentLabel: percentLabelFor(pct),
+    });
+  }
+  raw.push({
+    id: 'exact',
+    role: 'exact',
+    value: result.stockLikeTarget,
+    label: 'Exact target',
+    percentFromOriginal: 0,
+    percentLabel: 'Matches original',
+  });
+  if (above != null) {
+    const pct = effectiveVsOriginalPercent(above, result);
+    raw.push({
+      id: `nearby-higher-${above}`,
+      role: 'nearby-higher',
+      value: above,
+      label: 'Nearby example',
+      percentFromOriginal: pct,
+      percentLabel: percentLabelFor(pct),
+    });
+  }
+  {
+    const pct = effectiveVsOriginalPercent(result.deeperTarget, result);
+    raw.push({
+      id: 'deeper',
+      role: 'deeper',
+      value: result.deeperTarget,
+      label: 'Deeper target',
+      percentFromOriginal: pct,
+      percentLabel: percentLabelFor(pct),
+    });
+  }
 
-  const values = setups.map((s) => s.effective);
+  const values = raw.map((item) => item.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const padding = (max - min) * 0.08 || 0.1;
+  const span = max - min || 1;
+  /** Keep edge labels inside the track (avoids clipping “Deeper target”). */
+  const edgeInsetPercent = 7;
+
+  return raw
+    .map((item) => ({
+      ...item,
+      positionPercent:
+        edgeInsetPercent + ((item.value - min) / span) * (100 - 2 * edgeInsetPercent),
+    }))
+    .sort((a, b) => a.value - b.value || a.positionPercent - b.positionPercent);
+}
+
+export function buildPrimaryAnswerCopy(result: GearRatioResult): {
+  explanation: string;
+  supportLine: string;
+  currentGearsSecondary: string;
+  currentGearsHelper: string;
+  deeperSecondary: string;
+  deeperHelper: string;
+} {
+  const current = formatDiameterLabel(result.currentDiameterIn);
+  const next = formatDiameterLabel(result.newDiameterIn);
+  const stock = formatAxleRatio(result.input.stockGearRatio);
+  const target = formatAxleRatio(result.stockLikeTarget);
+  const abs = Math.abs(result.effectiveChangePercent).toFixed(1);
+  const taller = result.effectiveChangePercent < 0;
+  const bias = result.input.lowSpeedBiasPercent;
 
   return {
-    tireDiameterIn: Math.round(input.newDiameterIn),
-    setups,
-    barMin: min - padding,
-    barMax: max + padding,
+    explanation: `Changing from ${current}-inch to ${next}-inch tires with ${stock} gears produces an exact stock-like target of ${target}.`,
+    supportLine: 'Restores the original geometric gearing relationship',
+    currentGearsSecondary: `${abs}% ${taller ? 'taller' : 'deeper'} than the original setup`,
+    currentGearsHelper: taller
+      ? 'Lower RPM and low-speed multiplication at the same road speed'
+      : 'Higher RPM and low-speed multiplication at the same road speed',
+    deeperSecondary: `${bias}% deeper than the stock-like target`,
+    deeperHelper: 'Higher RPM and low-speed multiplication',
   };
 }
 
-export type GearComparisonCellTone = 'default' | 'orange' | 'red' | 'green';
 
-export interface GearComparisonTableCell {
-  text: string;
-  tone?: GearComparisonCellTone;
-  bold?: boolean;
+/** Percent change in effective gearing vs original when using an axle ratio on the new tires. */
+export function effectiveVsOriginalPercent(
+  axleRatio: number,
+  result: GearRatioResult,
+): number {
+  const effective = axleRatio * (result.currentDiameterIn / result.newDiameterIn);
+  return ((effective / result.input.stockGearRatio) - 1) * 100;
 }
 
-export interface GearComparisonTableRow {
+export function formatTallerDeeperPercent(pctFromOriginal: number): string {
+  if (Math.abs(pctFromOriginal) < 0.05) return 'Matches original effective gearing';
+  const abs = Math.abs(pctFromOriginal).toFixed(1);
+  if (pctFromOriginal < 0) return `Approximately ${abs}% taller than the original effective gearing`;
+  return `Approximately ${abs}% deeper than the original effective gearing`;
+}
+
+export function formatPctLowerHigher(changePercent: number): string {
+  if (Math.abs(changePercent) < 0.05) return 'Unchanged';
+  const abs = Math.abs(changePercent).toFixed(1);
+  return changePercent < 0 ? `${abs}% lower` : `${abs}% higher`;
+}
+
+export type FactualRelation =
+  | 'Original reference'
+  | 'Matches original mathematically'
+  | string;
+
+export interface FactualComparisonRow {
+  id: string;
   setup: string;
-  tireDiameter: string;
-  axleGear: string;
-  effectiveRatio: GearComparisonTableCell;
-  changeFromStock: GearComparisonTableCell;
-  acceleration: GearComparisonTableCell;
-  towing: GearComparisonTableCell;
-  cruisingRpm: string;
+  axleRatio: string;
+  effectiveRatio: string;
+  differenceFromOriginal: string;
+  /** Signed percent vs original effective gearing; 0 for the original reference. */
+  differencePercent: number;
+  interpretation: string;
+  emphasis: 'reference' | 'primary' | 'example' | 'secondary' | 'none';
+  tone: 'slate' | 'amber' | 'exact' | 'cyan' | 'magenta';
 }
 
-function formatTableDiameter(inches: number): string {
-  return `${inches.toFixed(2)}"`;
+function formatDiffCell(pctFromOriginal: number): string {
+  if (Math.abs(pctFromOriginal) < 0.05) return '0% difference';
+  const abs = Math.abs(pctFromOriginal).toFixed(1);
+  return pctFromOriginal < 0 ? `${abs}% taller` : `${abs}% deeper`;
 }
 
-function formatTableRatio(value: number): string {
-  return value.toFixed(2);
-}
+/**
+ * Compact setup comparison — at most five core rows, plus optional compared ratios.
+ * Interpretation chips describe geometric difference; deeper target uses bias vs stock-like.
+ */
+export function buildFactualComparisonRows(
+  result: GearRatioResult,
+  extraAxleRatios: number[] = [],
+): FactualComparisonRow[] {
+  const stock = result.input.stockGearRatio;
+  const scale = result.currentDiameterIn / result.newDiameterIn;
+  const nearEq = (a: number, b: number) => Math.abs(a - b) < 0.005;
 
-function formatChangeFromStock(effective: number, stockEffective: number): GearComparisonTableCell {
-  const pct = ((effective / stockEffective) - 1) * 100;
-  if (Math.abs(pct) < 0.05) {
-    return { text: '—', tone: 'default' };
+  const rows: Array<{
+    id: string;
+    setup: string;
+    axle: number;
+    onNewTires: boolean;
+    emphasis: FactualComparisonRow['emphasis'];
+    tone: FactualComparisonRow['tone'];
+  }> = [
+    {
+      id: 'original',
+      setup: 'Original setup',
+      axle: stock,
+      onNewTires: false,
+      emphasis: 'reference',
+      tone: 'slate',
+    },
+    {
+      id: 'new-current',
+      setup: 'New tires with current gears',
+      axle: stock,
+      onNewTires: true,
+      emphasis: 'none',
+      tone: 'amber',
+    },
+    {
+      id: 'stock-like',
+      setup: 'New tires with exact stock-like target',
+      axle: result.stockLikeTarget,
+      onNewTires: true,
+      emphasis: 'primary',
+      tone: 'exact',
+    },
+  ];
+
+  if (!nearEq(result.nearbyStockLikeExample, result.stockLikeTarget)) {
+    rows.push({
+      id: 'nearby-stock',
+      setup: 'New tires with nearest common-ratio example',
+      axle: result.nearbyStockLikeExample,
+      onNewTires: true,
+      emphasis: 'example',
+      tone: 'cyan',
+    });
   }
-  const sign = pct > 0 ? '+' : '';
+
+  if (!nearEq(result.deeperTarget, result.stockLikeTarget)) {
+    rows.push({
+      id: 'deeper',
+      setup: 'New tires with optional deeper target',
+      axle: result.deeperTarget,
+      onNewTires: true,
+      emphasis: 'secondary',
+      tone: 'magenta',
+    });
+  }
+
+  const existingAxles = rows.map((row) => row.axle);
+  for (const ratio of extraAxleRatios) {
+    if (!Number.isFinite(ratio)) continue;
+    if (existingAxles.some((axle) => nearEq(axle, ratio))) continue;
+    existingAxles.push(ratio);
+    rows.push({
+      id: `compare-${formatAxleRatio(ratio)}`,
+      setup: `Compared ratio ${formatAxleRatio(ratio)}`,
+      axle: ratio,
+      onNewTires: true,
+      emphasis: 'example',
+      tone: 'cyan',
+    });
+  }
+
+  return rows.map((row) => {
+    const effective = row.onNewTires ? row.axle * scale : row.axle;
+    const pctFromOriginal = ((effective / stock) - 1) * 100;
+
+    let interpretation: string;
+    if (row.id === 'original') interpretation = 'Original reference';
+    else if (row.id === 'stock-like') interpretation = 'Original gearing restored mathematically';
+    else if (row.id === 'deeper') interpretation = 'Deeper target';
+    else if (row.id.startsWith('compare-')) {
+      interpretation =
+        Math.abs(pctFromOriginal) < 0.05
+          ? 'Matches mathematically'
+          : pctFromOriginal < 0
+            ? 'Taller than original'
+            : 'Deeper than original';
+    } else if (row.id === 'nearby-stock') {
+      const abs = Math.abs(pctFromOriginal);
+      if (abs < 0.05) interpretation = 'Matches mathematically';
+      else if (abs < 3) {
+        interpretation = pctFromOriginal < 0 ? 'Slightly taller' : 'Slightly deeper';
+      } else {
+        interpretation = pctFromOriginal < 0 ? 'Taller than original' : 'Deeper than original';
+      }
+    } else {
+      interpretation =
+        Math.abs(pctFromOriginal) < 0.05
+          ? 'Matches mathematically'
+          : pctFromOriginal < 0
+            ? 'Taller than original'
+            : 'Deeper than original';
+    }
+
+    const isExactTarget = row.id === 'stock-like';
+    const isZeroDiff = row.id === 'original' || isExactTarget || Math.abs(pctFromOriginal) < 0.05;
+
+    return {
+      id: row.id,
+      setup: row.setup,
+      axleRatio: formatAxleRatio(row.axle),
+      effectiveRatio: formatAxleRatio(effective),
+      differenceFromOriginal: isExactTarget
+        ? '0% difference'
+        : row.id === 'original'
+          ? '0% / Original'
+          : formatDiffCell(pctFromOriginal),
+      differencePercent: isZeroDiff ? 0 : pctFromOriginal,
+      interpretation,
+      emphasis: row.emphasis,
+      tone: row.tone,
+    };
+  });
+}
+
+export interface TireChangeInterpretation {
+  heading: string;
+  summary: string;
+  direction: 'taller' | 'deeper' | 'unchanged';
+  effectivePrimary: string;
+  effectiveHelper: string;
+  rpmPrimary: string;
+  rpmHelper: string;
+  multiplicationPrimary: string;
+  multiplicationHelper: string;
+  interpretation: string;
+  notice: string;
+  relationship: [string, string, string];
+}
+
+export function buildTireChangeInterpretation(result: GearRatioResult): TireChangeInterpretation {
+  const current = formatDiameterInchesLabel(result.currentDiameterIn);
+  const next = formatDiameterInchesLabel(result.newDiameterIn);
+  const stock = formatAxleRatio(result.input.stockGearRatio);
+  const abs = Math.abs(result.effectiveChangePercent).toFixed(1);
+  const taller = result.effectiveChangePercent < 0;
+  const unchanged = Math.abs(result.effectiveChangePercent) < 0.05;
+  const direction: TireChangeInterpretation['direction'] = unchanged
+    ? 'unchanged'
+    : taller
+      ? 'taller'
+      : 'deeper';
+
+  const summary = unchanged
+    ? `Moving from ${current}-inch to ${next}-inch tires produces no effective gearing change when the existing ${stock} gears are retained.`
+    : `Moving from ${current}-inch to ${next}-inch tires makes the effective gearing ${abs}% ${
+        taller ? 'taller' : 'deeper'
+      } when the existing ${stock} gears are retained.`;
+
+  const relationship: TireChangeInterpretation['relationship'] = unchanged
+    ? ['Same tire diameter', 'Same distance per revolution', 'No effective gearing change']
+    : taller
+      ? ['Larger tire', 'More distance per revolution', 'Taller effective gearing']
+      : ['Smaller tire', 'Less distance per revolution', 'Deeper effective gearing'];
+
   return {
-    text: `${sign}${pct.toFixed(1)}%`,
-    tone: pct < 0 ? 'red' : 'green',
-    bold: true,
+    heading: 'What Changes With the New Tires?',
+    summary,
+    direction,
+    effectivePrimary: unchanged
+      ? 'No effective gearing change'
+      : `${abs}% ${taller ? 'taller' : 'deeper'}`,
+    effectiveHelper: `Current gears behave like a ${formatAxleRatio(result.effectiveRatio)} ratio`,
+    rpmPrimary: unchanged
+      ? 'No change'
+      : `Approximately ${abs}% ${taller ? 'lower' : 'higher'}`,
+    rpmHelper: 'At the same road speed',
+    multiplicationPrimary: unchanged
+      ? 'No change'
+      : `Approximately ${abs}% ${taller ? 'lower' : 'higher'}`,
+    multiplicationHelper: 'Relative to the original setup',
+    interpretation: unchanged
+      ? 'Keeping the current axle ratio leaves geometric gearing effectively unchanged.'
+      : taller
+        ? 'Keeping the current axle ratio means lower RPM and less low-speed multiplication at the same road speed.'
+        : 'Keeping the current axle ratio means higher RPM and more low-speed multiplication at the same road speed.',
+    notice:
+      'These figures describe geometric tire-diameter and axle-ratio relationships only. They are not vehicle-specific fitment or availability claims.',
+    relationship,
   };
 }
 
-function performanceLabel(rating: GearStarRating): GearComparisonTableCell {
-  if (rating.filled >= 5) return { text: 'Excellent', tone: 'green', bold: true };
-  if (rating.filled >= 4) return { text: 'Good', tone: 'green', bold: true };
-  if (rating.filled >= 2) return { text: 'Fair', tone: 'orange', bold: true };
-  return { text: 'Poor', tone: 'red', bold: true };
+export interface ResultCardModel {
+  variant: 'stock-like' | 'deeper' | 'current';
+  eyebrow: string;
+  primaryValue: string;
+  primaryLabel: string;
+  nearbyExample?: string;
+  supporting: string[];
+  note?: string;
 }
 
-function formatCruiseRpm(pctChange: number | null): string {
-  if (pctChange === null) return 'Baseline';
-  const sign = pctChange > 0 ? '+' : '';
-  const direction = pctChange < 0 ? 'Lower' : 'Higher';
-  return `${sign}${pctChange.toFixed(1)}% (${direction})`;
-}
-
-export function buildGearComparisonTable(result: GearRatioResult): GearComparisonTableRow[] {
-  const { input } = result;
-  const stockEffective = input.stockGearRatio;
-  const scale = result.effectiveCurrentDiameterIn / result.effectiveNewDiameterIn;
-  const stockDiameter = result.effectiveCurrentDiameterIn;
-  const newDiameter = result.effectiveNewDiameterIn;
-
-  const idealEffective = result.idealGear * scale;
-  const performanceEffective = result.performanceGear * scale;
-
-  const newAccel = accelerationStars(result.effectiveRatio / stockEffective);
-  const newTow = towingStars(result.effectiveRatio / stockEffective);
-  const idealAccel = accelerationStars(idealEffective / stockEffective);
-  const idealTow = towingStars(idealEffective / stockEffective);
-  const perfAccel = accelerationStars(performanceEffective / stockEffective);
-  const perfTow = towingStars(performanceEffective / stockEffective);
-
-  const idealRpmPct =
-    result.currentRpm > 0 ? ((result.idealRpm - result.currentRpm) / result.currentRpm) * 100 : 0;
-  const performanceRpmPct =
-    result.currentRpm > 0 ? ((result.performanceRpm - result.currentRpm) / result.currentRpm) * 100 : 0;
+export function buildResultCards(result: GearRatioResult): ResultCardModel[] {
+  const bias = result.input.lowSpeedBiasPercent;
+  const nearbyStockPct = effectiveVsOriginalPercent(result.nearbyStockLikeExample, result);
+  const absChange = Math.abs(result.effectiveChangePercent).toFixed(1);
+  const taller = result.effectiveChangePercent < 0;
 
   return [
     {
-      setup: 'Stock (Current)',
-      tireDiameter: formatTableDiameter(stockDiameter),
-      axleGear: formatTableRatio(stockEffective),
-      effectiveRatio: { text: formatTableRatio(stockEffective), bold: true },
-      changeFromStock: { text: '—', tone: 'default' },
-      acceleration: { text: 'Good', tone: 'default' },
-      towing: { text: 'Fair', tone: 'default' },
-      cruisingRpm: 'Baseline',
+      variant: 'stock-like',
+      eyebrow: 'Restore original effective gearing',
+      primaryValue: formatAxleRatio(result.stockLikeTarget),
+      primaryLabel: 'Exact stock-like target',
+      nearbyExample: `Nearby example: ${formatAxleRatio(result.nearbyStockLikeExample)}`,
+      supporting: [
+        `${formatTallerDeeperPercent(nearbyStockPct)} when using ${formatAxleRatio(result.nearbyStockLikeExample)}.`,
+      ],
+      note: 'Confirm ratio availability for your axle.',
     },
     {
-      setup: 'New Tires (Stock Gears)',
-      tireDiameter: formatTableDiameter(newDiameter),
-      axleGear: formatTableRatio(stockEffective),
-      effectiveRatio: { text: formatTableRatio(result.effectiveRatio), bold: true },
-      changeFromStock: formatChangeFromStock(result.effectiveRatio, stockEffective),
-      acceleration: performanceLabel(newAccel),
-      towing: performanceLabel(newTow),
-      cruisingRpm: formatCruiseRpm(result.rpmChangePct),
+      variant: 'deeper',
+      eyebrow: 'Additional low-speed bias',
+      primaryValue: formatAxleRatio(result.deeperTarget),
+      primaryLabel: `${bias}% deeper than stock-like target`,
+      nearbyExample: `Nearby example: ${formatAxleRatio(result.nearbyDeeperExample)}`,
+      supporting: [
+        'Raises engine RPM and increases low-speed multiplication compared with the stock-like target.',
+      ],
+      note: 'Confirm ratio availability for your axle.',
     },
     {
-      setup: 'Recommended (Ideal)',
-      tireDiameter: formatTableDiameter(newDiameter),
-      axleGear: formatTableRatio(result.idealGear),
-      effectiveRatio: { text: formatTableRatio(idealEffective), bold: true },
-      changeFromStock: formatChangeFromStock(idealEffective, stockEffective),
-      acceleration: performanceLabel(idealAccel),
-      towing: performanceLabel(idealTow),
-      cruisingRpm: formatCruiseRpm(idealRpmPct),
-    },
-    {
-      setup: 'Performance',
-      tireDiameter: formatTableDiameter(newDiameter),
-      axleGear: formatTableRatio(result.performanceGear),
-      effectiveRatio: { text: formatTableRatio(performanceEffective), bold: true },
-      changeFromStock: formatChangeFromStock(performanceEffective, stockEffective),
-      acceleration: performanceLabel(perfAccel),
-      towing: performanceLabel(perfTow),
-      cruisingRpm: formatCruiseRpm(performanceRpmPct),
+      variant: 'current',
+      eyebrow: 'Current gears with new tires',
+      primaryValue: formatAxleRatio(result.effectiveRatio),
+      primaryLabel: 'Effective axle ratio',
+      supporting: [
+        `${absChange}% ${taller ? 'taller' : 'deeper'} than original`,
+        `Engine RPM at the same road speed changes by approximately ${taller ? '−' : '+'}${absChange}%`,
+        `Low-speed multiplication changes by approximately ${taller ? '−' : '+'}${absChange}%`,
+        taller
+          ? 'Lower RPM and less wheel multiplication at the same road speed.'
+          : 'Higher RPM and more wheel multiplication at the same road speed.',
+      ],
     },
   ];
 }
 
-export type BeforeYouBuyTone = 'green' | 'yellow' | 'orange' | 'red';
 
-export interface BeforeYouBuyItem {
-  tire: string;
-  status: string;
-  detail: string;
-  tone: BeforeYouBuyTone;
-  icon: string;
-}
-
-export const BEFORE_YOU_BUY: BeforeYouBuyItem[] = [
-  {
-    tire: '31"',
-    status: 'Usually No Regear Needed',
-    detail: 'Close to most factory sizes — stock gears stay comfortable for daily driving.',
-    tone: 'green',
-    icon: 'check',
-  },
-  {
-    tire: '33"',
-    status: 'May Need 3.73–4.10',
-    detail: 'Works well on many trucks; mild gears help if you tow or run lower stock ratios.',
-    tone: 'yellow',
-    icon: 'mild',
-  },
-  {
-    tire: '35"',
-    status: 'Recommended 4.10–4.56',
-    detail: 'Often sluggish on stock 3.21–3.55 gears — a regear restores stock-like response.',
-    tone: 'orange',
-    icon: 'regear',
-  },
-  {
-    tire: '37"',
-    status: 'Strongly Consider 4.88+',
-    detail: 'Needs deep gears to recover acceleration, towing power, and drivability.',
-    tone: 'red',
-    icon: 'strong',
-  },
-];
 
 export interface RegearCostTier {
   key: string;
-  icon: string;
   name: string;
   range: string;
   unit: string;
-  featured?: boolean;
-  features: string[];
+  detail: string;
 }
 
+/** Broad US planning estimates already used on this calculator — not quotes. */
 export const REGEAR_COSTS: RegearCostTier[] = [
   {
-    key: 'diy',
-    icon: 'wrench',
-    name: 'DIY',
+    key: 'parts',
+    name: 'Parts only',
     range: '$300–700',
-    unit: 'parts only',
-    features: ['Ring & pinion + install kit', 'Your own time & tools', 'Setup experience required'],
+    unit: 'typical ring-and-pinion + install kit',
+    detail: 'Does not include specialised tools, setup gauges or labour.',
   },
   {
     key: 'pro',
-    icon: 'shop',
-    name: 'Professional Shop',
+    name: 'Professional installation per axle',
     range: '$800–2,000',
-    unit: 'per axle',
-    featured: true,
-    features: ['Parts, labor & precision setup', 'Pattern & backlash dialed in', 'Warranty on the work'],
+    unit: 'parts and labour, one axle',
+    detail: 'Includes precision setup such as pattern and backlash where quoted by the shop.',
   },
   {
-    key: 'complete',
-    icon: 'axles',
-    name: 'Complete Front + Rear',
+    key: 'both',
+    name: 'Front and rear axle regear',
     range: '$1,500–3,500+',
-    unit: 'both axles',
-    features: ['4WD / AWD dual-diff regear', 'Optional lockers add cost', 'Best long-term drivability'],
+    unit: 'both axles, US shops',
+    detail: 'Common total range when a 4WD or AWD vehicle needs matching front and rear ratios.',
+  },
+  {
+    key: 'extras',
+    name: 'Additional bearings, lockers or differential work',
+    range: 'Adds to total',
+    unit: 'vehicle-dependent',
+    detail: 'Bearings, seals, lockers, carrier upgrades and damaged differential repair are priced separately.',
   },
 ];
 
 export const GEAR_FAQS: GearFaq[] = [
   {
-    question: 'Do I need new gears after increasing tire size?',
+    question: 'What gear ratio do I need for larger tires?',
     answer:
-      'It depends on how much bigger the tire is and how you drive. A small jump of 3–5% in diameter usually feels fine on stock gears. Once you lose more than about 7–10% of effective gearing — common when going up 3+ inches in tire size — acceleration, towing, and highway response suffer enough that a regear is worth it. This calculator shows your exact effective gearing loss so you can decide.',
+      'Scale your current axle ratio by new tire diameter ÷ current tire diameter to get an exact stock-like target. That restores approximately the same geometric relationship as the original setup. Compare nearby manufactured ratios and confirm what your axle and differential support.',
   },
   {
-    question: 'Will bigger tires reduce acceleration?',
+    question: 'How do larger tires affect effective gear ratio?',
     answer:
-      'Yes. A larger tire increases the distance traveled per axle revolution, which reduces torque multiplication at the contact patch. The effect is the same as installing a numerically lower (taller) gear. The bigger the tire relative to stock, the more noticeable the loss — especially from a stop, while towing, and on grades. Regearing back to your original effective ratio restores stock-like acceleration.',
+      'A larger tire travels farther per wheel revolution, so the same axle ratio delivers taller effective gearing. Engine RPM and low-speed wheel multiplication both drop at a given road speed even though the stamped ring-and-pinion ratio is unchanged.',
   },
   {
-    question: 'How much does a gear swap cost?',
+    question: 'Does changing tire size change engine RPM?',
     answer:
-      'Parts for a ring-and-pinion plus install kit typically run $300–800 per axle. Professional installation and setup adds $500–1,200 per axle because gear setup is precision work. A 2WD truck with one driven axle lands near the lower end, while a 4WD or AWD vehicle with two differentials can total $1,500–3,500+ once both axles are done. Doing it yourself saves labor but requires specialized tools and experience.',
+      'Yes, at the same road speed and transmission gear. Larger tires generally lower engine RPM with the current axle ratio; smaller tires raise it. Estimated RPM also depends on top-gear ratio and the speed you choose for comparison.',
   },
   {
-    question: "What's the difference between actual and effective gear ratio?",
+    question: 'Is the exact calculated ratio always available?',
     answer:
-      'Your actual (or numerical) gear ratio is the physical ring-and-pinion ratio in the axle, such as 3.73:1. The effective gear ratio is how that ratio behaves once tire size changes. Fitting a taller tire makes a 3.73 axle perform like a numerically lower ratio because the wheel travels farther per turn. Effective gearing is what you actually feel — it drives acceleration, towing, and cruise RPM.',
+      'The exact mathematical target may not be manufactured for every axle. Compare nearby ratios and confirm compatibility with your axle and differential.',
   },
   {
-    question: 'Will larger tires hurt fuel economy?',
+    question: 'Should I use advertised or measured tire diameter?',
     answer:
-      'Often, yes — at least until you regear. Bigger, heavier tires add rotating mass and reduce effective gearing, so the engine works harder and downshifts more, especially while towing or climbing. Highway cruise RPM drops, which can help economy slightly in isolation, but the added weight and aerodynamic drag of taller tires usually outweighs that. Restoring effective gearing with a regear typically recovers most of the lost economy.',
+      'Use the same measurement type for both tires. Advertised sizes can differ from mounted diameter under load. Actual mounted measurements improve accuracy for effective gearing and stock-like targets.',
   },
   {
-    question: 'Should I regear for towing?',
+    question: 'Do I need to regear both axles on a four-wheel-drive vehicle?',
     answer:
-      'If you tow regularly on larger tires, regearing is one of the best upgrades you can make. Larger tires reduce low-end torque exactly when you need it most, forcing the transmission to hold lower gears and run hotter. A deeper (numerically higher) gear restores torque multiplication, keeps the engine in its powerband, reduces heat, and improves control on grades. For towing builds, choosing a slightly deeper gear than the daily-driving ideal is common.',
+      'Front and rear axle ratios normally need to match when both axles are mechanically engaged. Confirm the requirements for your drivetrain before changing ratios.',
   },
 ];
 
-export const SEO_GEAR_CONTENT = {
-  heading: 'How Tire Size Changes Affect Your Gearing',
-  paragraphs: [
-    'When you install larger tires, you change far more than ground clearance and looks. A taller tire travels a greater distance with every rotation of the axle, which reduces the torque delivered to the ground for a given engine output. Mechanically, this behaves exactly like switching to a numerically lower differential gear — your axle still reads 3.73:1, but it performs like something taller.',
-    'The effective gear ratio is the number that actually matters for how the vehicle feels. It is calculated by multiplying your stock gear ratio by the ratio of stock tire diameter to new tire diameter. The further your new tire diameter is from stock, the more effective gearing you lose, and the more your acceleration, towing capability, and throttle response degrade.',
-    'Restoring lost performance is the job of a regear. The ideal gear ratio is found by multiplying your stock gear by the ratio of new tire diameter to stock diameter — it returns your effective gearing to its original value. Because differential gears are only made in fixed steps, the calculator snaps the ideal value to the closest commonly available ratio so you can shop realistically.',
-    'Drivers who tow, crawl, or carry heavy loads often choose a gear slightly deeper than the daily-driving ideal. A deeper ratio multiplies torque further, keeps the engine in its powerband under load, lowers transmission temperatures, and improves low-speed control off-road. The trade-off is marginally higher cruise RPM and a small fuel-economy penalty at steady highway speeds.',
-    'Cruise RPM is the other half of the equation. Engine speed at a given road speed scales with both gear ratio and vehicle speed and falls as tire diameter grows. Larger tires drop your highway RPM with stock gears, which can push the engine out of its efficient operating range and trigger frequent downshifts. Matching your gear ratio to your tire size and driving style keeps RPM where the engine is happiest.',
-    'Finally, remember that tires deform under vehicle weight. The loaded, rolling diameter is typically 2–4% smaller than the advertised size, so an effective-diameter correction produces more realistic gearing, speedometer, and RPM numbers than using the nominal tire size alone.',
-  ],
-};
-
-export function formatVerdictRowIcon(status: GearImpactRow['status']): string {
-  switch (status) {
-    case 'pass':
-      return '✓';
-    case 'warning':
-      return '⚠';
-    default:
-      return '✕';
-  }
+export interface GearEduSection {
+  id: string;
+  title: string;
+  points: string[];
+  takeaway: string;
+  icon: 'taller' | 'restore' | 'deeper' | 'limits';
 }
+
+export const GEAR_EDU_SECTIONS: GearEduSection[] = [
+  {
+    id: 'taller',
+    icon: 'taller',
+    title: 'Why larger tires make gearing taller',
+    points: [
+      'A larger tire travels farther with each wheel revolution, so the same axle ratio delivers taller effective gearing.',
+      'Engine RPM and low-speed wheel multiplication both drop at a given road speed.',
+      'The stamped numerical axle ratio itself does not change.',
+    ],
+    takeaway: 'Diameter change alters effective gearing without rewriting the axle stamp.',
+  },
+  {
+    id: 'stock-like',
+    icon: 'restore',
+    title: 'Restoring stock-like gearing',
+    points: [
+      'The exact target scales the current axle ratio by the tire-diameter change.',
+      'That restores the original geometric relationship between engine speed, axle rotation and tire travel.',
+      'Using actual mounted tire diameter improves accuracy.',
+    ],
+    takeaway: 'Stock-like targets restore geometry — not a vehicle-specific recommendation.',
+  },
+  {
+    id: 'deeper',
+    icon: 'deeper',
+    title: 'Choosing a deeper ratio',
+    points: [
+      'A numerically higher ratio raises engine RPM at a given road speed and increases low-speed multiplication.',
+      'The best final ratio still depends on the vehicle and intended use.',
+      'Availability depends on the axle and differential.',
+    ],
+    takeaway: 'Deeper is a mathematical bias option, not a universal upgrade.',
+  },
+  {
+    id: 'limits',
+    icon: 'limits',
+    title: 'What the calculator cannot predict',
+    points: [
+      'It does not know engine torque curves, shift strategy, torque-converter behaviour or drivetrain losses.',
+      'Vehicle weight, aerodynamics, terrain, towing load and driving style are outside the geometric model.',
+      'It also cannot confirm axle-ratio availability or predict actual fuel economy.',
+    ],
+    takeaway: 'Use the numbers as geometry — verify parts and drivetrain with a specialist.',
+  },
+];

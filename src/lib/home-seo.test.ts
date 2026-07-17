@@ -4,7 +4,7 @@ import { ORGANIZATION_LOGO_URL, SITE_URL } from './seo/constants';
 import { buildHomePageSchema } from './seo/schema';
 
 describe('buildHomePageSchema', () => {
-  it('returns WebSite and Organization graph with SearchAction', () => {
+  it('returns WebSite and Organization graph without fake SearchAction', () => {
     const data = buildHomePageSchema();
     const graph = (data as { '@graph': Record<string, unknown>[] })['@graph'];
 
@@ -19,14 +19,7 @@ describe('buildHomePageSchema', () => {
       url: `${SITE_URL}/`,
       publisher: { '@id': `${SITE_URL}/#organization` },
     });
-
-    const action = website?.potentialAction as Record<string, unknown>;
-    expect(action?.['@type']).toBe('SearchAction');
-    expect(action?.['query-input']).toBe('required name=search_term_string');
-    expect(action?.target).toMatchObject({
-      '@type': 'EntryPoint',
-      urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
-    });
+    expect(website?.potentialAction).toBeUndefined();
 
     expect(organization).toMatchObject({
       name: SITE_NAME,

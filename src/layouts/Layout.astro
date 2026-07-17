@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import '../styles/mobile-responsive.css';
 import '../styles/site-header.css';
+import '../styles/site-footer.css';
 import SEO from '../components/SEO.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
@@ -32,7 +33,10 @@ const {
   mainClass = 'bg-surface-subtle',
 } = Astro.props;
 
-const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+const gaMeasurementId = import.meta.env.PROD
+  ? import.meta.env.PUBLIC_GA_MEASUREMENT_ID
+  : undefined;
+const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
 ---
 
 <!doctype html>
@@ -49,6 +53,11 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
       robots={robots}
       preloadHero={preloadHero}
     />
+    {
+      googleSiteVerification ? (
+        <meta name="google-site-verification" content={googleSiteVerification} />
+      ) : null
+    }
     {
       gaMeasurementId && (
         <>

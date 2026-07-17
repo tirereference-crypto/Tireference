@@ -1,0 +1,22 @@
+---
+import HomeTrustIcon from './HomeTrustIcon.astro';
+import { HOME_HERO_TRUST } from '../../lib/home-landing';
+---
+
+<section class="home-hero-trust" aria-label="Why Tire Reference">
+  <ul class="home-hero__trust">
+    {
+      HOME_HERO_TRUST.map((item) => (
+        <li class="home-hero__trust-item">
+          <span class="home-hero__trust-icon" aria-hidden="true">
+            <HomeTrustIcon name={item.icon} />
+          </span>
+          <span class="home-hero__trust-copy">
+            <span class="home-hero__trust-title">{item.title}</span>
+            <span class="home-hero__trust-desc">{item.description}</span>
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</section>

@@ -1,10 +1,11 @@
 import { useId } from 'react';
 
+/** Native tire-front.webp is 307×842 (portrait). */
 const TIRE_FRONT_SRC = '/images/tire-front.webp';
-const TIRE_ASPECT = 842 / 307;
+const TIRE_ASPECT_H_OVER_W = 842 / 307;
 const ARROW_COLOR = '#5b4fe6';
 
-const VIEW_W = 200;
+const VIEW_W = 220;
 const VIEW_H = 300;
 
 function ArrowHead({ id, color }: { id: string; color: string }) {
@@ -15,18 +16,28 @@ function ArrowHead({ id, color }: { id: string; color: string }) {
   );
 }
 
+/**
+ * How-to-measure illustration. Geometry is kept fully inside the view box
+ * with top/side padding so parent overflow clipping cannot create a stray edge.
+ */
 export function MeasureDiameterVisual() {
   const uid = useId().replace(/:/g, '');
   const markerId = `dia-measure-arrow-${uid}`;
 
-  const groundY = 268;
-  const tireW = 88;
-  const tireH = tireW * TIRE_ASPECT;
-  const tireLeft = 8;
-  const tireTop = groundY - tireH;
-  const tireRight = tireLeft + tireW;
-  const arrowX = tireRight + 16;
-  const diamInset = 8;
+  const groundY = 278;
+  const topPad = 18;
+  const tireW = 72;
+  const tireH = tireW * TIRE_ASPECT_H_OVER_W;
+  // Fit tire between topPad and ground with a little breathing room.
+  const maxTireH = groundY - topPad - 4;
+  const scale = Math.min(1, maxTireH / tireH);
+  const drawW = tireW * scale;
+  const drawH = tireH * scale;
+  const tireLeft = 18;
+  const tireTop = groundY - drawH;
+  const tireRight = tireLeft + drawW;
+  const arrowX = tireRight + 22;
+  const diamInset = 10;
 
   const pctX = (v: number) => `${(v / VIEW_W) * 100}%`;
   const pctY = (v: number) => `${(v / VIEW_H) * 100}%`;
@@ -39,11 +50,11 @@ export function MeasureDiameterVisual() {
           style={{
             left: pctX(tireLeft),
             top: pctY(tireTop),
-            width: pctX(tireW),
-            height: pctY(tireH),
+            width: pctX(drawW),
+            height: pctY(drawH),
           }}
         >
-          <img src={TIRE_FRONT_SRC} alt="" decoding="async" />
+          <img src={TIRE_FRONT_SRC} alt="" decoding="async" width={307} height={842} />
         </div>
 
         <svg
@@ -55,13 +66,33 @@ export function MeasureDiameterVisual() {
             <ArrowHead id={markerId} color={ARROW_COLOR} />
           </defs>
 
-          <line x1="4" y1={groundY} x2={VIEW_W - 4} y2={groundY} stroke="#cbd5e1" strokeWidth="1.5" />
+          <line
+            x1="10"
+            y1={groundY}
+            x2={VIEW_W - 10}
+            y2={groundY}
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+          />
 
-          <line x1="4" y1={tireTop} x2={arrowX - 6} y2={tireTop} stroke={ARROW_COLOR} strokeWidth="2" strokeDasharray="5 4" />
-          <line x1="4" y1={groundY} x2={arrowX - 6} y2={groundY} stroke={ARROW_COLOR} strokeWidth="2" strokeDasharray="5 4" />
-
-          <line x1={arrowX} y1={tireTop} x2={tireRight} y2={tireTop} stroke={ARROW_COLOR} strokeWidth="1.25" strokeDasharray="3 3" opacity="0.7" />
-          <line x1={arrowX} y1={groundY} x2={tireRight} y2={groundY} stroke={ARROW_COLOR} strokeWidth="1.25" strokeDasharray="3 3" opacity="0.7" />
+          <line
+            x1="12"
+            y1={tireTop}
+            x2={arrowX - 8}
+            y2={tireTop}
+            stroke={ARROW_COLOR}
+            strokeWidth="2"
+            strokeDasharray="5 4"
+          />
+          <line
+            x1="12"
+            y1={groundY}
+            x2={arrowX - 8}
+            y2={groundY}
+            stroke={ARROW_COLOR}
+            strokeWidth="2"
+            strokeDasharray="5 4"
+          />
 
           <line
             x1={arrowX}
@@ -75,7 +106,13 @@ export function MeasureDiameterVisual() {
           />
         </svg>
 
-        <div className="dia-measure-visual__dim-label">
+        <div
+          className="dia-measure-visual__dim-label"
+          style={{
+            left: pctX(arrowX + 8),
+            top: pctY((tireTop + groundY) / 2),
+          }}
+        >
           <span className="dia-measure-visual__dim-label-text">Overall</span>
           <span className="dia-measure-visual__dim-label-text">diameter</span>
         </div>

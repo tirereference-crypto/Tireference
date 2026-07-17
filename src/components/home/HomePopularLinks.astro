@@ -1,0 +1,53 @@
+---
+import { buildPopularComparisonCards, buildPopularTireSizeCards } from '../../lib/home-sections';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
+
+const sizes = buildPopularTireSizeCards().slice(0, 8);
+const comparisons = buildPopularComparisonCards(5);
+---
+
+<section class="home-section home-reveal home-popular" aria-labelledby="home-popular-sizes-title">
+  <div class="home-popular__grid">
+    <div class="home-popular__col">
+      <header class="home-popular__header">
+        <h2 id="home-popular-sizes-title" class="home-popular__title">Popular Tire Sizes</h2>
+        <a href="/tire-sizes/" class="home-popular__view-all">
+          View all sizes
+          <span aria-hidden="true">→</span>
+        </a>
+      </header>
+      <ul class="home-popular__chips">
+        {
+          sizes.map((item) => (
+            <li>
+              <a href={item.href} class="home-popular__chip">
+                {item.size}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="home-popular__col">
+      <header class="home-popular__header">
+        <h2 id="home-popular-comparisons-title" class="home-popular__title">Popular Comparisons</h2>
+        <a href={CALCULATOR_PATHS.tireComparison} class="home-popular__view-all">
+          View all comparisons
+          <span aria-hidden="true">→</span>
+        </a>
+      </header>
+      <ul class="home-popular__chips">
+        {
+          comparisons.map((item) => (
+            <li>
+              <a href={item.href} class="home-popular__chip">
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>

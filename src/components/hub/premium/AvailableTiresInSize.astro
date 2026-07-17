@@ -1,0 +1,83 @@
+---
+import type { TireProduct } from '../../../lib/tire-size-products';
+import {
+  formatCategoryLabel,
+  formatNum,
+  specsStatusLabel,
+} from '../../../lib/tire-size-products';
+import { canonicalProductBrand } from '../../../lib/tire-product-display';
+
+interface Props {
+  displaySize: string;
+  products: TireProduct[];
+  totalCount: number;
+}
+
+const { displaySize, products, totalCount } = Astro.props;
+const hasMore = totalCount > products.length;
+---
+
+{products.length > 0 && (
+  <section id="available-tires" class="ref-section ref-section--products-compact">
+    <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">
+      Real Tires Available in This Size
+    </h2>
+    <p class="ref-section__subtitle">
+      A sample of manufacturer models indexed for {displaySize} — not a full catalog.
+    </p>
+
+    <div class="ref-section__body ref-section__grid grid gap-3 sm:grid-cols-2">
+      {products.map((p) => {
+        const tread = formatNum(p.tread_depth_32nds, 1);
+        const weight = formatNum(p.weight_lb, 1);
+        const status = specsStatusLabel(p);
+        const brand = canonicalProductBrand(p);
+        const loadSpeed = [p.load_range, p.service_description || p.speed_rating]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <article class="ref-card rounded-card border border-border bg-surface p-4">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-muted">{brand}</p>
+                <h3 class="mt-0.5 text-sm font-bold leading-snug text-heading">{p.model}</h3>
+              </div>
+              <span
+                class:list={[
+                  'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                  status === 'Full specs'
+                    ? 'bg-success/10 text-success'
+                    : 'bg-surface-subtle text-muted',
+                ]}
+              >
+                {status}
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-body">
+              {formatCategoryLabel(p.product_category)}
+              {loadSpeed ? ` · ${loadSpeed}` : ''}
+            </p>
+            {(tread || weight) && (
+              <p class="mt-2 text-xs tabular-nums text-muted">
+                {tread ? `Tread ${tread}/32` : ''}
+                {tread && weight ? ' · ' : ''}
+                {weight ? `${weight} lb` : ''}
+              </p>
+            )}
+          </article>
+        );
+      })}
+    </div>
+
+    {hasMore && (
+      <div class="ref-section__body">
+        <a
+          href="#spec-comparison"
+          class="inline-flex text-sm font-semibold text-primary hover:underline"
+        >
+          View all indexed tires in this size ({totalCount})
+        </a>
+      </div>
+    )}
+  </section>
+)}

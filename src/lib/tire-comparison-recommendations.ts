@@ -12,8 +12,15 @@ import { parsePrimaryLoadIndex } from './tire-ratings';
 import type { TireComparison, TireSpecs } from './tire-math';
 import type { UnitSystem } from './calculator-types';
 import { speedUnitLabel } from './tire-comparison-units';
-import { fmtInQuote, fmtPct, fmtSigned, nearZero } from './tire-comparison-format';
-import { FITMENT_SCORE, REVS_PER_MILE_THRESHOLD } from './tire-comparison-fitment';
+import {
+  fmtInQuote,
+  fmtPct,
+  fmtSigned,
+  isSidewallRideUnchanged,
+  nearZero,
+  SIDEWALL_CHANGE_PCT,
+} from './tire-comparison-format';
+import { fitmentVerdictFromScore, REVS_PER_MILE_THRESHOLD } from './tire-comparison-fitment';
 
 export interface ComparisonRecommendationContext {
   sizeA: string;
@@ -121,8 +128,8 @@ function dimensionalSignals(ctx: ComparisonRecommendationContext) {
     shorter: diamDiffIn < -0.05,
     wider: widthDeltaMm > 3,
     narrower: widthDeltaMm < -3,
-    softer: sidewallDiff > 0.1 || aspectDiff > 3,
-    firmer: sidewallDiff < -0.1 || aspectDiff < -3,
+    softer: ctx.sidewallPct >= SIDEWALL_CHANGE_PCT.UNCHANGED,
+    firmer: ctx.sidewallPct <= -SIDEWALL_CHANGE_PCT.UNCHANGED,
     balanced:
       Math.abs(comparison.diameterDiffPercent) < 2 &&
       Math.abs(widthDeltaMm) < 8,
@@ -131,7 +138,7 @@ function dimensionalSignals(ctx: ComparisonRecommendationContext) {
       Math.abs(comparison.speedometer.errorPercent) < 3,
     winter:
       widthDeltaMm < -3 ||
-      (sidewallDiff > 0.1 && widthDeltaMm <= 0),
+      (ctx.sidewallPct >= SIDEWALL_CHANGE_PCT.UNCHANGED && widthDeltaMm <= 0),
     revsDown: comparison.revsPerMileDiff < -REVS_PER_MILE_THRESHOLD,
     revsUp: comparison.revsPerMileDiff > REVS_PER_MILE_THRESHOLD,
     speedoHigh: Math.abs(comparison.speedometer.errorPercent) > 3,
@@ -318,21 +325,17 @@ export function buildCategoryConsiderations(ctx: ComparisonRecommendationContext
 /** Main recommendation section body — decision-focused, fitment score only for numbers. */
 export function buildCategoryRecommendationBody(ctx: ComparisonRecommendationContext): string {
   const { sizeA, sizeB, categoryB, fitmentScore } = ctx;
+  const verdict = fitmentVerdictFromScore(fitmentScore);
 
-  let headline: string;
-  if (fitmentScore >= FITMENT_SCORE.EXCELLENT) {
-    headline = `Fitment score ${fitmentScore.toFixed(1)}/10 — dimensional deltas stay within typical factory margins for ${categoryLabel(categoryB)} use.`;
-  } else if (fitmentScore >= FITMENT_SCORE.ACCEPTABLE) {
-    headline = `Fitment score ${fitmentScore.toFixed(1)}/10 — verify clearance before committing; changes are noticeable but manageable on many ${categoryLabel(categoryB)} platforms.`;
-  } else {
-    headline = `Fitment score ${fitmentScore.toFixed(1)}/10 — this step warrants detailed mock-fit planning before purchase.`;
-  }
+  const headline = `Fitment score ${fitmentScore.toFixed(1)}/10 — ${verdict.headline}.`;
 
   const usage = buildCategoryUsageParagraph(ctx);
   const action =
-    fitmentScore >= FITMENT_SCORE.ACCEPTABLE
+    verdict.tier === 'good'
       ? `Confirm load index${ctx.ratingsB?.loadIndex ? ` (${ctx.ratingsB.loadIndex})` : ''}, speed rating${ctx.ratingsB?.speedRating ? ` (${ctx.ratingsB.speedRating})` : ''}, and inner fender clearance on your vehicle before purchasing four tires.`
-      : `Mock-fit at full lock and full compression, verify wheel offset, and plan for speedometer correction if indicated speed drifts beyond your tolerance.`;
+      : verdict.tier === 'workable'
+        ? `Mock-fit at full lock and full compression, verify wheel offset, and confirm inner fender clearance before purchasing four tires.`
+        : `Plan for trimming, revised offset, lift, or regearing as needed — mock-fit every corner at full articulation before committing to ${sizeB}.`;
 
   return `${headline} ${usage} ${action}`;
 }
@@ -509,7 +512,7 @@ export function buildCategoryPersonalityBullets(ctx: ComparisonRecommendationCon
 
   if (sportier.length === 0) {
     sportier.push(
-      nearZero(d.sidewallDiff, 0.05) && nearZero(d.widthDeltaMm, 2)
+      isSidewallRideUnchanged(ctx.sidewallPct) && nearZero(d.widthDeltaMm, 2)
         ? `Sidewall and width stay near ${sizeA} — response should feel familiar`
         : `Not a handling-focused swap for this tire class`,
     );
@@ -532,9 +535,9 @@ export function buildCategoryPersonalityBullets(ctx: ComparisonRecommendationCon
 
   if (comfort.length === 0) {
     comfort.push(
-      nearZero(d.sidewallDiff, 0.05)
-        ? `Sidewall height unchanged — ride compliance similar to ${sizeA}`
-        : d.softer
+      isSidewallRideUnchanged(ctx.sidewallPct)
+        ? `Sidewall height unchanged (${fmtPct(ctx.sidewallPct)}) — ride compliance similar to ${sizeA}`
+        : ctx.sidewallPct >= SIDEWALL_CHANGE_PCT.UNCHANGED
           ? `Taller sidewall — softer ride character`
           : `Shorter sidewall — firmer ride character`,
     );

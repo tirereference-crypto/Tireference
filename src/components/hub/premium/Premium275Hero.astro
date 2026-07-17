@@ -1,16 +1,28 @@
 ---
 import type { TireSizeHubData } from '../../../lib/tire-size-hub';
 import { buildHeroSpecCards } from '../../../lib/tire-size-premium';
+import {
+  getExpertIntroBlockForTireSize,
+} from '../../../lib/tire-size-expert-intro';
+import type { TireSizeDataCoverage } from '../../../lib/tire-size-products';
 import HubCategoryBadge from '../HubCategoryBadge.astro';
+import HubIcon from '../HubIcon.astro';
 import Premium275TireViz from './Premium275TireViz.astro';
 
 interface Props {
   hub: TireSizeHubData;
+  coverage?: TireSizeDataCoverage | null;
 }
 
-const { hub } = Astro.props;
+const { hub, coverage = null } = Astro.props;
 const { displaySize, specs, categoryLabel, intro } = hub;
 const specCards = buildHeroSpecCards(specs);
+const expertBlock = getExpertIntroBlockForTireSize(
+  { size: hub.entry.size, specs, category: hub.entry.category },
+  coverage,
+);
+const introParagraph = expertBlock?.paragraph ?? intro;
+const fitmentNotes = expertBlock?.fitmentNotes ?? [];
 ---
 
 <section class="premium-hero">
@@ -26,9 +38,21 @@ const specCards = buildHeroSpecCards(specs);
   </div>
 
   <div class="premium-hero__intro">
-    <p class="max-w-4xl text-sm leading-snug text-body sm:text-[0.9375rem]">
-      {intro}
+    <p class="premium-hero__intro-copy max-w-4xl text-sm leading-snug text-body sm:text-[0.9375rem]">
+      {introParagraph}
     </p>
+    {fitmentNotes.length > 0 && (
+      <ul class="premium-hero__notes" aria-label="Fitment notes">
+        {fitmentNotes.map((note) => (
+          <li class="premium-hero__notes-item">
+            <span class="premium-hero__notes-icon" aria-hidden="true">
+              <HubIcon name="check" class="h-3.5 w-3.5 shrink-0" />
+            </span>
+            <span class="premium-hero__notes-text">{note}</span>
+          </li>
+        ))}
+      </ul>
+    )}
   </div>
 </section>
 
@@ -60,6 +84,54 @@ const specCards = buildHeroSpecCards(specs);
     border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
     padding: 0.75rem var(--ref-section-px, 1.25rem) 0.875rem;
     background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  }
+
+  .premium-hero__notes {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.55rem;
+    max-width: 48rem;
+  }
+
+  .premium-hero__notes-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-body);
+  }
+
+  .premium-hero__notes-icon {
+    display: inline-flex;
+    height: 1.125rem;
+    width: 1.125rem;
+    min-width: 1.125rem;
+    flex: 0 0 1.125rem;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.12rem;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+  }
+
+  .premium-hero__notes-icon :global(svg) {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    max-width: 0.75rem !important;
+    max-height: 0.75rem !important;
+    display: block;
+  }
+
+  .premium-hero__notes-text {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   @media (max-width: 639px) {

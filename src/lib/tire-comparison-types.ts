@@ -14,6 +14,14 @@ export interface KpiCard {
   label: string;
   diffAmount: string;
   diffPercent: string;
+  /** Absolute values for “original → new” row under the delta. */
+  originalValue: string;
+  newValue: string;
+  icon: 'diameter' | 'width' | 'sidewall' | 'circumference' | 'speedo' | 'revs';
+  /**
+   * Presentation tone for deltas. Prefer `neutral` unless a threshold rule applies.
+   * Do not treat positive numeric change as green by default.
+   */
   tone: 'positive' | 'negative' | 'neutral';
 }
 
@@ -53,6 +61,22 @@ export interface SpecTableRow {
   difference: string;
   tone: 'positive' | 'negative' | 'neutral';
   differenceVariant?: 'info';
+  thirdTire?: string;
+  thirdDifference?: string;
+  thirdTone?: 'positive' | 'negative' | 'neutral';
+  /** Internal provenance for the row values (not a loud UI badge). */
+  source?:
+    | 'nominal_calculation'
+    | 'manufacturer_published'
+    | 'calculated_from_published'
+    | 'dataset_derived'
+    | 'vehicle_specific_check';
+  sourceLabel?: string;
+  /** When sides differ in provenance (mixed-source cells). */
+  currentSourceLabel?: string;
+  newSourceLabel?: string;
+  /** When true, difference is withheld because sources are not comparable. */
+  differenceWithheld?: boolean;
 }
 
 export interface ComparisonPageIntro {
@@ -70,7 +94,8 @@ export interface WillThisFitRow {
   id: string;
   label: string;
   status: FitmentStatus;
-  statusLabel: 'Safe' | 'Check' | 'Not Recommended';
+  /** Compact Safe/Check/Not Recommended for criteria rows; descriptive copy for overall. */
+  statusLabel: string;
 }
 
 export interface VehicleFitmentDisplay {
@@ -87,16 +112,15 @@ export interface ComparisonSummaryChip {
   id: string;
   label: string;
   value: string;
-  tone: 'positive' | 'negative' | 'neutral';
+  /** `within` = under dimensional threshold; otherwise neutral grey/blue, not green-for-positive. */
+  tone: 'positive' | 'negative' | 'neutral' | 'within' | 'caution';
 }
 
 export interface ComparisonSeoContent {
   title: string;
   metaDescription: string;
   h1: string;
-  whatChanges: string;
   isGoodUpgrade: { headline: string; body: string };
-  whoShouldChoose: string;
   faqs: Array<{ question: string; answer: string }>;
 }
 
@@ -139,7 +163,7 @@ export interface ComparisonInsights {
   quickVerdict: QuickComparisonVerdict;
   pageIntro: ComparisonPageIntro;
   summaryChips: ComparisonSummaryChip[];
-  understandingDifference: string;
+  whatThisChangeMeans: string;
   personalityCards: PersonalityCard[];
   willThisFitRows: WillThisFitRow[];
   upgradePaths: UpgradePathsData | null;

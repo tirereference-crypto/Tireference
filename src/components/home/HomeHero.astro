@@ -1,5 +1,6 @@
 ---
 import HomeHeroSearch from './HomeHeroSearch';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 
 const heroBannerSrc = '/images/home/hero-banner.png?v=13';
 const heroBannerTabletSrc = '/images/home/hero-banner-tablet.png';
@@ -9,12 +10,13 @@ const heroBannerSrcset = `${heroBannerMobileSrc} 800w, ${heroBannerTabletSrc} 12
 
 <section class="home-hero" aria-labelledby="home-hero-title">
   <h1 id="home-hero-title" class="sr-only">Precision Tire Calculators &amp; Size Guides</h1>
+
   <div class="home-hero__stage">
     <img
       src={heroBannerSrc}
       srcset={heroBannerSrcset}
       sizes="(max-width: 767px) 100vw, (max-width: 1023px) 100vw, 90rem"
-      alt="Off-road tire on rocky terrain illustrating tire size measurements and fitment data"
+      alt="Off-road tire on rocky terrain with tire size measurement callouts"
       width="2048"
       height="717"
       class="home-hero__banner"
@@ -25,6 +27,23 @@ const heroBannerSrcset = `${heroBannerMobileSrc} 800w, ${heroBannerTabletSrc} 12
 
     <div class="home-hero__search-overlay">
       <HomeHeroSearch client:load />
+    </div>
+  </div>
+
+  <div class="home-hero__cta-band">
+    <div class="home-hero__cta-row">
+      <a href="#calculators" class="home-hero__cta home-hero__cta--primary">
+        Explore All Calculators
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+      <a href={CALCULATOR_PATHS.tireComparison} class="home-hero__cta home-hero__cta--secondary">
+        Compare Tire Sizes
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M4 10h12M8 6l-4 4 4 4M12 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
     </div>
   </div>
 </section>

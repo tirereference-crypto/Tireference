@@ -1,0 +1,41 @@
+---
+import type { UseCaseBucket } from '../../../lib/tire-size-products';
+import { canonicalProductBrand } from '../../../lib/tire-product-display';
+
+interface Props {
+  buckets: UseCaseBucket[];
+}
+
+const { buckets } = Astro.props;
+// Keep the section small: max 4 buckets, already filtered to non-empty
+const shown = buckets.slice(0, 4);
+---
+
+{shown.length > 0 && (
+  <section id="best-by-use" class="ref-section ref-section--alt ref-section--use-cases">
+    <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">
+      Best Options by Use Case
+    </h2>
+    <p class="ref-section__subtitle">
+      Compact picks from indexed models — not ranked reviews.
+    </p>
+    <div class="ref-section__body ref-section__grid grid gap-3 sm:grid-cols-2">
+      {shown.map((bucket) => (
+        <div class="ref-card rounded-card border border-border bg-surface p-4">
+          <h3 class="text-sm font-bold text-heading">{bucket.label}</h3>
+          <ul class="mt-2.5 space-y-2">
+            {bucket.products.slice(0, 2).map((p) => (
+              <li class="text-sm leading-snug text-body">
+                <span class="font-semibold text-heading">{canonicalProductBrand(p)}</span>
+                {' '}{p.model}
+                {p.load_range ? (
+                  <span class="text-xs text-muted"> · LR {p.load_range}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+)}

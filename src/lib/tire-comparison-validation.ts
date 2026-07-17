@@ -4,18 +4,31 @@ import { getTireSizeEntry } from './tire-size-hub';
 import { isProductionTireSize, normalizeTireSizeKey } from './tire-size-validation';
 import { fieldsToTireSizeString, parseFullSizeToFields } from './tire-size-input';
 
-/** Configurable SEO quality gates for tire comparison pages. */
+/** Legacy SEO quality gates for tire comparison pages. */
 export const COMPARISON_VALIDATION_RULES = {
   /** Both sizes must share the same dataset vehicle category. */
   requireSameCategory: true,
-  /** Maximum wheel diameter difference (inches). */
+  /** Maximum wheel diameter difference (inches) — legacy rule. */
   maxWheelDiameterDiffIn: 2,
-  /** Maximum overall diameter difference (%), evaluated from both perspectives. */
+  /** Maximum overall diameter difference (%), evaluated from both perspectives — legacy rule. */
   maxOverallDiameterDiffPct: 8,
-  /** Maximum section-width difference (mm). */
+  /** Maximum section-width difference (mm) — legacy rule. */
   maxWidthDiffMm: 50,
-  /** Maximum aspect-ratio difference (percentage points). */
+  /** Maximum aspect-ratio difference (percentage points) — legacy rule. */
   maxAspectRatioDiff: 20,
+} as const;
+
+/**
+ * Additional dimensional gates applied on top of legacy rules.
+ * All must pass for a pair to be valid.
+ */
+export const COMPARISON_DIMENSIONAL_RULES = {
+  /** Rim diameters equal or differ by at most 1 inch. */
+  maxWheelDiameterDiffIn: 1,
+  /** Overall diameter differs by no more than 15% (max of both perspectives). */
+  maxOverallDiameterDiffPct: 15,
+  /** Section width differs by no more than 25% (max of both perspectives). */
+  maxSectionWidthDiffPct: 25,
 } as const;
 
 /**
@@ -38,6 +51,19 @@ export const INCOMPATIBLE_CATEGORY_PAIRS: ReadonlyArray<
 export interface ComparisonValidationResult {
   valid: boolean;
   reason: string;
+}
+
+export interface ComparisonValidationOptions {
+  /** When true, skip COMPARISON_DIMENSIONAL_RULES (legacy-only check). */
+  skipDimensional?: boolean;
+}
+
+/** Options for generated /compare/ links on comparison and hub surfaces. */
+export interface ComparisonLinkOptions extends ComparisonValidationOptions {
+  /** When false, skip the content quality publish gate. Defaults to true. */
+  requirePublished?: boolean;
+  /** Drop links that point at this comparison page's own pair. */
+  excludePagePair?: { current: string; new: string };
 }
 
 function invalid(reason: string): ComparisonValidationResult {
@@ -77,7 +103,10 @@ function categoriesAreCompatible(
   );
 }
 
-function diameterDiffPct(specsA: ReturnType<typeof getTireSpecs>, specsB: ReturnType<typeof getTireSpecs>): number {
+function diameterDiffPct(
+  specsA: ReturnType<typeof getTireSpecs>,
+  specsB: ReturnType<typeof getTireSpecs>,
+): number {
   const pctFromA =
     (Math.abs(specsB.overallDiameterIn - specsA.overallDiameterIn) /
       specsA.overallDiameterIn) *
@@ -89,49 +118,53 @@ function diameterDiffPct(specsA: ReturnType<typeof getTireSpecs>, specsB: Return
   return Math.max(pctFromA, pctFromB);
 }
 
-/**
- * Validate whether two tire sizes should generate a dedicated comparison page
- * or appear in internal comparison suggestions.
- */
-export function isValidComparison(sizeA: string, sizeB: string): ComparisonValidationResult {
-  const keyA = normalizeTireSizeKey(sizeA);
-  const keyB = normalizeTireSizeKey(sizeB);
+function sectionWidthDiffPct(
+  specsA: ReturnType<typeof getTireSpecs>,
+  specsB: ReturnType<typeof getTireSpecs>,
+): number {
+  const pctFromA =
+    (Math.abs(specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100;
+  const pctFromB =
+    (Math.abs(specsA.widthMm - specsB.widthMm) / specsB.widthMm) * 100;
+  return Math.max(pctFromA, pctFromB);
+}
 
-  if (!keyA || !keyB) {
-    return invalid('One or both tire sizes could not be normalized.');
+function passesDimensionalRules(
+  specsA: ReturnType<typeof getTireSpecs>,
+  specsB: ReturnType<typeof getTireSpecs>,
+): ComparisonValidationResult {
+  const wheelDiffIn = Math.abs(specsA.wheelDiameterIn - specsB.wheelDiameterIn);
+  if (wheelDiffIn > COMPARISON_DIMENSIONAL_RULES.maxWheelDiameterDiffIn) {
+    return invalid(
+      `Rim diameter differs by ${wheelDiffIn.toFixed(1)} in (max ${COMPARISON_DIMENSIONAL_RULES.maxWheelDiameterDiffIn} in).`,
+    );
   }
 
-  if (keyA === keyB) {
-    return invalid('Cannot compare a tire size to itself.');
+  const overallDiamPct = diameterDiffPct(specsA, specsB);
+  if (overallDiamPct > COMPARISON_DIMENSIONAL_RULES.maxOverallDiameterDiffPct) {
+    return invalid(
+      `Overall diameter differs by ${overallDiamPct.toFixed(1)}% (max ${COMPARISON_DIMENSIONAL_RULES.maxOverallDiameterDiffPct}%).`,
+    );
   }
 
-  if (!isProductionTireSize(sizeA) || !isProductionTireSize(sizeB)) {
-    return invalid('Both sizes must be valid production tire sizes.');
+  const widthPct = sectionWidthDiffPct(specsA, specsB);
+  if (widthPct > COMPARISON_DIMENSIONAL_RULES.maxSectionWidthDiffPct) {
+    return invalid(
+      `Section width differs by ${widthPct.toFixed(1)}% (max ${COMPARISON_DIMENSIONAL_RULES.maxSectionWidthDiffPct}%).`,
+    );
   }
 
-  if (!isFieldBackedTireSize(sizeA) || !isFieldBackedTireSize(sizeB)) {
-    return invalid('Both sizes must round-trip through the calculator field format.');
-  }
+  return valid();
+}
 
-  if (!hasTireSizeHubPage(sizeA) || !hasTireSizeHubPage(sizeB)) {
-    return invalid('Both sizes must have a tire-size hub page in the dataset.');
-  }
-
-  const entryA = getTireSizeEntry(sizeA);
-  const entryB = getTireSizeEntry(sizeB);
-  if (!entryA || !entryB) {
-    return invalid('Both sizes must exist in the tire-size dataset.');
-  }
-
-  let specsA: ReturnType<typeof getTireSpecs>;
-  let specsB: ReturnType<typeof getTireSpecs>;
-  try {
-    specsA = getTireSpecs(sizeA);
-    specsB = getTireSpecs(sizeB);
-  } catch {
-    return invalid('Could not parse tire specifications for one or both sizes.');
-  }
-
+function passesLegacyRules(
+  sizeA: string,
+  sizeB: string,
+  entryA: NonNullable<ReturnType<typeof getTireSizeEntry>>,
+  entryB: NonNullable<ReturnType<typeof getTireSizeEntry>>,
+  specsA: ReturnType<typeof getTireSpecs>,
+  specsB: ReturnType<typeof getTireSpecs>,
+): ComparisonValidationResult {
   if (COMPARISON_VALIDATION_RULES.requireSameCategory && entryA.category !== entryB.category) {
     return invalid(
       `Vehicle categories differ (${entryA.category} vs ${entryB.category}). Comparisons require the same category.`,
@@ -173,4 +206,73 @@ export function isValidComparison(sizeA: string, sizeB: string): ComparisonValid
   }
 
   return valid();
+}
+
+/**
+ * Validate whether two tire sizes should generate a dedicated comparison page
+ * or appear in internal comparison suggestions.
+ *
+ * Applies legacy dataset/category rules AND dimensional fitment rules.
+ */
+export function isValidComparison(
+  sizeA: string,
+  sizeB: string,
+  options?: ComparisonValidationOptions,
+): ComparisonValidationResult {
+  const keyA = normalizeTireSizeKey(sizeA);
+  const keyB = normalizeTireSizeKey(sizeB);
+
+  if (!keyA || !keyB) {
+    return invalid('One or both tire sizes could not be normalized.');
+  }
+
+  if (keyA === keyB) {
+    return invalid('Cannot compare a tire size to itself.');
+  }
+
+  if (!isProductionTireSize(sizeA) || !isProductionTireSize(sizeB)) {
+    return invalid('Both sizes must be valid production tire sizes.');
+  }
+
+  if (!isFieldBackedTireSize(sizeA) || !isFieldBackedTireSize(sizeB)) {
+    return invalid('Both sizes must round-trip through the calculator field format.');
+  }
+
+  if (!hasTireSizeHubPage(sizeA) || !hasTireSizeHubPage(sizeB)) {
+    return invalid('Both sizes must have a tire-size hub page in the dataset.');
+  }
+
+  const entryA = getTireSizeEntry(sizeA);
+  const entryB = getTireSizeEntry(sizeB);
+  if (!entryA || !entryB) {
+    return invalid('Both sizes must exist in the tire-size dataset.');
+  }
+
+  let specsA: ReturnType<typeof getTireSpecs>;
+  let specsB: ReturnType<typeof getTireSpecs>;
+  try {
+    specsA = getTireSpecs(sizeA);
+    specsB = getTireSpecs(sizeB);
+  } catch {
+    return invalid('Could not parse tire specifications for one or both sizes.');
+  }
+
+  const legacy = passesLegacyRules(sizeA, sizeB, entryA, entryB, specsA, specsB);
+  if (!legacy.valid) return legacy;
+
+  if (!options?.skipDimensional) {
+    const dimensional = passesDimensionalRules(specsA, specsB);
+    if (!dimensional.valid) return dimensional;
+  }
+
+  return valid();
+}
+
+/** Boolean helper — true only when legacy and dimensional rules all pass. */
+export function isValidComparisonPair(
+  sizeA: string,
+  sizeB: string,
+  options?: ComparisonValidationOptions,
+): boolean {
+  return isValidComparison(sizeA, sizeB, options).valid;
 }

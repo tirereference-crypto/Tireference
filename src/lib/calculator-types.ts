@@ -2,9 +2,21 @@
 
 export type UnitSystem = 'imperial' | 'metric';
 
+/** Size-code format (independent of display units). */
+export type SizeFormat = 'metric' | 'flotation';
+
+/** Output display units for calculated results. */
+export type DisplayUnits = 'imperial' | 'metric' | 'both';
+
 export interface TireSizeInputFields {
   width: string;
   aspectRatio: string;
+  wheelDiameter: string;
+}
+
+export interface FlotationInputFields {
+  overallDiameter: string;
+  sectionWidth: string;
   wheelDiameter: string;
 }
 

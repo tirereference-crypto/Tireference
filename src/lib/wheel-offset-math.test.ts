@@ -45,6 +45,36 @@ describe('wheel-offset-math', () => {
     expect(result.trackWidthChangeMm).toBeCloseTo(result.outerPositionChangeMm * 2, 4);
   });
 
+  it('Case A: identical wheels produce zero position change', () => {
+    const result = compareWheelSetups(
+      { widthIn: 8, diameterIn: 18, offsetMm: 35 },
+      { widthIn: 8, diameterIn: 18, offsetMm: 35 },
+    );
+    expect(result.innerClearanceChangeMm).toBe(0);
+    expect(result.outerPositionChangeMm).toBe(0);
+    expect(result.trackWidthChangeMm).toBe(0);
+  });
+
+  it('Case B: lower offset same width moves outward and adds inner clearance', () => {
+    const result = compareWheelSetups(
+      { widthIn: 8, diameterIn: 18, offsetMm: 35 },
+      { widthIn: 8, diameterIn: 18, offsetMm: 15 },
+    );
+    expect(result.outerPositionChangeMm).toBeCloseTo(20, 4);
+    expect(result.innerClearanceChangeMm).toBeCloseTo(-20, 4);
+    expect(result.trackWidthChangeMm).toBeCloseTo(40, 4);
+  });
+
+  it('Case C: wider wheel same offset moves both lips ~25.4 mm', () => {
+    const result = compareWheelSetups(
+      { widthIn: 8, diameterIn: 18, offsetMm: 35 },
+      { widthIn: 10, diameterIn: 18, offsetMm: 35 },
+    );
+    expect(result.offsetDifferenceMm).toBe(0);
+    expect(result.innerClearanceChangeMm).toBeCloseTo(25.4, 4);
+    expect(result.outerPositionChangeMm).toBeCloseTo(25.4, 4);
+  });
+
   it('converts offset to backspacing', () => {
     const result = convertBackspacing(8, 35, 'offset-to-backspacing');
     expect(result?.backspacingIn).toBeCloseTo(5.378, 2);

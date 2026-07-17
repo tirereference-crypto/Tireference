@@ -1,30 +1,31 @@
 import { useId } from 'react';
 import type { UnitSystem } from '../../lib/calculator-types';
-import type { SpecTableRow } from '../../lib/tire-comparison-insights';
 import {
   formatCircumference,
   formatDimension,
   formatDimensionDiff,
 } from '../../lib/tire-comparison-units';
 import type { TireSpecs } from '../../lib/tire-math';
-import { TireSpecsSummaryTable } from './ComparisonReferenceWidgets';
 
-const BLUE = '#2563eb';
-const ORANGE = '#ea580c';
+const BLUE = '#2563eb'; /* --cmp-original */
+const ORANGE = '#ea580c'; /* --cmp-new */
+const PURPLE = '#64748b'; /* muted third-tire accent — avoid competing brand purple */
 const GRAY = '#94a3b8';
 
 const CURRENT_TIRE_SRC = '/images/tires/tire-side-blue.png';
 const NEW_TIRE_SRC = '/images/tires/tire-side-orange.png';
+const THIRD_TIRE_SRC = '/images/tires/tire-side-orange.png';
 
 interface ComparisonVisualPanelProps {
   specsA: TireSpecs;
   specsB: TireSpecs;
   sizeA: string;
   sizeB: string;
-  specRows: SpecTableRow[];
-  activeTab: 'visual' | 'specs';
-  onTabChange: (tab: 'visual' | 'specs') => void;
+  specsC?: TireSpecs;
+  sizeC?: string;
   unitSystem?: UnitSystem;
+  /** When true, omit the outer card chrome (used inside tab panel). */
+  embedded?: boolean;
 }
 
 function ArrowHead({ id, color }: { id: string; color: string }) {
@@ -51,26 +52,28 @@ function ComparisonVisualCanvas({
   const uid = useId().replace(/:/g, '');
   const blueMarker = `arrow-blue-${uid}`;
   const orangeMarker = `arrow-orange-${uid}`;
+  const descId = `viz-desc-${uid}`;
 
-  // viewBox space: 800 x 320
-  const groundY = 262;
-  const leftCx = 235;
-  const rightCx = 565;
+  const groundY = 288;
+  const viewH = 320;
+  const leftCx = 230;
+  const rightCx = 570;
   const centerX = 400;
 
-  // Scale tire diameters to pixels. Side view is a round wheel face → square render.
   const maxDiam = Math.max(specsA.overallDiameterIn, specsB.overallDiameterIn);
-  const pxPerIn = 170 / maxDiam;
-  const dA = specsA.overallDiameterIn * pxPerIn; // visual diameter (= height = width)
+  /** Slightly undersize vs canvas so labels clear the tire glow ring. */
+  const pxPerIn = 220 / maxDiam;
+  const dA = specsA.overallDiameterIn * pxPerIn;
   const dB = specsB.overallDiameterIn * pxPerIn;
   const rA = dA / 2;
   const rB = dB / 2;
   const topA = groundY - dA;
   const topB = groundY - dB;
-  // Keep diameter arrowheads tucked just inside the top/bottom reference lines.
   const diamInset = 7;
   const cyA = groundY - rA;
   const cyB = groundY - rB;
+  const wA = Math.min(rA * 1.35, specsA.sectionWidthIn * pxPerIn * 0.55);
+  const wB = Math.min(rB * 1.35, specsB.sectionWidthIn * pxPerIn * 0.55);
 
   const diamDiff = specsB.overallDiameterIn - specsA.overallDiameterIn;
   const tallerIsB = diamDiff >= 0;
@@ -84,12 +87,29 @@ function ComparisonVisualCanvas({
   const diffLabelY = shorterTop - 4;
 
   const pctX = (v: number) => `${(v / 800) * 100}%`;
-  const pctY = (v: number) => `${(v / 320) * 100}%`;
+  const pctY = (v: number) => `${(v / viewH) * 100}%`;
+  const labelClearance = 58;
+  const labelTopA = Math.max(4, topA - labelClearance);
+  const labelTopB = Math.max(4, topB - labelClearance);
+
+  const description = [
+    `Side-by-side proportional comparison of Original tire ${sizeA} and New tire ${sizeB} on a shared ground baseline.`,
+    `Overall diameter ${formatDimension(specsA.overallDiameterIn, unitSystem)} versus ${formatDimension(specsB.overallDiameterIn, unitSystem)}`,
+    `(difference ${formatDimensionDiff(diamDiff, unitSystem)}).`,
+    `Section width ${formatDimension(specsA.sectionWidthIn, unitSystem)} versus ${formatDimension(specsB.sectionWidthIn, unitSystem)}.`,
+    `Wheel diameter ${specsA.wheelDiameterIn}" versus ${specsB.wheelDiameterIn}".`,
+  ].join(' ');
 
   return (
-    <div className="cmp-viz-canvas">
-      {/* Tire images (round side view), sized by diameter, sitting on the ground line */}
-      <div className="cmp-viz-canvas__tires">
+    <div
+      className="cmp-viz-canvas"
+      role="img"
+      aria-labelledby={descId}
+    >
+      <p id={descId} className="sr-only">
+        {description}
+      </p>
+      <div className="cmp-viz-canvas__tires" aria-hidden="true">
         <div
           className="cmp-viz-canvas__tire cmp-viz-canvas__tire--current"
           style={{
@@ -99,7 +119,7 @@ function ComparisonVisualCanvas({
             height: pctY(dA),
           }}
         >
-          <img src={CURRENT_TIRE_SRC} alt={`Current tire ${sizeA} side view`} decoding="async" loading="lazy" />
+          <img src={CURRENT_TIRE_SRC} alt="" decoding="async" loading="lazy" />
         </div>
         <div
           className="cmp-viz-canvas__tire cmp-viz-canvas__tire--new"
@@ -110,36 +130,29 @@ function ComparisonVisualCanvas({
             height: pctY(dB),
           }}
         >
-          <img src={NEW_TIRE_SRC} alt={`New tire ${sizeB} side view`} decoding="async" loading="lazy" />
+          <img src={NEW_TIRE_SRC} alt="" decoding="async" loading="lazy" />
         </div>
       </div>
 
-      {/* Reference lines, arrows and rings */}
-      <svg className="cmp-viz-canvas__bg" viewBox="0 0 800 320" preserveAspectRatio="none" aria-hidden="true">
+      <svg className="cmp-viz-canvas__bg" viewBox={`0 0 800 ${viewH}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         <defs>
           <ArrowHead id={blueMarker} color={BLUE} />
           <ArrowHead id={orangeMarker} color={ORANGE} />
         </defs>
 
-        {/* Ground line */}
         <line x1="36" y1={groundY} x2="764" y2={groundY} stroke="#cbd5e1" strokeWidth="1.5" />
-
-        {/* Center divider */}
-        <line x1={centerX} y1="78" x2={centerX} y2={groundY} stroke={GRAY} strokeWidth="1.5" strokeDasharray="6 5" />
-
-        {/* Colored glow rings around each tire */}
+        <line x1={centerX} y1={Math.min(topA, topB) - 8} x2={centerX} y2={groundY} stroke={GRAY} strokeWidth="1.5" strokeDasharray="6 5" />
         <circle cx={leftCx} cy={cyA} r={rA + 3} fill="none" stroke={BLUE} strokeWidth="2.5" opacity="0.85" />
         <circle cx={rightCx} cy={cyB} r={rB + 3} fill="none" stroke={ORANGE} strokeWidth="2.5" opacity="0.85" />
-
-        {/* Top alignment dashed horizontals across canvas */}
         <line x1="64" y1={topA} x2={centerX - 6} y2={topA} stroke={BLUE} strokeWidth="1.5" strokeDasharray="5 4" opacity="0.85" />
         <line x1={centerX + 6} y1={topB} x2="736" y2={topB} stroke={ORANGE} strokeWidth="1.5" strokeDasharray="5 4" opacity="0.85" />
+        <line x1={leftCx} y1={Math.max(28, topA - 18)} x2={leftCx} y2={topA - 2} stroke={BLUE} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.65" />
+        <line x1={rightCx} y1={Math.max(28, topB - 18)} x2={rightCx} y2={topB - 2} stroke={ORANGE} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.65" />
 
-        {/* Center dashed line from each tire top up to its label */}
-        <line x1={leftCx} y1="64" x2={leftCx} y2={topA - 2} stroke={BLUE} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.65" />
-        <line x1={rightCx} y1="64" x2={rightCx} y2={topB - 2} stroke={ORANGE} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.65" />
+        {/* Section-width cues at ground (text identity also below). */}
+        <line x1={leftCx - wA} y1={groundY - 10} x2={leftCx + wA} y2={groundY - 10} stroke={BLUE} strokeWidth="2" opacity="0.7" />
+        <line x1={rightCx - wB} y1={groundY - 10} x2={rightCx + wB} y2={groundY - 10} stroke={ORANGE} strokeWidth="2" opacity="0.7" />
 
-        {/* Diameter-difference bracket in the center gap between tires */}
         {Math.abs(diamDiff) >= 0.01 && (
           <>
             <line
@@ -173,7 +186,6 @@ function ComparisonVisualCanvas({
           </>
         )}
 
-        {/* Left diameter arrow (outer edge) — points to tire top & bottom */}
         <line x1={leftCx - rA - 26} y1={topA} x2={leftCx} y2={topA} stroke={BLUE} strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
         <line x1={leftCx - rA - 26} y1={groundY} x2={leftCx} y2={groundY} stroke={BLUE} strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
         <line
@@ -193,7 +205,6 @@ function ComparisonVisualCanvas({
           {formatDimension(specsA.overallDiameterIn, unitSystem)}
         </text>
 
-        {/* Right diameter arrow (outer edge) — points to tire top & bottom */}
         <line x1={rightCx} y1={topB} x2={rightCx + rB + 26} y2={topB} stroke={ORANGE} strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
         <line x1={rightCx} y1={groundY} x2={rightCx + rB + 26} y2={groundY} stroke={ORANGE} strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
         <line
@@ -212,18 +223,22 @@ function ComparisonVisualCanvas({
         <text x={rightCx + rB + 34} y={cyB + 10} fill={ORANGE} fontSize="13" fontWeight="700" fontFamily="ui-monospace, monospace" textAnchor="start">
           {formatDimension(specsB.overallDiameterIn, unitSystem)}
         </text>
-
       </svg>
 
-      {/* Size labels */}
       <div className="cmp-viz-canvas__labels">
-        <div className="cmp-viz-canvas__label cmp-viz-canvas__label--current" style={{ left: pctX(leftCx) }}>
+        <div
+          className="cmp-viz-canvas__label cmp-viz-canvas__label--current"
+          style={{ left: pctX(leftCx), top: pctY(labelTopA) }}
+        >
+          <p className="cmp-viz-canvas__role">Original</p>
           <p className="cmp-viz-canvas__size">{sizeA}</p>
-          <p className="cmp-viz-canvas__diam">Circumference: {formatCircumference(specsA.circumferenceIn, unitSystem)}</p>
         </div>
-        <div className="cmp-viz-canvas__label cmp-viz-canvas__label--new" style={{ left: pctX(rightCx) }}>
+        <div
+          className="cmp-viz-canvas__label cmp-viz-canvas__label--new"
+          style={{ left: pctX(rightCx), top: pctY(labelTopB) }}
+        >
+          <p className="cmp-viz-canvas__role">New</p>
           <p className="cmp-viz-canvas__size">{sizeB}</p>
-          <p className="cmp-viz-canvas__diam">Circumference: {formatCircumference(specsB.circumferenceIn, unitSystem)}</p>
         </div>
       </div>
     </div>
@@ -235,53 +250,146 @@ export function ComparisonVisualPanel({
   specsB,
   sizeA,
   sizeB,
-  specRows,
-  activeTab,
-  onTabChange,
+  specsC,
+  sizeC,
   unitSystem = 'imperial',
+  embedded = false,
 }: ComparisonVisualPanelProps) {
+  const body =
+    specsC && sizeC ? (
+      <ComparisonTripleVisualCanvas
+        specsA={specsA}
+        specsB={specsB}
+        specsC={specsC}
+        sizeA={sizeA}
+        sizeB={sizeB}
+        sizeC={sizeC}
+        unitSystem={unitSystem}
+      />
+    ) : (
+      <ComparisonVisualCanvas
+        specsA={specsA}
+        specsB={specsB}
+        sizeA={sizeA}
+        sizeB={sizeB}
+        unitSystem={unitSystem}
+      />
+    );
+
+  if (embedded) return body;
+
   return (
     <section className="cmp-viz-panel" id="visual-comparison" aria-label="Visual comparison">
-      <div className="cmp-viz-panel__toolbar">
-        <div className="cmp-viz-panel__tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'visual'}
-            className={`cmp-viz-panel__tab ${activeTab === 'visual' ? 'cmp-viz-panel__tab--active' : ''}`}
-            onClick={() => onTabChange('visual')}
+      {body}
+    </section>
+  );
+}
+
+function ComparisonTripleVisualCanvas({
+  specsA,
+  specsB,
+  specsC,
+  sizeA,
+  sizeB,
+  sizeC,
+  unitSystem = 'imperial',
+}: {
+  specsA: TireSpecs;
+  specsB: TireSpecs;
+  specsC: TireSpecs;
+  sizeA: string;
+  sizeB: string;
+  sizeC: string;
+  unitSystem?: UnitSystem;
+}) {
+  const uid = useId().replace(/:/g, '');
+  const descId = `viz-triple-desc-${uid}`;
+  const groundY = 248;
+  const viewH = 278;
+  const positions = [150, 400, 650];
+  const specs = [specsA, specsB, specsC];
+  const sizes = [sizeA, sizeB, sizeC];
+  const colors = [BLUE, ORANGE, PURPLE];
+  const roles = ['Original', 'New', 'Third'];
+  const tireClasses = ['current', 'new', 'third'] as const;
+  const tireSrcs = [CURRENT_TIRE_SRC, NEW_TIRE_SRC, THIRD_TIRE_SRC];
+
+  const maxDiam = Math.max(...specs.map((s) => s.overallDiameterIn));
+  const pxPerIn = 170 / maxDiam;
+
+  const tires = specs.map((spec, index) => {
+    const d = spec.overallDiameterIn * pxPerIn;
+    const r = d / 2;
+    const cx = positions[index];
+    const top = groundY - d;
+    return { d, r, cx, top, cy: groundY - r, spec, size: sizes[index], role: roles[index] };
+  });
+
+  const pctX = (v: number) => `${(v / 800) * 100}%`;
+  const pctY = (v: number) => `${(v / viewH) * 100}%`;
+
+  return (
+    <div
+      className="cmp-viz-canvas cmp-viz-canvas--triple"
+      role="img"
+      aria-labelledby={descId}
+    >
+      <p id={descId} className="sr-only">
+        Proportional three-tire comparison of {sizeA}, {sizeB}, and {sizeC} on a shared ground baseline.
+      </p>
+      <div className="cmp-viz-canvas__tires" aria-hidden="true">
+        {tires.map((tire, index) => (
+          <div
+            key={tire.size}
+            className={`cmp-viz-canvas__tire cmp-viz-canvas__tire--${tireClasses[index]}`}
+            style={{
+              left: pctX(tire.cx - tire.r),
+              top: pctY(tire.top),
+              width: pctX(tire.d),
+              height: pctY(tire.d),
+            }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Visual Comparison
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'specs'}
-            className={`cmp-viz-panel__tab ${activeTab === 'specs' ? 'cmp-viz-panel__tab--active' : ''}`}
-            onClick={() => onTabChange('specs')}
-          >
-            Side by Side Table
-          </button>
-        </div>
+            <img src={tireSrcs[index]} alt="" decoding="async" loading="lazy" />
+          </div>
+        ))}
       </div>
 
-      {activeTab === 'visual' ? (
-        <ComparisonVisualCanvas
-          specsA={specsA}
-          specsB={specsB}
-          sizeA={sizeA}
-          sizeB={sizeB}
-          unitSystem={unitSystem}
-        />
-      ) : (
-        <div className="cmp-viz-panel__table">
-          <TireSpecsSummaryTable rows={specRows} variant="panel" />
-        </div>
-      )}
-    </section>
+      <svg className="cmp-viz-canvas__bg" viewBox={`0 0 800 ${viewH}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <defs>
+          {colors.map((color, index) => (
+            <ArrowHead key={color} id={`arrow-${index}-${uid}`} color={color} />
+          ))}
+        </defs>
+        <line x1="36" y1={groundY} x2="764" y2={groundY} stroke="#cbd5e1" strokeWidth="1.5" />
+        {tires.map((tire, index) => (
+          <circle
+            key={tire.size}
+            cx={tire.cx}
+            cy={tire.cy}
+            r={tire.r + 3}
+            fill="none"
+            stroke={colors[index]}
+            strokeWidth="2.5"
+            opacity="0.85"
+          />
+        ))}
+      </svg>
+
+      <div className="cmp-viz-canvas__labels cmp-viz-canvas__labels--triple">
+        {tires.map((tire, index) => (
+          <div
+            key={tire.size}
+            className={`cmp-viz-canvas__label cmp-viz-canvas__label--${tireClasses[index]}`}
+            style={{ left: pctX(tire.cx), top: pctY(Math.max(6, tire.top - 58)) }}
+          >
+            <p className="cmp-viz-canvas__role">{tire.role}</p>
+            <p className="cmp-viz-canvas__size">{tire.size}</p>
+            <p className="cmp-viz-canvas__diam">
+              Circumference {formatCircumference(tire.spec.circumferenceIn, unitSystem)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

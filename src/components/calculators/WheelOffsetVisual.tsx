@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { WheelOffsetComparison } from '../../lib/wheel-offset-math';
+import { backspacingInches, outboardPositionMm } from '../../lib/wheel-offset-math';
 import {
-  backspacingInches,
-  formatSignedMm,
-  outboardPositionMm,
-} from '../../lib/wheel-offset-math';
+  buildDiagramAriaDescription,
+  formatInnerChangePrimary,
+  formatOuterChangePrimary,
+  formatTrackWidthPrimary,
+  formatTrackWidthSecondary,
+} from '../../lib/wheel-offset-display';
 
 const REFERENCE_IMAGE = '/images/wheels/wheel-offset-suspension-reference.png?v=11';
 
@@ -319,22 +322,17 @@ interface WheelOffsetFitmentVisualProps {
 }
 
 function innerClearanceSubtext(mm: number): string {
-  if (mm > 0) return `${Math.abs(mm).toFixed(0)}mm closer to suspension`;
-  if (mm < 0) return `${Math.abs(mm).toFixed(0)}mm more inner room`;
-  return 'No inner clearance change';
+  if (Math.abs(mm) < 0.05) return 'Suspension-side position unchanged';
+  return 'Suspension-side rim lip';
 }
 
 function outerPositionSubtext(mm: number): string {
-  if (mm > 0) return `${mm.toFixed(0)}mm more poke (outward)`;
-  if (mm < 0) return `${Math.abs(mm).toFixed(0)}mm tucked inward`;
-  return 'No outer position change';
+  if (Math.abs(mm) < 0.05) return 'Fender-side position unchanged';
+  return 'Fender-side rim lip';
 }
 
 function trackWidthSubtext(mm: number): string {
-  const perSide = Math.abs(mm) / 2;
-  if (mm > 0) return `+${perSide.toFixed(0)}mm per side (+${mm.toFixed(0)}mm total)`;
-  if (mm < 0) return `-${perSide.toFixed(0)}mm per side (${mm.toFixed(0)}mm total)`;
-  return 'No track width change';
+  return formatTrackWidthSecondary(mm);
 }
 
 function isDiagramStacked(): boolean {
@@ -624,20 +622,6 @@ function HtmlCallout({
   );
 }
 
-const OFFSET_EXPLAINED_MOUNT_X = 28;
-const OFFSET_EXPLAINED_HUB_X = 172;
-const OFFSET_EXPLAINED_LINE_Y2 = 32;
-const OFFSET_EXPLAINED_ARROW_Y = 26;
-const OFFSET_EXPLAINED_OFFSET_LABEL_Y = 35;
-const OFFSET_EXPLAINED_VIEW_H = 40;
-const OFFSET_EXPLAINED_ARROW_INSET = 0.03;
-const OFFSET_EXPLAINED_ARROW_X1 =
-  OFFSET_EXPLAINED_MOUNT_X +
-  (OFFSET_EXPLAINED_HUB_X - OFFSET_EXPLAINED_MOUNT_X) * OFFSET_EXPLAINED_ARROW_INSET;
-const OFFSET_EXPLAINED_ARROW_X2 =
-  OFFSET_EXPLAINED_HUB_X -
-  (OFFSET_EXPLAINED_HUB_X - OFFSET_EXPLAINED_MOUNT_X) * OFFSET_EXPLAINED_ARROW_INSET;
-
 const REFERENCE_LINES = [
   { color: LINE_COLORS.suspension, dashed: true, label: 'Suspension', desc: 'Suspension and brake components' },
   { color: LINE_COLORS.inner, dashed: true, label: 'Inner Rim (Closest Point)', desc: 'Closest point between wheel and suspension' },
@@ -661,8 +645,8 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
   const { current, newSetup, innerClearanceChangeMm, outerPositionChangeMm, trackWidthChangeMm } =
     comparison;
 
-  const trackLabel =
-    trackWidthChangeMm >= 0 ? 'Track Width Increase' : 'Track Width Decrease';
+  const trackLabel = 'Estimated track-width change';
+  const diagramDescription = buildDiagramAriaDescription(comparison);
 
   const innerCalloutRef = useRef<HTMLDivElement>(null);
   const outerCalloutRef = useRef<HTMLDivElement>(null);
@@ -676,24 +660,38 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
 
   return (
     <div className="wof-fitment-viz">
-      <h3 className="wof-fitment-viz__title">Visual Wheel Position Comparison</h3>
+      <h3 className="wof-fitment-viz__title">Wheel Position Comparison</h3>
+      <p className="wof-fitment-viz__subtitle">
+        See how the new wheel moves relative to your current wheel. Actual vehicle clearance is not
+        measured.
+      </p>
 
       <div className="wof-fitment-viz__setups-row">
         <div className="wof-fitment-viz__setup-meta wof-fitment-viz__setup-meta--current">
-          <span className="wof-fitment-viz__setup-name">Current Setup</span>
+          <span className="wof-fitment-viz__setup-name">Current wheel</span>
           <span className="wof-fitment-viz__setup-spec">
             {specLabel(current.widthIn, current.diameterIn, current.offsetMm)}
           </span>
         </div>
         <div className="wof-fitment-viz__setup-meta wof-fitment-viz__setup-meta--new">
-          <span className="wof-fitment-viz__setup-name">New Setup</span>
+          <span className="wof-fitment-viz__setup-name">New wheel</span>
           <span className="wof-fitment-viz__setup-spec">
             {specLabel(newSetup.widthIn, newSetup.diameterIn, newSetup.offsetMm)}
           </span>
         </div>
       </div>
 
-      <div ref={diagramWrapRef} className="wof-fitment-viz__diagram-wrap">
+      <p className="wof-fitment-viz__offset-brief">
+        Positive offset moves the mounting face toward the wheel’s outer face; negative offset moves
+        it toward the suspension side.
+      </p>
+
+      <div
+        ref={diagramWrapRef}
+        className="wof-fitment-viz__diagram-wrap"
+        role="img"
+        aria-label={diagramDescription}
+      >
         <WheelPanel
           spec={current}
           uid="current"
@@ -706,8 +704,8 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
           <div className="wof-fitment-viz__callout-row">
             <HtmlCallout
               calloutRef={innerCalloutRef}
-              value={formatSignedMm(innerClearanceChangeMm)}
-              label="Inner Clearance Change"
+              value={formatInnerChangePrimary(innerClearanceChangeMm)}
+              label="Inner position change"
               sub={innerClearanceSubtext(innerClearanceChangeMm)}
               tone="inner"
             />
@@ -723,8 +721,8 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
           <div className="wof-fitment-viz__callout-row">
             <HtmlCallout
               calloutRef={outerCalloutRef}
-              value={formatSignedMm(outerPositionChangeMm)}
-              label="Outer Position Change"
+              value={formatOuterChangePrimary(outerPositionChangeMm)}
+              label="Outer position change"
               sub={outerPositionSubtext(outerPositionChangeMm)}
               tone="outer"
             />
@@ -746,7 +744,7 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
             <div className="wof-fitment-viz__callout-row">
               <HtmlCallout
                 calloutRef={trackCalloutRef}
-                value={formatSignedMm(trackWidthChangeMm)}
+                value={formatTrackWidthPrimary(trackWidthChangeMm)}
                 label={trackLabel}
                 sub={trackWidthSubtext(trackWidthChangeMm)}
                 tone="track"
@@ -782,9 +780,15 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
         />
       </div>
 
-      <div className="wof-fitment-viz__legend-row">
-        <div className="wof-fitment-viz__legend">
-          <h4 className="wof-fitment-viz__legend-title">Key Reference Lines</h4>
+      <details className="wof-fitment-viz__diagram-accordion">
+        <summary>Understanding the diagram</summary>
+        <div className="wof-fitment-viz__diagram-accordion-body">
+          <p className="wof-fitment-viz__diagram-accordion-lead">
+            Left diagram is the <strong>current wheel</strong>; right is the <strong>new wheel</strong>.
+            Suspension side is inward; fender side is outward.
+          </p>
+
+          <h4 className="wof-fitment-viz__legend-title">Key reference lines</h4>
           <ul className="wof-fitment-viz__legend-list">
             {REFERENCE_LINES.map((line) => (
               <li key={line.label} className="wof-fitment-viz__legend-item">
@@ -800,118 +804,36 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
               </li>
             ))}
           </ul>
-        </div>
 
-        <div className="wof-fitment-viz__legend-divider" aria-hidden="true" />
+          <h4>How to read inward and outward movement</h4>
+          <ul>
+            <li>
+              <strong>Inner position</strong> compares how close the inner rim lip sits to suspension
+              and brake components.
+            </li>
+            <li>
+              <strong>Outer position</strong> compares how far the outer lip extends toward the fender
+              and tire sidewall.
+            </li>
+            <li>
+              <strong>Estimated track-width change</strong> is twice the per-wheel outer-position
+              change when the same setup is used on both sides.
+            </li>
+          </ul>
 
-        <div className="wof-fitment-viz__offset-explained">
-          <h4 className="wof-fitment-viz__offset-explained-title">Offset Explained</h4>
-          <div className="wof-fitment-viz__offset-diagram">
-            <div className="wof-fitment-viz__offset-diagram-labels">
-              <p
-                className="wof-fitment-viz__offset-diagram-label"
-                style={{ color: LINE_COLORS.center }}
-              >
-                Mounting Surface
-                <span className="wof-fitment-viz__offset-diagram-label-sub">(Vehicle Hub)</span>
-              </p>
-              <p
-                className="wof-fitment-viz__offset-diagram-label"
-                style={{ color: LINE_COLORS.hub }}
-              >
-                Wheel Centerline
-              </p>
-            </div>
-            <svg
-              className="wof-fitment-viz__offset-diagram-svg"
-              viewBox={`0 0 200 ${OFFSET_EXPLAINED_VIEW_H}`}
-              aria-hidden="true"
-            >
-              <defs>
-                <marker
-                  id="wof-offset-mini-start"
-                  markerWidth="7"
-                  markerHeight="7"
-                  refX="1"
-                  refY="3.5"
-                  orient="auto"
-                >
-                  <path d="M7,0 L0,3.5 L7,7 Z" fill={LINE_COLORS.fender} />
-                </marker>
-                <marker
-                  id="wof-offset-mini-end"
-                  markerWidth="7"
-                  markerHeight="7"
-                  refX="6"
-                  refY="3.5"
-                  orient="auto"
-                >
-                  <path d="M0,0 L7,3.5 L0,7 Z" fill={LINE_COLORS.fender} />
-                </marker>
-              </defs>
-              <line
-                x1={OFFSET_EXPLAINED_MOUNT_X}
-                y1={0}
-                x2={OFFSET_EXPLAINED_MOUNT_X}
-                y2={OFFSET_EXPLAINED_LINE_Y2}
-                stroke={LINE_COLORS.center}
-                strokeWidth="2.5"
-                strokeDasharray="5 4"
-              />
-              <line
-                x1={OFFSET_EXPLAINED_HUB_X}
-                y1={0}
-                x2={OFFSET_EXPLAINED_HUB_X}
-                y2={OFFSET_EXPLAINED_LINE_Y2}
-                stroke={LINE_COLORS.hub}
-                strokeWidth="2.5"
-              />
-              <line
-                x1={OFFSET_EXPLAINED_ARROW_X1}
-                y1={OFFSET_EXPLAINED_ARROW_Y}
-                x2={OFFSET_EXPLAINED_ARROW_X2}
-                y2={OFFSET_EXPLAINED_ARROW_Y}
-                stroke={LINE_COLORS.fender}
-                strokeWidth="2.5"
-                markerStart="url(#wof-offset-mini-start)"
-                markerEnd="url(#wof-offset-mini-end)"
-              />
-              <text
-                x={100}
-                y={OFFSET_EXPLAINED_OFFSET_LABEL_Y}
-                textAnchor="middle"
-                className="wof-fitment-viz__offset-diagram-offset-svg"
-              >
-                Offset (+)
-              </text>
-            </svg>
-          </div>
-          <p className="wof-fitment-viz__offset-note">
-            Mounting surface is <strong>outboard</strong> of centerline
+          <h4>What this diagram does not evaluate</h4>
+          <ul>
+            <li>Vehicle-specific suspension, brake, and steering clearance</li>
+            <li>Fender, tire, and bodywork clearance at ride height</li>
+            <li>Camber, toe, and alignment settings</li>
+          </ul>
+
+          <p className="wof-fitment-viz__diagram-disclaimer">
+            Results describe relative wheel position only. Measure actual clearances on your vehicle
+            before purchasing wheels or tires.
           </p>
         </div>
-      </div>
-
-      <div className="wof-fitment-viz__notes-row">
-        <div className="wof-fitment-viz__note-card wof-fitment-viz__note-card--notes">
-          <span className="wof-fitment-viz__note-icon" aria-hidden="true">💡</span>
-          <h4>Important Notes</h4>
-          <ul>
-            <li>Positive numbers (+) push the wheel <strong>inward</strong></li>
-            <li>Negative numbers (−) push the wheel <strong>outward</strong></li>
-            <li>Track width change is the total increase across both sides of the vehicle</li>
-          </ul>
-        </div>
-        <div className="wof-fitment-viz__note-card wof-fitment-viz__note-card--check">
-          <span className="wof-fitment-viz__note-icon" aria-hidden="true">🛡️</span>
-          <h4>Always Check</h4>
-          <ul>
-            <li>Suspension clearance (inner side)</li>
-            <li>Fender clearance (outer side)</li>
-            <li>Turning and compression clearance</li>
-          </ul>
-        </div>
-      </div>
+      </details>
     </div>
   );
 }
@@ -919,7 +841,7 @@ export function WheelOffsetFitmentVisual({ comparison }: WheelOffsetFitmentVisua
 const OFFSET_EXPLAINER_COLORS = {
   positive: '#1f8a4c',
   zero: '#2563eb',
-  negative: '#dc2626',
+  negative: '#b45309',
 } as const;
 
 const OFFSET_EXPLAINER_TYPES = [
@@ -928,12 +850,11 @@ const OFFSET_EXPLAINER_TYPES = [
     title: 'POSITIVE OFFSET',
     color: OFFSET_EXPLAINER_COLORS.positive,
     description:
-      'Mounting pad is forward of the wheel centerline. Wheel sits further inward toward suspension.',
+      'The mounting face sits farther toward the outside face of the wheel and usually moves the wheel inward relative to a wheel of the same width.',
     points: [
-      'Most common on modern cars, crossovers, and FWD-based platforms.',
-      'Typical OEM range is roughly +35 to +55 mm on passenger vehicles.',
-      'Pulls the wheel inward, which usually improves inner clearance to struts and brake parts.',
-      'Going more positive than stock can tuck the wheel too far in and reduce fender gap.',
+      'Common on modern cars, crossovers, and many OEM truck wheels.',
+      'Higher positive offset typically increases inner packaging toward the suspension on the same width.',
+      'Width and offset must still be evaluated together.',
     ],
   },
   {
@@ -941,12 +862,11 @@ const OFFSET_EXPLAINER_TYPES = [
     title: 'ZERO OFFSET',
     color: OFFSET_EXPLAINER_COLORS.zero,
     description:
-      'Mounting pad is in line with the wheel centerline. Equal clearance inside and outside.',
+      'The mounting face aligns with the wheel centerline. Backspacing equals half the nominal wheel width.',
     points: [
-      'Backspacing equals half the wheel width — a useful baseline when comparing setups.',
-      'Less common from the factory on modern street cars, but seen on some trucks and classics.',
-      'Neither pushes the wheel inward nor outward relative to the rim center.',
-      'Helpful reference point when moving to positive or negative offset wheels.',
+      'Useful baseline when comparing positive and negative setups.',
+      'Neither tucks nor pushes the wheel relative to the rim centerline alone.',
+      'A wider zero-offset wheel still moves both lips outward from center.',
     ],
   },
   {
@@ -954,12 +874,11 @@ const OFFSET_EXPLAINER_TYPES = [
     title: 'NEGATIVE OFFSET',
     color: OFFSET_EXPLAINER_COLORS.negative,
     description:
-      'Mounting pad is behind the wheel centerline. Wheel sits further outward toward the fender.',
+      'The mounting face sits toward the suspension side of the centerline and usually moves the wheel outward relative to a wheel of the same width.',
     points: [
-      'Popular on trucks, SUVs, and aggressive aftermarket fitments.',
-      'Often written as ET-12, ET-20, or deeper values on wide wheels.',
-      'Pushes the outer lip outward for a wider stance and fuller fender look.',
-      'Watch fender clearance, scrub radius, and turning lock before committing.',
+      'Often used when a wider stance is desired.',
+      'Outer lip movement depends on both offset and width.',
+      'Confirm fender and tire clearance on the vehicle — this page does not measure them.',
     ],
   },
 ] as const;
@@ -967,7 +886,11 @@ const OFFSET_EXPLAINER_TYPES = [
 export function WheelOffsetTypesExplainer() {
   return (
     <div className="wof-offset-types">
-      <h2 className="wof-offset-types__title">What Is Wheel Offset?</h2>
+      <h2 className="wof-offset-types__title">How Wheel Offset Changes Wheel Position</h2>
+      <p className="wof-offset-types__intro">
+        Wheel width and offset must be evaluated together. An offset change of 0 mm can still create a
+        major position change when the new wheel is wider.
+      </p>
       <div className="wof-offset-types__grid">
         {OFFSET_EXPLAINER_TYPES.map((type) => (
           <article key={type.key} className={`wof-offset-types__col wof-offset-types__col--${type.key}`}>

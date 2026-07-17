@@ -42,7 +42,7 @@ describe('validateComparisonQuality', () => {
     const insights = buildInsights('225/45R17', '235/40R18');
     const corrupted = {
       ...insights,
-      understandingDifference: `${insights.understandingDifference} This delivers 39% better handling.`,
+      whatThisChangeMeans: `${insights.whatThisChangeMeans} This delivers 39% better handling.`,
     };
 
     const result = validateComparisonQuality(corrupted);
@@ -92,12 +92,15 @@ describe('validateComparisonQuality', () => {
 
   it('detects duplicate paragraphs', () => {
     const insights = buildInsights('225/45R17', '235/40R18');
-    const duplicate = insights.understandingDifference;
+    const duplicate = insights.whatThisChangeMeans;
     const corrupted = {
       ...insights,
       seo: {
         ...insights.seo,
-        whatChanges: duplicate,
+        isGoodUpgrade: {
+          headline: insights.seo.isGoodUpgrade.headline,
+          body: duplicate,
+        },
       },
     };
 
@@ -112,13 +115,13 @@ describe('validateComparisonQuality', () => {
     const insights = buildInsights('225/45R17', '235/40R18');
     const corrupted = {
       ...insights,
-      understandingDifference: `${insights.understandingDifference} Ideal daily driver with improved handling.`,
+      whatThisChangeMeans: `${insights.whatThisChangeMeans} Ideal daily driver with improved handling.`,
     };
 
     const gated = applyComparisonQualityGate(corrupted);
     expect(gated.quality.approved).toBe(true);
     for (const phrase of BANNED_COMPARISON_PHRASES) {
-      expect(gated.insights.understandingDifference.toLowerCase()).not.toContain(phrase);
+      expect(gated.insights.whatThisChangeMeans.toLowerCase()).not.toContain(phrase);
     }
   });
 
@@ -136,8 +139,8 @@ describe('validateComparisonQuality', () => {
     const blocks = extractComparisonContentBlocks(insights);
     const ids = blocks.map((b) => b.id);
 
-    expect(ids).toContain('understandingDifference');
-    expect(ids).toContain('seo.whatChanges');
+    expect(ids).toContain('whatThisChangeMeans');
+    expect(ids).toContain('seo.isGoodUpgrade.body');
     expect(ids.some((id) => id.startsWith('faq.'))).toBe(true);
   });
 
@@ -147,7 +150,7 @@ describe('validateComparisonQuality', () => {
 
     expect(repaired.fitmentScore).toBe(insights.fitmentScore);
     expect(repaired.kpiCards).toEqual(insights.kpiCards);
-    expect(repaired.seo.isGoodUpgrade.headline).toMatch(/score|fit/i);
+    expect(repaired.seo.isGoodUpgrade.headline).toMatch(/score|fit|compatibility/i);
   });
 });
 

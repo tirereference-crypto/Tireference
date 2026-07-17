@@ -2514,3 +2514,179 @@
   background: transparent;
   filter: drop-shadow(0 3px 8px rgb(15 23 42 / 0.12));
 }
+
+/* —— Focused tire-size calculator layout —— */
+.calc-results-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.calc-query-error {
+  margin: 0 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, #b45309 35%, var(--color-border));
+  background: color-mix(in srgb, #fef3c7 55%, var(--color-surface));
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  color: var(--color-heading);
+}
+
+.calc-result-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+
+.calc-result-notices p {
+  margin: 0;
+}
+
+.calc-next-actions__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.calc-next-actions__primary,
+.calc-next-actions__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.calc-next-actions__primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.calc-next-actions__primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.calc-next-actions__secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-heading);
+}
+
+.calc-next-actions__secondary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.calc-code-explain {
+  padding-top: 0.25rem;
+}
+
+.calc-code-explain__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.calc-code-explain__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 0;
+  align-items: flex-start;
+}
+
+.calc-code-explain__item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  min-width: 7.5rem;
+  flex: 1 1 7.5rem;
+}
+
+.calc-code-explain__sep {
+  color: var(--color-border);
+  font-weight: 600;
+  padding-top: 0.15rem;
+}
+
+.calc-code-explain__value {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.calc-code-explain__label {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.calc-code-explain__copy {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+.calc-related-compact__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.calc-related-compact__grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.calc-related-compact__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.65rem 0;
+  text-decoration: none;
+}
+
+.calc-related-compact__card:hover .calc-related-compact__label {
+  color: var(--color-primary);
+}
+
+.calc-related-compact__label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.calc-related-compact__desc {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+.calc-faq--compact {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.calc-faq--compact .calc-faq__header {
+  margin-bottom: 0.75rem;
+}
+
+.calc-copy-link-row {
+  display: flex;
+  justify-content: flex-end;
+}

@@ -50,14 +50,14 @@ export default function SiteHeaderSearch({
     <div className={`site-nav__search-wrap ${className ?? ''}`}>
       <form role="search" onSubmit={onSubmit}>
         <label className="sr-only" htmlFor={inputId}>
-          Search tire size or calculator
+          Search sizes or calculators
         </label>
         <SearchIcon />
         <input
           id={inputId}
           type="search"
           className="site-nav__search-input"
-          placeholder="Search tire size or calculator..."
+          placeholder="Search sizes or calculators"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => setFocused(true)}

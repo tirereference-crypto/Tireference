@@ -55,10 +55,10 @@ const rightContactY =
   role="img"
   aria-label="Tire specification diagram with width and diameter measurements"
 >
-  <div class="tire-spec-diagram__body flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-5 xl:gap-6">
+  <div class="tire-spec-diagram__body flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-start lg:gap-0">
     <!-- Tire images — left cluster (unchanged) -->
-    <div class="tire-diagram-cluster-wrap w-fit max-w-full shrink min-w-0">
-    <div class="tire-diagram-cluster flex items-end justify-center gap-3 overflow-visible sm:gap-4 lg:justify-start lg:pr-6">
+    <div class="tire-diagram-cluster-wrap w-fit max-w-full shrink-0 min-w-0">
+    <div class="tire-diagram-cluster flex items-end justify-center gap-3 overflow-visible sm:gap-4 lg:justify-start lg:pr-2">
     <!-- Front tire — width lines anchored to tire left/right shoulders -->
     <div class="relative flex justify-center lg:justify-start">
       <div class:list={['relative inline-flex items-end', tireColClass]}>
@@ -243,11 +243,13 @@ const rightContactY =
     </div>
     </div>
 
-    <!-- Specification grid — 2 × 3 dashboard layout -->
-    <div class="spec-cards-grid min-w-0 shrink-0 grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-x-2.5">
-      {specCards.map((card) => (
-        <Premium275SpecCard card={card} diagram />
-      ))}
+    <!-- Spec cards centered in remaining space (equal gap left & right) -->
+    <div class="spec-cards-slot min-w-0 w-full lg:flex-1 lg:flex lg:justify-end">
+      <div class="spec-cards-grid min-w-0 shrink-0 grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-x-2.5">
+        {specCards.map((card) => (
+          <Premium275SpecCard card={card} diagram />
+        ))}
+      </div>
     </div>
   </div>
 </div>

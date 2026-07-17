@@ -1,8 +1,5 @@
 import { useMemo } from 'react';
-import {
-  calculateFuelCostImpact,
-  DEFAULT_FUEL_ASSUMPTIONS,
-} from '../../lib/fuel-cost-impact';
+import { FUEL_ECONOMY_IMPACT_NOTE } from '../../lib/fuel-cost-impact';
 import type { UnitSystem } from '../../lib/calculator-types';
 import {
   chartSpeedPoints,
@@ -192,118 +189,9 @@ function PerformanceMetricCard({ card }: { card: PerformanceImpactCard }) {
   );
 }
 
-function fuelArcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(cx, cy, r, startAngle);
-  const end = polarToCartesian(cx, cy, r, endAngle);
-  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
-}
-
-const FUEL_GAUGE_START = 235;
-const FUEL_GAUGE_SWEEP = 250;
-const FUEL_GAUGE_TICKS = 32;
-
-function FuelEconomySemiGauge({
-  value,
-  variant,
-}: {
-  value: number;
-  variant: 'current' | 'new';
-}) {
-  const uid = `fuel-gauge-${variant}`;
-  const cx = 100;
-  const cy = 100;
-  const r = 78;
-  const endAngle = FUEL_GAUGE_START + FUEL_GAUGE_SWEEP;
-  const arcPath = fuelArcPath(cx, cy, r, FUEL_GAUGE_START, endAngle);
-
-  const ticks = Array.from({ length: FUEL_GAUGE_TICKS + 1 }, (_, i) => {
-    const angle = FUEL_GAUGE_START + (i / FUEL_GAUGE_TICKS) * FUEL_GAUGE_SWEEP;
-    const outer = polarToCartesian(cx, cy, r + 5, angle);
-    const inner = polarToCartesian(cx, cy, r - 5, angle);
-    return { x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y, key: i };
-  });
-
+export function FuelEconomyImpactNote() {
   return (
-    <div className="cmp-fuel-gauge">
-      <div className="cmp-fuel-gauge__wrap">
-        <svg viewBox="0 0 200 176" className="cmp-fuel-gauge__svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-          <defs>
-            <linearGradient id={`${uid}-grad`} x1="0%" y1="0%" x2="100%" y2="0%">
-              {variant === 'current' ? (
-                <>
-                  <stop offset="0%" stopColor="#22c55e" />
-                  <stop offset="55%" stopColor="#22c55e" />
-                  <stop offset="100%" stopColor="#2563eb" />
-                </>
-              ) : (
-                <>
-                  <stop offset="0%" stopColor="#94a3b8" />
-                  <stop offset="45%" stopColor="#ef4444" />
-                  <stop offset="100%" stopColor="#f97316" />
-                </>
-              )}
-            </linearGradient>
-          </defs>
-          <path
-            d={arcPath}
-            fill="none"
-            stroke={`url(#${uid}-grad)`}
-            strokeWidth="9"
-            strokeLinecap="round"
-          />
-          {ticks.map((t) => (
-            <line
-              key={t.key}
-              x1={t.x1}
-              y1={t.y1}
-              x2={t.x2}
-              y2={t.y2}
-              stroke="#ffffff"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          ))}
-        </svg>
-        <div className="cmp-fuel-gauge__value">
-          <span className="cmp-fuel-gauge__number">{value.toFixed(1)}</span>
-          <span className="cmp-fuel-gauge__unit">MPG</span>
-        </div>
-      </div>
-      <p className="cmp-fuel-gauge__label">{variant === 'current' ? 'Current' : 'New'}</p>
-    </div>
-  );
-}
-
-export function FuelEconomyGauges({
-  specsA,
-  specsB,
-}: {
-  specsA: TireSpecs;
-  specsB: TireSpecs;
-}) {
-  const impact = useMemo(
-    () => calculateFuelCostImpact(specsA, specsB, DEFAULT_FUEL_ASSUMPTIONS),
-    [specsA, specsB],
-  );
-
-  const mpgDiff = impact.mpgNew - impact.mpgCurrent;
-  const mpgPct = impact.mpgCurrent !== 0 ? (mpgDiff / impact.mpgCurrent) * 100 : 0;
-  const diffTone = mpgDiff < -0.001 ? 'negative' : mpgDiff > 0.001 ? 'positive' : 'neutral';
-
-  return (
-    <div className="cmp-fuel-gauges">
-      <FuelEconomySemiGauge value={impact.mpgCurrent} variant="current" />
-      <div className={`cmp-fuel-gauges__diff cmp-fuel-gauges__diff--${diffTone}`}>
-        <svg viewBox="0 0 24 12" className="cmp-fuel-gauges__arrow" aria-hidden="true">
-          <path d="M0 6h18M14 2l6 4-6 4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="cmp-fuel-gauges__diff-value">{mpgDiff >= 0 ? '+' : '−'}{Math.abs(mpgDiff).toFixed(1)}</span>
-        <span className="cmp-fuel-gauges__diff-unit">MPG</span>
-        <span className="cmp-fuel-gauges__diff-pct">({mpgPct >= 0 ? '+' : '−'}{Math.abs(mpgPct).toFixed(2)}%)</span>
-      </div>
-      <FuelEconomySemiGauge value={impact.mpgNew} variant="new" />
-    </div>
+    <p className="cmp-fuel-panel__note">{FUEL_ECONOMY_IMPACT_NOTE}</p>
   );
 }
 
@@ -441,18 +329,29 @@ export function RpmVsSpeedChart({
 export function TireSpecsSummaryTable({
   rows,
   variant = 'summary',
+  hasThird = false,
+  thirdColumnLabel = 'Third',
+  columnLabels,
+  showSourceHints = false,
 }: {
   rows: SpecTableRow[];
   variant?: 'summary' | 'panel';
+  hasThird?: boolean;
+  thirdColumnLabel?: string;
+  columnLabels?: { current?: string; newTire?: string };
+  showSourceHints?: boolean;
 }) {
+  const showThird = hasThird && rows.some((row) => row.thirdTire);
+  const currentLabel = columnLabels?.current ?? 'Current';
+  const newLabel = columnLabels?.newTire ?? 'New';
   const wrapClass =
     variant === 'panel'
       ? 'cmp-spec-table-wrap cmp-spec-table-wrap--panel'
       : 'cmp-spec-table-wrap cmp-spec-table-wrap--compact';
   const tableClass =
     variant === 'panel'
-      ? 'cmp-spec-table cmp-spec-table--panel'
-      : 'cmp-spec-table cmp-spec-table--summary';
+      ? `cmp-spec-table cmp-spec-table--panel${showThird ? ' cmp-spec-table--triple' : ''}`
+      : `cmp-spec-table cmp-spec-table--summary${showThird ? ' cmp-spec-table--triple' : ''}`;
 
   return (
     <>
@@ -460,25 +359,72 @@ export function TireSpecsSummaryTable({
         <table className={tableClass}>
           <thead>
             <tr>
-              <th>Specification</th>
-              <th>Current</th>
-              <th>New</th>
-              <th>Difference</th>
+              <th scope="col">Specification</th>
+              <th scope="col">{currentLabel}</th>
+              <th scope="col">{newLabel}</th>
+              {showThird ? (
+                <>
+                  <th scope="col">{thirdColumnLabel}</th>
+                  <th scope="col">New Δ</th>
+                  <th scope="col">Third Δ</th>
+                </>
+              ) : (
+                <th scope="col">Difference</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.label}>
-                <td>{row.label}</td>
-                <td>{row.current}</td>
-                <td>{row.newTire}</td>
-                <td
-                  className={[
-                    row.differenceVariant === 'info' ? 'cmp-spec-table__diff--info' : `tone-${row.tone}`,
-                  ].join(' ')}
-                >
-                  {row.difference}
+                <th scope="row">
+                  <span className="cmp-spec-table__label">{row.label}</span>
+                  {showSourceHints && row.sourceLabel ? (
+                    <SourceHint label={row.sourceLabel} />
+                  ) : null}
+                </th>
+                <td>
+                  <span className="cmp-spec-table__tire cmp-spec-table__tire--a">{row.current}</span>
+                  {showSourceHints && row.currentSourceLabel && row.current !== '—' ? (
+                    <SourceHint label={row.currentSourceLabel} />
+                  ) : null}
                 </td>
+                <td>
+                  <span className="cmp-spec-table__tire cmp-spec-table__tire--b">{row.newTire}</span>
+                  {showSourceHints && row.newSourceLabel && row.newTire !== '—' ? (
+                    <SourceHint label={row.newSourceLabel} />
+                  ) : null}
+                </td>
+                {showThird ? (
+                  <>
+                    <td>{row.thirdTire ?? '—'}</td>
+                    <td
+                      className={[
+                        row.differenceVariant === 'info' ? 'cmp-spec-table__diff--info' : `tone-${row.tone}`,
+                      ].join(' ')}
+                    >
+                      {row.difference}
+                    </td>
+                    <td
+                      className={[
+                        row.differenceVariant === 'info'
+                          ? 'cmp-spec-table__diff--info'
+                          : `tone-${row.thirdTone ?? 'neutral'}`,
+                      ].join(' ')}
+                    >
+                      {row.thirdDifference ?? '—'}
+                    </td>
+                  </>
+                ) : (
+                  <td
+                    className={[
+                      row.differenceVariant === 'info' || row.differenceWithheld
+                        ? 'cmp-spec-table__diff--info'
+                        : `tone-${row.tone}`,
+                    ].join(' ')}
+                  >
+                    {row.difference}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -488,30 +434,65 @@ export function TireSpecsSummaryTable({
       <div className="cmp-spec-cards" aria-label="Tire specifications comparison">
         {rows.map((row) => (
           <article key={row.label} className="cmp-spec-card">
-            <h3 className="cmp-spec-card__title">{row.label}</h3>
+            <h3 className="cmp-spec-card__title">
+              {row.label}
+              {showSourceHints && row.sourceLabel ? <SourceHint label={row.sourceLabel} /> : null}
+            </h3>
             <div className="cmp-spec-card__row">
-              <span className="cmp-spec-card__label">Current</span>
+              <span className="cmp-spec-card__label">{currentLabel}</span>
               <span className="cmp-spec-card__value">{row.current}</span>
             </div>
             <div className="cmp-spec-card__row">
-              <span className="cmp-spec-card__label">New</span>
+              <span className="cmp-spec-card__label">{newLabel}</span>
               <span className="cmp-spec-card__value">{row.newTire}</span>
             </div>
+            {showThird && row.thirdTire ? (
+              <div className="cmp-spec-card__row">
+                <span className="cmp-spec-card__label">{thirdColumnLabel}</span>
+                <span className="cmp-spec-card__value">{row.thirdTire}</span>
+              </div>
+            ) : null}
             <div className="cmp-spec-card__row">
-              <span className="cmp-spec-card__label">Difference</span>
+              <span className="cmp-spec-card__label">{showThird ? 'New Δ' : 'Difference'}</span>
               <span
                 className={[
                   'cmp-spec-card__value',
-                  row.differenceVariant === 'info' ? '' : `tone-${row.tone}`,
+                  row.differenceVariant === 'info' || row.differenceWithheld ? '' : `tone-${row.tone}`,
                 ].join(' ')}
               >
                 {row.difference}
               </span>
             </div>
+            {showThird && row.thirdDifference ? (
+              <div className="cmp-spec-card__row">
+                <span className="cmp-spec-card__label">Third Δ</span>
+                <span
+                  className={[
+                    'cmp-spec-card__value',
+                    row.differenceVariant === 'info' ? '' : `tone-${row.thirdTone ?? 'neutral'}`,
+                  ].join(' ')}
+                >
+                  {row.thirdDifference}
+                </span>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
     </>
+  );
+}
+
+function SourceHint({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="cmp-spec-source-hint"
+      title={label}
+      aria-label={`Data source: ${label}`}
+    >
+      <span aria-hidden="true">i</span>
+    </button>
   );
 }
 
@@ -546,40 +527,20 @@ export function ComparisonFinancialPanel({
   specsA: TireSpecs;
   specsB: TireSpecs;
 }) {
-  const impact = useMemo(
-    () => calculateFuelCostImpact(specsA, specsB, DEFAULT_FUEL_ASSUMPTIONS),
-    [specsA, specsB],
-  );
   const tireCurrent = estimateTireSetCost(specsA);
   const tireNew = estimateTireSetCost(specsB);
-  const fiveYearFuel = impact.annualDifference * 5;
-  const fiveYearTotal = fiveYearFuel + (tireNew - tireCurrent);
-  const costPerMileCurrent = (impact.annualCostCurrent / DEFAULT_FUEL_ASSUMPTIONS.annualMiles) * 100;
-  const costPerMileNew = (impact.annualCostNew / DEFAULT_FUEL_ASSUMPTIONS.annualMiles) * 100;
 
   return (
     <div className="cmp-financial">
       <dl className="cmp-financial__stats">
         <div>
-          <dt>Fuel Cost Impact (Annual)</dt>
-          <dd className={impact.annualDifference > 0 ? 'cmp-financial__neg' : 'cmp-financial__pos'}>
-            {impact.annualDifference >= 0 ? '+' : '−'}${Math.abs(impact.annualDifference).toFixed(0)}/yr
-          </dd>
-        </div>
-        <div>
           <dt>Tire Replacement (Set of 4)</dt>
           <dd>${tireCurrent} → ${tireNew}</dd>
         </div>
-        <div>
-          <dt>Cost Per Mile</dt>
-          <dd>{costPerMileCurrent.toFixed(2)}¢ → {costPerMileNew.toFixed(2)}¢</dd>
-        </div>
       </dl>
 
-      <div className={`cmp-financial__summary ${fiveYearTotal > 0 ? 'cmp-financial__summary--neg' : 'cmp-financial__summary--pos'}`}>
-        {fiveYearTotal >= 0
-          ? `This setup will cost you $${Math.abs(Math.round(fiveYearTotal))} more over 5 years`
-          : `This setup may save you $${Math.abs(Math.round(fiveYearTotal))} over 5 years`}
+      <div className="cmp-financial__summary">
+        {FUEL_ECONOMY_IMPACT_NOTE}
       </div>
     </div>
   );

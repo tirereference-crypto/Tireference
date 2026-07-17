@@ -16,7 +16,7 @@ describe('buildExploreFurtherData', () => {
 
     for (const path of data.upgradePaths) {
       expect(path.diameterChangeIn).toBeGreaterThan(0);
-      expect(path.comparisonHref).toContain('current=275%2F70R18');
+      expect(path.comparisonHref).toContain('from=275%2F70R18');
       expect(path.fitmentNote.length).toBeGreaterThan(0);
       expect(isValidComparisonPair('275/70R18', path.size)).toBe(true);
     }

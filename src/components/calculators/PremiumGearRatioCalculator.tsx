@@ -1,151 +1,255 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '../../styles/calculator-gear.css';
-import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
 import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import {
-  computeGearRatio,
-  formatRatio,
-  formatRpm,
-  parseGearRatioInput,
   type GearRatioFields,
   type GearRatioResult,
+  formatAxleRatio,
 } from '../../lib/gear-ratio-math';
 import {
-  formatVerdictRowIcon,
+  buildGearRatioScaleMarkers,
+  buildNearbyRatioExamples,
+  buildPrimaryAnswerCopy,
+  GEAR_EDU_SECTIONS,
   GEAR_FAQS,
   GEAR_RATIO_OPTIONS,
+  LOW_SPEED_BIAS_OPTIONS_LABELS,
   REGEAR_COSTS,
-  RELATED_CALCULATOR_LINKS,
-  SEO_GEAR_CONTENT,
 } from '../../lib/gear-ratio-insights';
-import { EffectiveGearRatioExplained, GearCompareInstallRow, GearRatioComparisonTable } from './GearRatioVisual';
+import {
+  GearRatioFactualComparisonTable,
+  GearRpmCrawlComparison,
+  HowGearRatioCalculationWorks,
+  WhatChangesWithNewTires,
+} from './GearRatioVisual';
 import { useGearRatioCalculator } from './useGearRatioCalculator';
-import { StickyAnalyzeButton } from './StickyAnalyzeButton';
+import CalculatorLinkActions from './CalculatorLinkActions';
+import { RelatedCalculatorsSection } from './ComparisonLowerPage';
 import {
   CALCULATOR_NAMES,
   trackCalculatorCompletedOnce,
   useAnalyticsDedupTracker,
   useCalculatorStarted,
 } from '../../hooks/useCalculatorAnalytics';
-import { trackRelatedCalculatorClick } from '../../lib/analytics';
 
 export interface PremiumGearRatioCalculatorProps {
   initialFields?: GearRatioFields;
 }
 
-function ImpactIcon({ name }: { name: string }) {
-  const common = {
-    viewBox: '0 0 20 20',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.5,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-  switch (name) {
-    case 'acceleration':
-      return <svg {...common}><path d="M3 13h3l2-7 3 12 2-7h4" /></svg>;
-    case 'fuel':
-      return <svg {...common}><rect x="4" y="3" width="8" height="14" rx="1.5" /><path d="M12 7h2.5a1.5 1.5 0 011.5 1.5V13a1 1 0 11-2 0" /><path d="M5.5 7.5h5" /></svg>;
-    case 'towing':
-      return <svg {...common}><circle cx="6.5" cy="14" r="2" /><circle cx="14" cy="14" r="2" /><path d="M8.5 14h3.5M3 7h6l3 5M9 7V5h4l2 4" /></svg>;
-    case 'highway':
-      return <svg {...common}><path d="M7 17L10 3l3 14M10 7v1M10 11v1" /></svg>;
-    case 'offroad':
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><path d="M10 3.5v13M3.5 10h13M5.5 5.5l9 9M14.5 5.5l-9 9" /></svg>;
-    default:
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /></svg>;
-  }
+function scrollToId(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 }
 
-function CostIcon({ name }: { name: string }) {
+function ResultsJumpNav({
+  hasAdvancedResults,
+  onAdvanced,
+}: {
+  hasAdvancedResults: boolean;
+  onAdvanced: () => void;
+}) {
+  const items: Array<{ id: string; label: string; icon: string; href?: string; onClick?: () => void }> =
+    [
+      { id: 'what', label: 'What changes', icon: 'Δ', href: '#grc-what-changes' },
+      { id: 'compare', label: 'Compare setups', icon: '⇄', href: '#grc-compare-setups' },
+      hasAdvancedResults
+        ? { id: 'advanced', label: 'Advanced analysis', icon: '⚙', href: '#grc-advanced-analysis' }
+        : { id: 'advanced', label: 'Advanced analysis', icon: '⚙', onClick: onAdvanced },
+      { id: 'how', label: 'How it works', icon: 'ƒ', href: '#grc-how-it-works' },
+    ];
+
+  return (
+    <nav className="grc-page-jump" aria-label="On this page">
+      {items.map((item) =>
+        item.href ? (
+          <a
+            key={item.id}
+            href={item.href}
+            className="grc-page-jump__pill"
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToId(item.href!.slice(1));
+            }}
+          >
+            <span className="grc-page-jump__icon" aria-hidden="true">
+              {item.icon}
+            </span>
+            {item.label}
+          </a>
+        ) : (
+          <button key={item.id} type="button" className="grc-page-jump__pill" onClick={item.onClick}>
+            <span className="grc-page-jump__icon" aria-hidden="true">
+              {item.icon}
+            </span>
+            {item.label}
+          </button>
+        ),
+      )}
+    </nav>
+  );
+}
+
+function EduBlockIcon({ icon }: { icon: (typeof GEAR_EDU_SECTIONS)[number]['icon'] }) {
   const common = {
     viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.6,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-  switch (name) {
-    case 'wrench':
-      return <svg {...common}><path d="M15 6a3.5 3.5 0 01-4.6 4.6l-5 5a1.7 1.7 0 01-2.4-2.4l5-5A3.5 3.5 0 0115 6z" /></svg>;
-    case 'shop':
-      return <svg {...common}><path d="M4 9l1-4h14l1 4M4 9h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1V9zM9 19v-5h6v5" /></svg>;
-    case 'axles':
-      return <svg {...common}><circle cx="6" cy="12" r="3" /><circle cx="18" cy="12" r="3" /><path d="M9 12h6" /></svg>;
-    default:
-      return <svg {...common}><circle cx="12" cy="12" r="8" /></svg>;
-  }
-}
-
-function RelatedIcon({ name }: { name: string }) {
-  const common = {
-    viewBox: '0 0 20 20',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.5,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-  switch (name) {
-    case 'compare':
-      return <svg {...common}><path d="M6 4v12M14 4v12M3 7l3-3 3 3M11 13l3 3 3-3" /></svg>;
-    case 'size':
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><circle cx="10" cy="10" r="2.5" /></svg>;
-    case 'diameter':
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><path d="M3.5 10h13" /></svg>;
-    case 'offset':
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><circle cx="10" cy="10" r="2.5" /></svg>;
-    case 'gear':
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><path d="M10 4v2M10 14v2M4 10h2M14 10h2" /></svg>;
-    default:
-      return <svg {...common}><circle cx="10" cy="10" r="6.5" /></svg>;
-  }
-}
-
-const RELATED_ICON_BY_HREF: Record<string, string> = {
-  [CALCULATOR_PATHS.tireSize]: 'size',
-  [CALCULATOR_PATHS.tireComparison]: 'compare',
-  [CALCULATOR_PATHS.tireDiameter]: 'diameter',
-  [CALCULATOR_PATHS.wheelOffset]: 'offset',
-  [CALCULATOR_PATHS.gearRatio]: 'gear',
-};
-
-function SetupCardIcon({ variant }: { variant: 'current' | 'new' }) {
-  const common = {
-    viewBox: '0 0 24 24',
+    width: 20,
+    height: 20,
     fill: 'none',
     stroke: 'currentColor',
     strokeWidth: 1.75,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
+    'aria-hidden': true as const,
   };
-  if (variant === 'current') {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
-      </svg>
-    );
+
+  switch (icon) {
+    case 'taller':
+      return (
+        <svg {...common}>
+          <path d="M12 19V5" />
+          <path d="M7 10l5-5 5 5" />
+          <path d="M5 19h14" />
+        </svg>
+      );
+    case 'restore':
+      return (
+        <svg {...common}>
+          <path d="M4 12a8 8 0 0 1 14.1-5.1" />
+          <path d="M18 4v4h-4" />
+          <path d="M20 12a8 8 0 0 1-14.1 5.1" />
+          <path d="M6 20v-4h4" />
+        </svg>
+      );
+    case 'deeper':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="7" />
+          <path d="M12 9v6" />
+          <path d="M9.5 12.5 12 15l2.5-2.5" />
+        </svg>
+      );
+    case 'limits':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="7" />
+          <path d="M12 8v5" />
+          <path d="M12 16h.01" />
+        </svg>
+      );
   }
+}
+
+function TireIcon() {
   return (
-    <svg {...common}>
-      <circle cx="12" cy="12" r="8.5" />
-      <circle cx="12" cy="12" r="3" />
+    <svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="10" cy="10" r="2.25" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
 
-function SetupColHeader({ variant, title }: { variant: 'current' | 'new'; title: string }) {
+function GearIcon({ size = 16 }: { size?: number }) {
   return (
-    <header className={`grc-setup-col__head grc-setup-col__head--${variant}`}>
-      <span className={`grc-setup-col__icon grc-setup-col__icon--${variant}`} aria-hidden="true">
-        <SetupCardIcon variant={variant} />
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M4.2 6.5l1.6 1.6M18.2 15.9l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 17.5l1.6-1.6M18.2 8.1l1.6-1.6" />
+    </svg>
+  );
+}
+
+function DirectionTrendIcon({ taller }: { taller: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+      {taller ? (
+        <>
+          <path
+            d="M10 4v12"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+          />
+          <path
+            d="M6.5 14.5 10 18l3.5-3.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      ) : (
+        <>
+          <path
+            d="M10 16V4"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+          />
+          <path
+            d="M6.5 5.5 10 2l3.5 3.5"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Tire diameter chip display — drop trailing .0, keep one decimal when needed. */
+function formatChipDiameter(value: string): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value || '—';
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+}
+
+function SetupSummaryChips({
+  currentDiameter,
+  newDiameter,
+  axleRatio,
+}: {
+  currentDiameter: string;
+  newDiameter: string;
+  axleRatio: string;
+}) {
+  return (
+    <div className="grc-setup-summary" aria-label="Setup summary">
+      <span className="grc-setup-chip grc-setup-chip--current">
+        <TireIcon />
+        <span>
+          <strong>{formatChipDiameter(currentDiameter)} in</strong> Current Tire
+        </span>
       </span>
-      <h2 className="grc-setup-col__title">{title}</h2>
-    </header>
+      <span className="grc-setup-summary__arrow" aria-hidden="true">
+        →
+      </span>
+      <span className="grc-setup-chip grc-setup-chip--new">
+        <TireIcon />
+        <span>
+          <strong>{formatChipDiameter(newDiameter)} in</strong> New Tire
+        </span>
+      </span>
+      <span className="grc-setup-chip grc-setup-chip--axle">
+        <GearIcon size={14} />
+        <span>
+          <strong>{formatAxleRatio(axleRatio)}</strong> Current Axle Ratio
+        </span>
+      </span>
+    </div>
   );
 }
 
@@ -156,7 +260,10 @@ function StackNumberField({
   unit,
   value,
   step,
+  helper,
+  error,
   onChange,
+  onBlur,
 }: {
   id: string;
   label: string;
@@ -164,10 +271,15 @@ function StackNumberField({
   unit?: string;
   value: string;
   step?: number;
+  helper?: string;
+  error?: string | null;
   onChange: (value: string) => void;
+  onBlur?: () => void;
 }) {
+  const helperId = helper ? `${id}-helper` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
   return (
-    <div className="grc-stack-field">
+    <div className={`grc-stack-field${error ? ' grc-stack-field--error' : ''}`}>
       <label htmlFor={id} className="grc-stack-field__label">
         <span className="grc-stack-field__label-text">{label}</span>
         {optional ? <span className="grc-stack-field__optional">(Optional)</span> : null}
@@ -179,193 +291,285 @@ function StackNumberField({
           step={step ?? 1}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={
+            [helperId, errorId, unit ? `${id}-unit` : null].filter(Boolean).join(' ') || undefined
+          }
         />
-        {unit ? <span className="grc-stack-field__suffix">{unit}</span> : null}
-      </div>
-    </div>
-  );
-}
-
-function StackSelectField({
-  id,
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="grc-stack-field">
-      <label htmlFor={id} className="grc-stack-field__label">
-        <span className="grc-stack-field__label-text">{label}</span>
-      </label>
-      <div className="grc-stack-field__control grc-stack-field__control--select">
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
-
-function Tooltip({ text }: { text: string }) {
-  return (
-    <span className="grc-tooltip" tabIndex={0} role="note" aria-label={text}>
-      <span className="grc-tooltip__icon" aria-hidden="true">
-        i
-      </span>
-      <span className="grc-tooltip__bubble">{text}</span>
-    </span>
-  );
-}
-
-function SummaryFooterIcon({ variant }: { variant: 'recommended' | 'performance' | 'warning' }) {
-  const common = {
-    viewBox: '0 0 20 20',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.75,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-  if (variant === 'recommended') {
-    return (
-      <svg {...common}>
-        <path d="M5 10.5l3 3.5 7-8" />
-      </svg>
-    );
-  }
-  if (variant === 'performance') {
-    return (
-      <svg {...common}>
-        <path d="M10 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4L5.5 16.8l.9-5L2.8 8.3l5-.7z" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <path d="M10 4.5l6.5 11.5H3.5L10 4.5z" />
-      <path d="M10 9v3" />
-      <circle cx="10" cy="14.5" r="0.75" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function SummaryRatioCard({
-  variant,
-  index,
-  title,
-  subtitle,
-  mainValue,
-  secondaryLabel,
-  secondaryValue,
-  footerLabel,
-  footerIcon,
-}: {
-  variant: 'ideal' | 'performance' | 'current';
-  index: number;
-  title: string;
-  subtitle: string;
-  mainValue: string;
-  secondaryLabel: string;
-  secondaryValue: string;
-  footerLabel: string;
-  footerIcon: 'recommended' | 'performance' | 'warning';
-}) {
-  return (
-    <article className={`grc-summary-card grc-summary-card--${variant}`}>
-      <header className="grc-summary-card__head">
-        <div className="grc-summary-card__head-row">
-          <span className={`grc-summary-card__index grc-summary-card__index--${variant}`}>{index}</span>
-          <h3 className="grc-summary-card__title">{title}</h3>
-        </div>
-        <p className="grc-summary-card__subtitle">{subtitle}</p>
-      </header>
-      <div className="grc-summary-card__body">
-        <p className="grc-summary-card__value">{mainValue}</p>
-        <div className="grc-summary-card__secondary">
-          <span className="grc-summary-card__secondary-label">{secondaryLabel}</span>
-          <span className={`grc-summary-card__pill grc-summary-card__pill--${variant}`}>
-            {secondaryValue}
+        {unit ? (
+          <span id={`${id}-unit`} className="grc-stack-field__suffix">
+            {unit}
           </span>
-        </div>
+        ) : null}
       </div>
-      <footer className={`grc-summary-card__footer grc-summary-card__footer--${variant}`}>
-        <span className="grc-summary-card__footer-icon" aria-hidden="true">
-          <SummaryFooterIcon variant={footerIcon} />
-        </span>
-        <span className="grc-summary-card__footer-label">{footerLabel}</span>
-      </footer>
-    </article>
+      {helper ? (
+        <p id={helperId} className="grc-stack-field__helper">
+          {helper}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="grc-stack-field__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
-function keepCurrentFooterLabel(lossPct: number): string {
-  if (lossPct < 3) return 'GEARS OK';
-  if (lossPct < 7) return 'MILDLY UNDERGEARED';
-  return 'UNDERGEARED';
+function useValueFlash(signature: string): boolean {
+  const [flash, setFlash] = useState(false);
+  const prevRef = useRef(signature);
+  const readyRef = useRef(false);
+
+  useEffect(() => {
+    if (!readyRef.current) {
+      readyRef.current = true;
+      prevRef.current = signature;
+      return;
+    }
+    if (prevRef.current === signature) return;
+    prevRef.current = signature;
+    setFlash(true);
+    const timer = window.setTimeout(() => setFlash(false), 250);
+    return () => window.clearTimeout(timer);
+  }, [signature]);
+
+  return flash;
 }
 
-function ResultsSummary({
-  result,
-  squatEnabled,
-}: {
-  result: GearRatioResult | null;
-  squatEnabled: boolean;
-}) {
+function nearbyExpandHelper(item: ReturnType<typeof buildNearbyRatioExamples>[number]): string {
+  if (item.direction === 'match') {
+    return 'This nearby example approximately matches the original geometric relationship.';
+  }
+  const match = item.comparison.match(/([\d.]+)%/);
+  const abs = match?.[1] ?? 'the same';
+  if (item.direction === 'taller') {
+    return `Engine RPM and low-speed multiplication remain approximately ${abs}% below the original setup.`;
+  }
+  return `Engine RPM and low-speed multiplication remain approximately ${abs}% above the original setup.`;
+}
+
+function GearRatioScale({ result }: { result: GearRatioResult }) {
+  const markers = buildGearRatioScaleMarkers(result);
+  const [motionReady, setMotionReady] = useState(false);
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    const frame = window.requestAnimationFrame(() => setMotionReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   return (
-    <section className="grc-summary" aria-label="Results summary">
-      <h2 className="grc-summary__title">Results Summary</h2>
-      {!result ? (
-        <div className="grc-summary__empty">
-          <p>Enter valid tire diameters and gear ratio to see results.</p>
+    <div
+      className={`grc-scale${motionReady ? ' grc-scale--motion' : ''}`}
+      aria-label="Compare the gearing options"
+      aria-describedby="grc-scale-note"
+    >
+      <h3 className="grc-scale__title">Compare the gearing options</h3>
+      <p id="grc-scale-note" className="grc-scale__note">
+        Markers show the relative numerical position of each ratio.
+      </p>
+
+      <div className="grc-scale__track" aria-hidden="true">
+        <div className="grc-scale__line" />
+        {markers.map((marker) => (
+          <div
+            key={marker.id}
+            className={`grc-scale__marker grc-scale__marker--${marker.role}${
+              marker.role === 'exact' ? ' grc-scale__marker--dominant' : ''
+            }`}
+            style={{ left: `${marker.positionPercent}%` }}
+            tabIndex={0}
+            aria-label={`${marker.label}: ${formatAxleRatio(marker.value)}, ${marker.percentLabel}`}
+            title={`${marker.label}: ${formatAxleRatio(marker.value)} — ${marker.percentLabel}`}
+          >
+            <span className="grc-scale__dot" />
+            <span className="grc-scale__value">{formatAxleRatio(marker.value)}</span>
+            <span className="grc-scale__label">{marker.label}</span>
+            <span className="grc-scale__tip" aria-hidden="true">
+              {formatAxleRatio(marker.value)} · {marker.label} · {marker.percentLabel}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <ol className="grc-scale__stack">
+        {markers.map((marker) => (
+          <li
+            key={marker.id}
+            className={`grc-scale__stack-item grc-scale__stack-item--${marker.role}`}
+          >
+            <span className="grc-scale__stack-marker" aria-hidden="true" />
+            <span className="grc-scale__stack-copy">
+              <span className="grc-scale__stack-label">{marker.label}</span>
+              <span className="grc-scale__stack-pct">{marker.percentLabel}</span>
+            </span>
+            <span className="grc-scale__stack-value">{formatAxleRatio(marker.value)}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function PrimaryAnswerPanel({
+  result,
+  stale,
+  hasPrimaryErrors,
+  onCompareRatio,
+}: {
+  result: GearRatioResult;
+  stale: boolean;
+  hasPrimaryErrors: boolean;
+  onCompareRatio: (ratio: number) => void;
+}) {
+  const copy = buildPrimaryAnswerCopy(result);
+  const nearby = buildNearbyRatioExamples(result);
+  const bias = result.input.lowSpeedBiasPercent;
+  const tallerNow = result.effectiveChangePercent < 0;
+  const [expandedNearby, setExpandedNearby] = useState<string | null>(null);
+  const flashTarget = useValueFlash(formatAxleRatio(result.stockLikeTarget));
+  const flashEffective = useValueFlash(formatAxleRatio(result.effectiveRatio));
+  const flashDeeper = useValueFlash(formatAxleRatio(result.deeperTarget));
+
+  return (
+    <section
+      className={`grc-answer${stale ? ' grc-answer--stale' : ''}`}
+      aria-label="Stock-like gearing target"
+    >
+      <div className="grc-answer__hero">
+        <div className="grc-answer__hero-eyebrow">
+          <GearIcon size={18} />
+          <span>Exact stock-like target</span>
         </div>
-      ) : (
-        <div className="grc-summary__cards">
-          <SummaryRatioCard
-            variant="ideal"
-            index={1}
-            title="Ideal Gear Ratio"
-            subtitle="Best balance for daily driving"
-            mainValue={formatRatio(result.idealGearRaw)}
-            secondaryLabel="Closest available gear ratio"
-            secondaryValue={formatRatio(result.idealGear)}
-            footerLabel="Recommended"
-            footerIcon="recommended"
-          />
-          <SummaryRatioCard
-            variant="performance"
-            index={2}
-            title="Performance Ratio"
-            subtitle="For towing, crawling & heavy loads"
-            mainValue={formatRatio(result.performanceGear)}
-            secondaryLabel="Closest available gear ratio"
-            secondaryValue={formatRatio(result.performanceGear)}
-            footerLabel="Best Performance"
-            footerIcon="performance"
-          />
-          <SummaryRatioCard
-            variant="current"
-            index={3}
-            title="Keep Current Ratio"
-            subtitle="If you keep stock gears"
-            mainValue={formatRatio(result.input.stockGearRatio)}
-            secondaryLabel={squatEnabled ? 'Effective Ratio (with squat)' : 'Effective Ratio'}
-            secondaryValue={formatRatio(result.effectiveRatio)}
-            footerLabel={keepCurrentFooterLabel(result.gearingLossPct)}
-            footerIcon="warning"
-          />
+
+        {hasPrimaryErrors || stale ? (
+          <p className="grc-answer__status" role="status">
+            Check the highlighted input. Showing the last valid result.
+          </p>
+        ) : null}
+
+        <p className={`grc-answer__value${flashTarget ? ' grc-flash' : ''}`}>
+          {formatAxleRatio(result.stockLikeTarget)}
+        </p>
+        <p className="grc-answer__label">{copy.supportLine}</p>
+        <p className="grc-answer__explain">{copy.explanation}</p>
+      </div>
+
+      <GearRatioScale result={result} />
+
+      {nearby.length > 0 ? (
+        <div className="grc-answer__nearby">
+          <h3 className="grc-answer__nearby-title">Nearby common ratio examples</h3>
+          <div className="grc-answer__chips">
+            {nearby.map((item) => {
+              const key = `${item.side}-${item.ratio}`;
+              const open = expandedNearby === key;
+              return (
+                <div
+                  key={key}
+                  className={`grc-answer__chip grc-answer__chip--${item.side}${
+                    item.isClosest ? ' grc-answer__chip--closest' : ''
+                  }${open ? ' grc-answer__chip--open' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="grc-answer__chip-toggle"
+                    aria-expanded={open}
+                    onClick={() => setExpandedNearby(open ? null : key)}
+                    onFocus={() => setExpandedNearby(key)}
+                  >
+                    <span className="grc-answer__chip-head">
+                      <span className={`grc-answer__chip-ratio${flashTarget ? ' grc-flash' : ''}`}>
+                        {formatAxleRatio(item.ratio)}
+                      </span>
+                      {item.direction !== 'match' ? (
+                        <span
+                          className={`grc-answer__chip-dir grc-answer__chip-dir--${item.direction}`}
+                        >
+                          {item.direction === 'taller' ? 'Taller' : 'Deeper'}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="grc-answer__chip-cmp">{item.comparison}</span>
+                    {item.isClosest ? (
+                      <span className="grc-answer__chip-tag">Closest mathematically</span>
+                    ) : null}
+                  </button>
+                  {open ? (
+                    <div className="grc-answer__chip-expand">
+                      <p>{nearbyExpandHelper(item)}</p>
+                      <button
+                        type="button"
+                        className="grc-answer__chip-compare"
+                        onClick={() => onCompareRatio(item.ratio)}
+                      >
+                        Compare {formatAxleRatio(item.ratio)}
+                      </button>
+                      <p className="grc-answer__chip-compare-note">
+                        Adds this ratio to Setup Comparison without changing your current axle input.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <p className="grc-answer__note">
+            Confirm availability for your specific axle and differential.
+          </p>
         </div>
-      )}
+      ) : null}
+
+      <div className="grc-answer__tiles">
+        <article className="grc-answer-tile grc-answer-tile--current">
+          <div className="grc-answer-tile__head">
+            <h3 className="grc-answer-tile__label">Current gears with new tires</h3>
+            <span
+              className="grc-answer-tile__trend"
+              aria-hidden="true"
+              title={tallerNow ? 'Taller effective gearing' : 'Deeper effective gearing'}
+            >
+              <DirectionTrendIcon taller={tallerNow} />
+            </span>
+          </div>
+          <p className={`grc-answer-tile__value${flashEffective ? ' grc-flash' : ''}`}>
+            {formatAxleRatio(result.effectiveRatio)}{' '}
+            <span className="grc-answer-tile__unit">effective ratio</span>
+          </p>
+          <p className="grc-answer-tile__secondary">{copy.currentGearsSecondary}</p>
+          <p className="grc-answer-tile__helper">{copy.currentGearsHelper}</p>
+        </article>
+        <article className="grc-answer-tile grc-answer-tile--deeper">
+          <div className="grc-answer-tile__head">
+            <h3 className="grc-answer-tile__label">Optional deeper target</h3>
+            <span
+              className="grc-answer-tile__trend"
+              aria-hidden="true"
+              title="Deeper effective gearing"
+            >
+              <DirectionTrendIcon taller={false} />
+            </span>
+          </div>
+          <p className={`grc-answer-tile__value${flashDeeper ? ' grc-flash' : ''}`}>
+            {formatAxleRatio(result.deeperTarget)}{' '}
+            <span className="grc-answer-tile__unit">target</span>
+          </p>
+          <p className="grc-answer-tile__secondary">
+            {bias}% deeper than the stock-like target
+          </p>
+          <p className="grc-answer-tile__helper">{copy.deeperHelper}</p>
+        </article>
+      </div>
+
+      <div className="grc-answer__toolbar">
+        <CalculatorLinkActions
+          shareTitle="Gear Ratio Calculator – Tire Size & Axle Ratio"
+          calculatorName={CALCULATOR_NAMES.gearRatio}
+        />
+      </div>
     </section>
   );
 }
@@ -373,48 +577,102 @@ function ResultsSummary({
 export default function PremiumGearRatioCalculator({
   initialFields,
 }: PremiumGearRatioCalculatorProps) {
-  const formRef = useRef<HTMLElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const resultsAnchorRef = useRef<HTMLDivElement>(null);
-  const faqRef = useRef<HTMLElement>(null);
-  const { fields, updateField, analyze, ready, result, verdict } = useGearRatioCalculator({
+  const faqRef = useRef<HTMLDivElement>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
+  const [accordionSession, setAccordionSession] = useState(0);
+  const [resultsLiveMessage, setResultsLiveMessage] = useState('');
+  const [compareRatios, setCompareRatios] = useState<number[]>([]);
+  const lastAnnouncedRef = useRef('');
+  const advancedRef = useRef<HTMLDetailsElement>(null);
+  const {
+    fields,
+    updateField,
+    touchField,
+    fieldErrors,
+    hasPrimaryErrors,
+    reset,
+    ready,
+    result,
+    resultsStale,
+  } = useGearRatioCalculator({
     initialFields,
   });
 
   useCalculatorStarted(CALCULATOR_NAMES.gearRatio);
   const dedupTracker = useAnalyticsDedupTracker();
+  useSingleOpenDetails(faqRef);
 
-  const handleAnalyze = useCallback(() => {
-    analyze();
+  const closeLongAccordions = useCallback(() => {
+    setCostOpen(false);
+    setAccordionSession((value) => value + 1);
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => closeLongAccordions();
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [closeLongAccordions]);
+
+  useEffect(() => {
+    if (!result || resultsStale) return;
     const signature = [
-      fields.currentDiameterIn,
-      fields.stockGearRatio,
-      fields.transTopGear,
-      fields.newDiameterIn,
-      fields.speed,
-      fields.speedUnit,
-      fields.cruiseRpm,
-      fields.desiredRpm,
+      formatAxleRatio(result.currentDiameterIn),
+      formatAxleRatio(result.newDiameterIn),
+      formatAxleRatio(result.input.stockGearRatio),
+      formatAxleRatio(result.stockLikeTarget),
     ].join('|');
     trackCalculatorCompletedOnce(dedupTracker, signature, {
       calculator_name: CALCULATOR_NAMES.gearRatio,
     });
-    requestAnimationFrame(() => {
-      resultsAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const message = `Stock-like gearing target ${formatAxleRatio(result.stockLikeTarget)}.`;
+    if (message !== lastAnnouncedRef.current) {
+      lastAnnouncedRef.current = message;
+      setResultsLiveMessage(message);
+    }
+  }, [result, resultsStale, dedupTracker]);
+
+  const gearOptions = useMemo(
+    () =>
+      GEAR_RATIO_OPTIONS.includes(fields.stockGearRatio)
+        ? GEAR_RATIO_OPTIONS
+        : [fields.stockGearRatio, ...GEAR_RATIO_OPTIONS],
+    [fields.stockGearRatio],
+  );
+
+  const handleReset = useCallback(() => {
+    reset();
+    setAdvancedOpen(false);
+    if (advancedRef.current) advancedRef.current.open = false;
+    setCompareRatios([]);
+    closeLongAccordions();
+    lastAnnouncedRef.current = '';
+    setResultsLiveMessage('Inputs reset to defaults.');
+  }, [reset, closeLongAccordions]);
+
+  const handleCompareRatio = useCallback((ratio: number) => {
+    setCompareRatios((prev) =>
+      prev.some((value) => Math.abs(value - ratio) < 0.005) ? prev : [...prev, ratio],
+    );
+    scrollToId('grc-compare-setups');
+  }, []);
+
+  const hasAdvancedResults = Boolean(result && (result.rpmReady || result.crawlReady));
+
+  const openAdvancedInputs = useCallback(() => {
+    const details = advancedRef.current;
+    if (details && !details.open) {
+      details.open = true;
+      setAdvancedOpen(true);
+    }
+    details?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
     });
-  }, [analyze, fields, dedupTracker]);
-
-  const stickyVisible = useStickyAnalyzeButton(formRef, resultsAnchorRef, { resultsReady: ready });
-  useSingleOpenDetails(faqRef);
-
-  const effectivePreview = useMemo(() => {
-    const parsed = parseGearRatioInput(fields);
-    if (!parsed) return null;
-    return computeGearRatio(parsed);
-  }, [fields]);
+  }, []);
 
   return (
-    <div className="cmp-page wof-page grc-page tl-has-sticky-analyze">
+    <div className="cmp-page wof-page grc-page">
       <div className="cmp-shell">
         <div className="cmp-toolbar">
           <nav className="cmp-breadcrumbs" aria-label="Breadcrumb">
@@ -433,262 +691,422 @@ export default function PremiumGearRatioCalculator({
               <span className="wof-hero__badge">REGEAR ANALYSIS</span>
             </div>
             <p className="wof-hero__desc grc-hero__desc">
-              Find the right differential gear ratio after changing tire size.
-              <br />
-              Compare stock, ideal, and performance gearing to understand acceleration, towing, fuel economy, and whether a regear is worth the cost.
+              Find the axle ratio that restores your original effective gearing after a tire size
+              change.
             </p>
+            <SetupSummaryChips
+              currentDiameter={fields.currentDiameterIn}
+              newDiameter={fields.newDiameterIn}
+              axleRatio={fields.stockGearRatio}
+            />
           </header>
 
-          <section ref={formRef} className="grc-workspace" aria-label="Gear ratio inputs">
-            <div className="grc-workspace-card">
-            <div className="grc-calc-grid">
-              <div className="grc-setup-col grc-setup-col--current">
-                <SetupColHeader variant="current" title="Current Setup" />
-                <div className="grc-setup-col__fields">
-                  <StackNumberField
-                    id="cur-diameter"
-                    label="Current Tire Diameter"
-                    unit="inches"
-                    value={fields.currentDiameterIn}
-                    step={0.1}
-                    onChange={(v) => updateField('currentDiameterIn', v)}
-                  />
-                  <StackSelectField
-                    id="cur-gear"
-                    label="Current Axle Gear Ratio"
-                    value={fields.stockGearRatio}
-                    options={GEAR_RATIO_OPTIONS}
-                    onChange={(v) => updateField('stockGearRatio', v)}
-                  />
-                  <StackNumberField
-                    id="cur-trans"
-                    label="Transmission Top Gear"
-                    optional
-                    value={fields.transTopGear}
-                    step={0.01}
-                    onChange={(v) => updateField('transTopGear', v)}
-                  />
-                  <StackNumberField
-                    id="cur-tcase"
-                    label="Transfer Case Low Range"
-                    optional
-                    value={fields.transferLowRatio}
-                    step={0.01}
-                    onChange={(v) => updateField('transferLowRatio', v)}
-                  />
-                </div>
-              </div>
-
-              <div className="grc-setup-col grc-setup-col--new">
-                <SetupColHeader variant="new" title="New Setup" />
-                <div className="grc-setup-col__fields">
-                <StackNumberField
-                  id="new-diameter"
-                  label="New Tire Diameter"
-                  unit="inches"
-                  value={fields.newDiameterIn}
-                  step={0.1}
-                  onChange={(v) => updateField('newDiameterIn', v)}
-                />
-                <label className="grc-check grc-setup-col__check">
-                  <input
-                    type="checkbox"
-                    checked={fields.squatEnabled}
-                    onChange={(e) => updateField('squatEnabled', e.target.checked)}
-                  />
-                  <span className="grc-check__box" aria-hidden="true" />
-                  <span className="grc-check__text">
-                    Account for tire squat (~3%)
-                    <Tooltip text="Tires flatten slightly under the weight of the vehicle, so the loaded rolling diameter is a bit smaller than advertised." />
-                  </span>
-                </label>
-                {effectivePreview && fields.squatEnabled ? (
-                  <div className="grc-setup-col__readout">
-                    <span className="grc-setup-col__readout-label">Effective Tire Diameter</span>
-                    <span className="grc-setup-col__readout-value">
-                      {effectivePreview.effectiveNewDiameterIn.toFixed(2)} inches
-                    </span>
-                    <span className="grc-setup-col__readout-sub">
-                      Reduces effective diameter by {fields.squatPercent}%. Tires compress under vehicle
-                      weight, reducing effective rolling diameter by roughly 2–4%.
-                    </span>
+          <section className="grc-workspace" aria-label="Gear ratio calculator">
+            <div className="grc-workspace-card grc-workspace-card--split">
+              <div className="grc-workspace-grid">
+                <div className="grc-input-panel">
+                  <div className="grc-input-panel__head">
+                    <h2 className="grc-input-panel__title">Enter Your Setup</h2>
+                    <button type="button" className="grc-reset-btn" onClick={handleReset}>
+                      Reset
+                    </button>
                   </div>
-                ) : null}
+
+                  <div className="grc-input-panel__fields">
+                    <div className="grc-setup-group grc-setup-group--current">
+                      <span className="grc-setup-badge grc-setup-badge--current">Current</span>
+                      <StackNumberField
+                        id="cur-diameter"
+                        label="Current tire diameter"
+                        unit="in"
+                        value={fields.currentDiameterIn}
+                        step={0.1}
+                        error={fieldErrors.currentDiameterIn}
+                        onChange={(v) => updateField('currentDiameterIn', v)}
+                        onBlur={() => touchField('currentDiameterIn')}
+                      />
+                      <div className="grc-stack-field">
+                        <label htmlFor="cur-gear" className="grc-stack-field__label">
+                          <span className="grc-stack-field__label-text">Current axle gear ratio</span>
+                        </label>
+                        <div className="grc-stack-field__control">
+                          <input
+                            id="cur-gear"
+                            type="number"
+                            step={0.01}
+                            list="grc-gear-presets"
+                            value={fields.stockGearRatio}
+                            onChange={(e) => updateField('stockGearRatio', e.target.value)}
+                            onBlur={() => touchField('stockGearRatio')}
+                            aria-invalid={fieldErrors.stockGearRatio ? true : undefined}
+                            aria-describedby="cur-gear-unit cur-gear-presets-hint"
+                          />
+                          <span id="cur-gear-unit" className="grc-stack-field__suffix">
+                            ratio
+                          </span>
+                        </div>
+                        <datalist id="grc-gear-presets">
+                          {gearOptions.map((option) => (
+                            <option key={option} value={option} />
+                          ))}
+                        </datalist>
+                        <p id="cur-gear-presets-hint" className="grc-stack-field__helper">
+                          Enter a custom ratio or pick a common preset such as 3.73 or 4.10.
+                        </p>
+                        {fieldErrors.stockGearRatio ? (
+                          <p className="grc-stack-field__error" role="alert">
+                            {fieldErrors.stockGearRatio}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="grc-setup-connector" aria-hidden="true">
+                      <span className="grc-setup-connector__line" />
+                      <span className="grc-setup-connector__label">
+                        Current setup → New tire setup
+                      </span>
+                      <span className="grc-setup-connector__arrow">↓</span>
+                    </div>
+
+                    <div className="grc-setup-group grc-setup-group--new">
+                      <span className="grc-setup-badge grc-setup-badge--new">New</span>
+                      <StackNumberField
+                        id="new-diameter"
+                        label="New tire diameter"
+                        unit="in"
+                        value={fields.newDiameterIn}
+                        step={0.1}
+                        error={fieldErrors.newDiameterIn}
+                        onChange={(v) => updateField('newDiameterIn', v)}
+                        onBlur={() => touchField('newDiameterIn')}
+                      />
+                    </div>
+
+                    <p className="grc-input-shared-note">
+                      Use actual mounted tire diameter when available.
+                    </p>
+                  </div>
+
+
+                </div>
+
+                <div className="grc-answer-panel">
+                  <div className="sr-only" aria-live="polite" aria-atomic="true">
+                    {resultsLiveMessage}
+                  </div>
+                  {result ? (
+                    <PrimaryAnswerPanel
+                      result={result}
+                      stale={resultsStale}
+                      hasPrimaryErrors={hasPrimaryErrors}
+                      onCompareRatio={handleCompareRatio}
+                    />
+                  ) : (
+                    <div className="grc-answer grc-answer--empty">
+                      <p>Enter valid tire diameters and axle ratio to see the stock-like target.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grc-advanced-slot">
+                  <details
+                    ref={advancedRef}
+                    className="grc-advanced grc-advanced--quiet"
+                    onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
+                  >
+                    <summary className="grc-advanced__summary" aria-expanded={advancedOpen}>
+                      <span className="grc-advanced__summary-icon" aria-hidden="true">
+                        <GearIcon size={16} />
+                      </span>
+                      <span className="grc-advanced__summary-text">
+                        <span className="grc-advanced__summary-title">
+                          Advanced RPM &amp; Crawl Analysis
+                        </span>
+                        <span className="grc-advanced__summary-hint">
+                          Optional speed, transmission and low-range inputs
+                        </span>
+                      </span>
+                      <span className="grc-accordion-chevron" aria-hidden="true" />
+                    </summary>
+                    <div className="grc-advanced__body">
+                      <div className="grc-advanced__grid">
+                        <StackNumberField
+                          id="adv-speed"
+                          label="Cruising Speed"
+                          unit={fields.speedUnit === 'kmh' ? 'km/h' : 'mph'}
+                          value={fields.speed}
+                          step={1}
+                          optional
+                          helper="Used to estimate engine RPM at a selected road speed."
+                          error={fieldErrors.speed}
+                          onChange={(v) => updateField('speed', v)}
+                          onBlur={() => touchField('speed')}
+                        />
+                        <div className="grc-stack-field">
+                          <label htmlFor="adv-speed-unit" className="grc-stack-field__label">
+                            <span className="grc-stack-field__label-text">Speed Unit</span>
+                          </label>
+                          <div className="grc-stack-field__control grc-stack-field__control--select">
+                            <select
+                              id="adv-speed-unit"
+                              value={fields.speedUnit}
+                              onChange={(e) =>
+                                updateField('speedUnit', e.target.value === 'kmh' ? 'kmh' : 'mph')
+                              }
+                            >
+                              <option value="mph">mph</option>
+                              <option value="kmh">km/h</option>
+                            </select>
+                          </div>
+                        </div>
+                        <StackNumberField
+                          id="adv-top"
+                          label="Transmission Top Gear"
+                          value={fields.transTopGear}
+                          step={0.01}
+                          optional
+                          helper="Enter the transmission ratio used at your selected cruising speed."
+                          error={fieldErrors.transTopGear}
+                          onChange={(v) => updateField('transTopGear', v)}
+                          onBlur={() => touchField('transTopGear')}
+                        />
+                        <StackNumberField
+                          id="adv-first"
+                          label="Transmission First Gear"
+                          value={fields.firstGearRatio}
+                          step={0.01}
+                          optional
+                          helper="Required to calculate overall crawl ratio."
+                          error={fieldErrors.firstGearRatio}
+                          onChange={(v) => updateField('firstGearRatio', v)}
+                          onBlur={() => touchField('firstGearRatio')}
+                        />
+                        <StackNumberField
+                          id="adv-tcase"
+                          label="Transfer Case Low Range"
+                          value={fields.transferLowRatio}
+                          step={0.01}
+                          optional
+                          helper="Required for four-wheel-drive low-range crawl-ratio calculations."
+                          error={fieldErrors.transferLowRatio}
+                          onChange={(v) => updateField('transferLowRatio', v)}
+                          onBlur={() => touchField('transferLowRatio')}
+                        />
+                        <div className="grc-stack-field">
+                          <label htmlFor="adv-bias" className="grc-stack-field__label">
+                            <span className="grc-stack-field__label-text">
+                              Additional Low-Speed Bias
+                            </span>
+                          </label>
+                          <div className="grc-stack-field__control grc-stack-field__control--select">
+                            <select
+                              id="adv-bias"
+                              value={fields.lowSpeedBiasPercent}
+                              onChange={(e) => updateField('lowSpeedBiasPercent', e.target.value)}
+                            >
+                              {LOW_SPEED_BIAS_OPTIONS_LABELS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className="grc-stack-field__helper">
+                            User-selected mathematical target relative to the exact stock-like target —
+                            not a vehicle-specific recommendation.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
-
-              <div ref={previewRef} className="grc-calc-grid__summary">
-                <ResultsSummary
-                  result={effectivePreview}
-                  squatEnabled={fields.squatEnabled}
-                />
-              </div>
-
-              <div className="grc-calc-grid__actions">
-                <button type="button" className="wof-analyze-btn grc-analyze-btn" onClick={handleAnalyze}>
-                  <span className="grc-analyze-btn__icon" aria-hidden="true">
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
-                      <rect x="3" y="2" width="14" height="16" rx="2" />
-                      <path d="M7 6h6M7 10h3M7 14h4" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  Analyze Gear Ratio
-                </button>
-              </div>
-            </div>
             </div>
           </section>
 
           <div className="cmp-main wof-main grc-main grc-layout__main">
-            {ready && result && verdict ? (
+            {ready && result ? (
               <>
-                  <div ref={resultsAnchorRef} className="grc-results-anchor" aria-hidden="true" />
-                  <section
-                    className={`wof-verdict grc-verdict wof-verdict--${verdict.tone}`}
-                    aria-label="Regear verdict details"
-                  >
-                    <div className="wof-verdict__lead">
-                      <span className="wof-verdict__icon" aria-hidden="true">
-                        {verdict.tone === 'green' ? '✓' : verdict.tone === 'red' ? '!' : '⚠'}
-                      </span>
-                      <span className="wof-verdict__eyebrow">Gearing Verdict</span>
-                      <span className="wof-verdict__label">{verdict.label}</span>
-                      <span className="wof-verdict__summary">{verdict.summary}</span>
-                    </div>
+                <ResultsJumpNav
+                  hasAdvancedResults={hasAdvancedResults}
+                  onAdvanced={openAdvancedInputs}
+                />
 
-                    <ul className="wof-verdict__checks grc-verdict__checks">
-                      {verdict.rows.map((row) => (
-                        <li
-                          key={row.id}
-                          className={`wof-verdict__check grc-verdict__check wof-verdict__check--${row.status}`}
-                        >
-                          <span className={`grc-verdict__check-icon grc-verdict__check-icon--${row.status}`} aria-hidden="true">
-                            <ImpactIcon name={row.icon} />
-                          </span>
-                          <span className="wof-verdict__check-body">
-                            <span className="wof-verdict__check-label">{row.label}</span>
-                            <span className="wof-verdict__check-detail">{row.detail}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div className="wof-verdict__notes">
-                      <span className="wof-verdict__notes-title">Recommendation</span>
-                      <p className="wof-verdict__notes-text">
-                        {verdict.tone === 'green'
-                          ? `You lose only ${result.gearingLossPct.toFixed(1)}% effective gearing. Keep your ${formatRatio(result.input.stockGearRatio)} gears and enjoy the new tires.`
-                          : `You lose about ${result.gearingLossPct.toFixed(1)}% effective gearing. A regear to ${formatRatio(result.idealGear)} restores daily response, or ${formatRatio(result.performanceGear)} for towing and trails.`}
-                      </p>
-                      <a className="wof-verdict__notes-btn" href={CALCULATOR_PATHS.tireComparison}>
-                        Compare Tire Sizes
-                      </a>
-                    </div>
-                  </section>
-
-                  <GearCompareInstallRow result={result} />
-
-                  <div className="grc-effective-cost-row">
-                    <div className="grc-effective-cost-row__col">
-                      <EffectiveGearRatioExplained result={result} />
-                    </div>
-                    <div className="grc-effective-cost-row__col">
-                      <section className="grc-cost" aria-label="Expected regear cost">
-                        <div className="grc-cost__head">
-                          <h2 className="grc-cost__title">Expected Regear Cost</h2>
-                          <p className="grc-cost__subtitle">
-                            Typical pricing by how you get the work done.
-                          </p>
-                        </div>
-                        <div className="grc-cost__grid">
-                          {REGEAR_COSTS.map((tier) => (
-                            <article
-                              key={tier.key}
-                              className={`grc-price ${tier.featured ? 'grc-price--featured' : ''}`}
-                            >
-                              {tier.featured ? (
-                                <span className="grc-price__flag">Most Common</span>
-                              ) : null}
-                              <span className="grc-price__icon" aria-hidden="true">
-                                <CostIcon name={tier.icon} />
-                              </span>
-                              <span className="grc-price__name">{tier.name}</span>
-                              <span className="grc-price__range">{tier.range}</span>
-                              <span className="grc-price__unit">{tier.unit}</span>
-                              <ul className="grc-price__features">
-                                {tier.features.map((feature) => (
-                                  <li key={feature}>
-                                    <span className="grc-price__feature-check" aria-hidden="true">
-                                      ✓
-                                    </span>
-                                    {feature}
-                                  </li>
-                                ))}
-                              </ul>
-                            </article>
-                          ))}
-                        </div>
-                        <p className="grc-cost__disclaimer">
-                          Estimates only. Actual cost varies by vehicle, axle type, gear brand, locker
-                          installation, and regional labor rates. Always get a local quote before budgeting.
-                        </p>
-                      </section>
-                    </div>
+                <div className="grc-band grc-band--white">
+                  <div className="grc-band__inner">
+                    <WhatChangesWithNewTires result={result} />
                   </div>
-
-                  <GearRatioComparisonTable result={result} />
-                </>
-              ) : null}
-
-            <article className="cmp-seo-block wof-seo-block grc-seo-block">
-              <h2>{SEO_GEAR_CONTENT.heading}</h2>
-              {SEO_GEAR_CONTENT.paragraphs.map((paragraph) => (
-                <p key={paragraph.slice(0, 40)}>{paragraph}</p>
-              ))}
-            </article>
-
-            <div className="grc-faq-related-row grc-faq-related">
-              <section className="wof-faq-section grc-faq-section" aria-label="Frequently asked questions">
-                <h2 className="wof-section-title grc-faq-section__title">Frequently Asked Questions</h2>
-                <div className="wof-faq-grid grc-faq-grid" ref={faqRef}>
-                  {GEAR_FAQS.map((faq) => (
-                    <details key={faq.question} className="wof-faq-item grc-faq-item">
-                      <summary>{faq.question}</summary>
-                      <p>{faq.answer}</p>
-                    </details>
-                  ))}
                 </div>
-              </section>
 
-              <aside className="grc-bottom-panels" aria-label="Related calculators">
-                <section className="cmp-panel wof-sidebar-panel grc-bottom-panels__panel">
-                  <h2 className="cmp-panel__title">Related Calculators</h2>
-                  <div className="wof-sidebar-calc__list">
-                    {RELATED_CALCULATOR_LINKS.map((link) => (
-                      <a
-                        key={link.href}
-                        href={link.href}
-                        className="wof-sidebar-calc__card"
-                        onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.gearRatio)}
+                <div className="grc-band grc-band--indigo">
+                  <div className="grc-band__inner grc-results-live">
+                    <GearRpmCrawlComparison result={result} />
+                    <GearRatioFactualComparisonTable result={result} extraAxleRatios={compareRatios} />
+                  </div>
+                </div>
+
+                <div className="grc-band grc-band--white">
+                  <div className="grc-band__inner grc-results-live">
+                    <HowGearRatioCalculationWorks key={accordionSession} result={result} />
+                    <details
+                      key={`cost-${accordionSession}`}
+                      id="grc-cost-accordion"
+                      className="grc-cost-accordion"
+                      open={costOpen}
+                      onToggle={(e) => setCostOpen(e.currentTarget.open)}
+                    >
+                      <summary
+                        className="grc-cost-accordion__summary"
+                        aria-expanded={costOpen}
+                        aria-controls="grc-cost-accordion-body"
                       >
-                        <span className="wof-sidebar-calc__icon">
-                          <RelatedIcon name={RELATED_ICON_BY_HREF[link.href] ?? 'compare'} />
+                        <span className="grc-cost-accordion__icon" aria-hidden="true">
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.75"
+                          >
+                            <path
+                              d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-1.9-.5-.5-1.9 2.1-2.1Z"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </span>
-                        <span className="wof-sidebar-calc__text">
-                          <span className="wof-sidebar-calc__title">{link.label}</span>
-                          <span className="wof-sidebar-calc__desc">{link.description}</span>
+                        <span className="grc-cost-accordion__text">
+                          <span className="grc-cost-accordion__title">Typical US Regear Cost</span>
+                          <span className="grc-cost-accordion__hint">
+                            View broad US planning estimates and cost factors
+                          </span>
                         </span>
-                      </a>
+                        <span className="grc-accordion-chevron" aria-hidden="true" />
+                      </summary>
+                      <div id="grc-cost-accordion-body" className="grc-cost-accordion__body">
+                        <p className="grc-cost-accordion__banner">
+                          Broad US planning estimates only. Actual cost depends on the axle, vehicle,
+                          parts, labour, bearings, lockers and differential condition.
+                        </p>
+                        <ul className="grc-cost-accordion__list">
+                          {REGEAR_COSTS.filter((tier) => tier.key !== 'extras').map((tier) => (
+                            <li
+                              key={tier.key}
+                              className={`grc-cost-accordion__item grc-cost-accordion__item--${tier.key}`}
+                            >
+                              <div className="grc-cost-accordion__item-head">
+                                <span className="grc-cost-accordion__name">{tier.name}</span>
+                                <span className="grc-cost-accordion__range">{tier.range}</span>
+                              </div>
+                              <span className="grc-cost-accordion__unit">{tier.unit}</span>
+                              <p className="grc-cost-accordion__detail">{tier.detail}</p>
+                            </li>
+                          ))}
+                        </ul>
+                        {REGEAR_COSTS.filter((tier) => tier.key === 'extras').map((tier) => (
+                          <p key={tier.key} className="grc-cost-accordion__note">
+                            {tier.name}: {tier.detail}
+                          </p>
+                        ))}
+                        <p className="grc-cost-accordion__note">
+                          These figures are not quotes and do not apply as-is in the UK, Canada,
+                          Australia or New Zealand.
+                        </p>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            <div className="grc-band grc-band--slate">
+              <div className="grc-band__inner">
+                <section className="grc-edu" aria-label="How tire size changes effective gearing">
+                  <h2 className="grc-edu__title">How Tire Size Changes Effective Gearing</h2>
+                  <div className="grc-edu__grid">
+                    {GEAR_EDU_SECTIONS.map((section) => (
+                      <article
+                        key={section.id}
+                        className={`grc-edu__block grc-edu__block--${section.id}`}
+                      >
+                        <div className="grc-edu__icon" aria-hidden="true">
+                          <EduBlockIcon icon={section.icon} />
+                        </div>
+                        <div className="grc-edu__body">
+                          <h3 className="grc-edu__heading">{section.title}</h3>
+                          {section.points.map((point) => (
+                            <p key={point} className="grc-edu__copy">
+                              {point}
+                            </p>
+                          ))}
+                          <p className="grc-edu__takeaway">{section.takeaway}</p>
+                        </div>
+                      </article>
                     ))}
                   </div>
                 </section>
-              </aside>
+              </div>
+            </div>
+
+            <div className="grc-band grc-band--white">
+              <div className="grc-band__inner">
+                <section
+                  className="wof-faq-section wof-faq-section--full grc-faq-section"
+                  aria-label="Frequently asked questions"
+                >
+                  <h2 className="wof-section-title grc-faq-section__title">
+                    <span className="grc-faq-section__icon" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                      >
+                        <circle cx="12" cy="12" r="8" />
+                        <path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.4-1.4 1-1.4 2" strokeLinecap="round" />
+                        <path d="M12 16.5h.01" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    Frequently Asked Questions
+                  </h2>
+                  <div className="wof-faq-grid grc-faq-grid" ref={faqRef}>
+                    {GEAR_FAQS.map((faq, index) => (
+                      <details
+                        key={faq.question}
+                        className={`wof-faq-item grc-faq-item${
+                          index % 2 === 0 ? ' grc-faq-item--tint-a' : ' grc-faq-item--tint-b'
+                        }`}
+                      >
+                        <summary>{faq.question}</summary>
+                        <p>{faq.answer}</p>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div className="grc-band grc-band--indigo">
+              <div className="grc-band__inner">
+                <RelatedCalculatorsSection
+                  excludeHref={CALCULATOR_PATHS.gearRatio}
+                  calculatorName={CALCULATOR_NAMES.gearRatio}
+                  limit={4}
+                  orderedHrefs={[
+                    CALCULATOR_PATHS.tireSize,
+                    CALCULATOR_PATHS.tireComparison,
+                    CALCULATOR_PATHS.wheelOffset,
+                    CALCULATOR_PATHS.tireDiameter,
+                  ]}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <StickyAnalyzeButton visible={stickyVisible} label="Analyze" onClick={handleAnalyze} ariaLabel="Analyze gear ratio" />
     </div>
   );
 }

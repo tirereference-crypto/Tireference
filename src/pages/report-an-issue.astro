@@ -1,0 +1,51 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import ReportIssueForm from '../components/info/ReportIssueForm.astro';
+import { REPORT_ISSUE_CATEGORIES } from '../lib/tire-size-calculator-report';
+import { CONTACT_EMAIL } from '../lib/info-pages';
+import { REPORT_ISSUE_PATH } from '../lib/eeat-metadata';
+import { SITE_NAME } from '../lib/site-brand';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = `Report an Issue | ${SITE_NAME}`;
+const description = `Report an incorrect calculation, product record, production-status label, broken link or other data issue on ${SITE_NAME}.`;
+
+const schema = buildInfoPageSchema(title, description, REPORT_ISSUE_PATH, 'Report an Issue');
+
+const size = Astro.url.searchParams.get('size') ?? '';
+const pageUrl = Astro.url.searchParams.get('pageUrl') ?? '';
+const calculator = Astro.url.searchParams.get('calculator') ?? '';
+const category = Astro.url.searchParams.get('category') ?? '';
+const section = Astro.url.searchParams.get('section') ?? '';
+---
+
+<Layout title={title} description={description} canonical={REPORT_ISSUE_PATH} schema={schema}>
+  <div class="info-page">
+    <div class="info-shell info-shell--narrow">
+      <InfoPageHero
+        title="Report an Issue"
+        lead={`Help us keep ${SITE_NAME} accurate. Describe the problem below — no account required. Submissions open in your email client so nothing is stored until you send the message.`}
+      />
+
+      <section class="info-section" aria-labelledby="report-form-title">
+        <h2 id="report-form-title" class="info-section__title">Correction details</h2>
+        <ReportIssueForm
+          categories={REPORT_ISSUE_CATEGORIES}
+          initialSize={size}
+          initialPageUrl={pageUrl}
+          initialCalculator={calculator}
+          initialCategory={category}
+          initialSection={section}
+          contactEmail={CONTACT_EMAIL}
+        />
+        <p class="info-form__privacy">
+          Optional contact email is used only to reply about this report. See our{' '}
+          <a href="/privacy-policy/">Privacy Policy</a>. You can also email{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> directly.
+        </p>
+      </section>
+    </div>
+  </div>
+</Layout>

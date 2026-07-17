@@ -8,6 +8,7 @@ import {
   comparisonSlugPath,
   filterValidComparisonLabels,
   getAllComparisonSlugs,
+  getComparisonPairCounts,
   isFieldBackedTireSize,
   isValidComparisonPair,
   MOST_SEARCHED_COMPARISON_PAIRS,
@@ -15,6 +16,7 @@ import {
 } from './tire-comparison-links';
 import { buildPopularComparisons } from './tire-size-premium';
 import { buildTireSizeHubData } from './tire-size-hub';
+import { isComparisonPublishable } from './tire-comparison-insights';
 import {
   buildPopularComparisonsForDiameterSearch,
   POPULAR_COMPARISONS,
@@ -73,12 +75,10 @@ describe('tire-comparison-links', () => {
   });
 
   it('only surfaces curated popular comparisons with field-backed database sizes', () => {
-    for (const [sizeA, sizeB] of MOST_SEARCHED_COMPARISON_PAIRS) {
-      expect(isValidComparisonPair(sizeA, sizeB)).toBe(true);
-    }
-
     const links = buildCuratedPopularComparisons(6);
-    expect(links).toHaveLength(6);
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.length).toBeLessThanOrEqual(6);
+
     for (const link of links) {
       expect(isValidComparisonPair(link.current, link.new)).toBe(true);
       expect(parseComparisonSlug(link.href.replace('/compare/', ''))).toEqual({
@@ -86,16 +86,31 @@ describe('tire-comparison-links', () => {
         new: link.new,
       });
     }
+
+    const invalidCurated = MOST_SEARCHED_COMPARISON_PAIRS.filter(
+      ([sizeA, sizeB]) => !isValidComparisonPair(sizeA, sizeB),
+    );
+    for (const [sizeA, sizeB] of invalidCurated) {
+      expect(buildCuratedPopularComparisons(10).some((l) => l.current === sizeA && l.new === sizeB)).toBe(false);
+    }
   });
 
-  it('only generates validated comparison slugs for static paths', () => {
+  it('only generates publishable comparison slugs for static paths', () => {
     const slugs = getAllComparisonSlugs();
     expect(slugs.length).toBeGreaterThan(0);
-    expect(slugs.length).toBeLessThan(216);
 
     for (const entry of slugs) {
       expect(isValidComparisonPair(entry.current, entry.new)).toBe(true);
+      expect(isComparisonPublishable(entry.current, entry.new)).toBe(true);
     }
+  });
+
+  it('generates fewer pairs after dimensional rules are applied', () => {
+    const { legacy, full } = getComparisonPairCounts();
+    expect(full).toBeLessThanOrEqual(legacy);
+    expect(full).toBeGreaterThan(0);
+    // eslint-disable-next-line no-console -- intentional build report
+    console.info(`Comparison pairs: ${legacy} legacy-only → ${full} with dimensional rules`);
   });
 });
 

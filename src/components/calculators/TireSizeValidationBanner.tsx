@@ -22,40 +22,45 @@ export function TireSizeValidationBanner({
   validation,
   onSelectSuggestion,
   compact = false,
+  hideStatusBadge = false,
+  hideNormalized = false,
 }: {
   validation: TireSizeValidationResult;
   onSelectSuggestion: (size: string) => void;
   compact?: boolean;
+  /** When a production-status line already covers common/uncommon messaging. */
+  hideStatusBadge?: boolean;
+  /** When the input card already shows the normalized size prominently. */
+  hideNormalized?: boolean;
 }) {
   if (validation.status === 'empty') return null;
 
-  const prefix = compact
-    ? ''
-    : validation.tone === 'green'
-      ? '✓ '
-      : validation.tone === 'amber' || validation.tone === 'red'
-        ? '⚠ '
-        : '';
+  const showNormalized =
+    !hideNormalized &&
+    Boolean(validation.canonicalSize) &&
+    Boolean(validation.normalizedInput) &&
+    validation.normalizedInput.toUpperCase() !== validation.canonicalSize!.toUpperCase();
+  const showSuggestions = validation.showSuggestions && validation.suggestions.length > 0;
+  const showBadge = !hideStatusBadge && Boolean(validation.badgeLabel);
+
+  if (!showBadge && !showNormalized && !showSuggestions) return null;
 
   return (
     <div className={`calc-size-validation${compact ? ' calc-size-validation--compact' : ''}`} aria-live="polite">
-      <div className={`calc-size-validation__badge calc-size-validation__badge--${validation.tone}`}>
-        {!compact ? <ValidationIcon tone={validation.tone} /> : null}
-        <span>
-          {prefix}
-          {validation.badgeLabel}
-        </span>
-      </div>
+      {showBadge ? (
+        <div className={`calc-size-validation__badge calc-size-validation__badge--${validation.tone}`}>
+          {!compact ? <ValidationIcon tone={validation.tone} /> : null}
+          <span>{validation.badgeLabel}</span>
+        </div>
+      ) : null}
 
-      {validation.canonicalSize &&
-        validation.normalizedInput &&
-        validation.normalizedInput.toUpperCase() !== validation.canonicalSize.toUpperCase() && (
-          <p className="calc-size-validation__normalized">
-            Normalized to <strong>{validation.canonicalSize}</strong>
-          </p>
-        )}
+      {showNormalized ? (
+        <p className="calc-size-validation__normalized">
+          Normalized to <strong>{validation.canonicalSize}</strong>
+        </p>
+      ) : null}
 
-      {validation.showSuggestions && validation.suggestions.length > 0 && (
+      {showSuggestions ? (
         <div className="calc-size-validation__suggestions">
           <p className="calc-size-validation__suggestions-label">Did you mean:</p>
           <div className="calc-size-validation__pills">
@@ -71,7 +76,7 @@ export function TireSizeValidationBanner({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

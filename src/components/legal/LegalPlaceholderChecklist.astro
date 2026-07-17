@@ -1,0 +1,25 @@
+---
+import { LEGAL_PLACEHOLDER_CHECKLIST } from '../../data/legal-entity';
+
+const unresolved = LEGAL_PLACEHOLDER_CHECKLIST.filter((item) => item.value.includes('['));
+---
+
+{
+  unresolved.length > 0 ? (
+    <aside class="legal-placeholder-checklist" aria-labelledby="legal-placeholder-title">
+      <h2 id="legal-placeholder-title">Placeholders to complete before launch</h2>
+      <p>
+        The following values are still marked with bracketed placeholders in{' '}
+        <code>src/data/legal-entity.ts</code>. Replace them with your real legal details.
+      </p>
+      <ul>
+        {unresolved.map((item) => (
+          <li>
+            <strong>{item.label}</strong> — currently <code>{item.value}</code>
+            <span class="legal-placeholder-checklist__where">({item.location})</span>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  ) : null
+}

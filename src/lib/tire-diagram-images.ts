@@ -20,9 +20,9 @@ export interface TireDiagramImages {
 }
 
 /** True horizontal side profile (1001×998). */
-const HERO_TIRE_SIDE_SRC = '/images/tires/tire-flat-side-view.png';
+export const HERO_TIRE_SIDE_SRC = '/images/tires/tire-flat-side-view.png';
 /** True front tread view (307×842). */
-const HERO_TIRE_FRONT_SRC = '/images/tire-front.webp';
+export const HERO_TIRE_FRONT_SRC = '/images/tire-front.webp';
 
 const VISUAL_DIAGRAMS: Record<TireVisualCategory, Omit<TireDiagramImages, 'visualCategory'>> = {
   passenger: {

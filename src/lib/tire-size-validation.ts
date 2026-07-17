@@ -2,6 +2,11 @@ import { TIRE_SIZES } from '../data/tire-sizes';
 import { getTireSpecs, parseTireSize } from './tire-math';
 import type { TireSizeInputFields } from './calculator-types';
 import { fieldsToTireSizeString } from './tire-size-input';
+import {
+  getSizeProductStats,
+  isCommonProductionSize,
+  isInProductDatabase,
+} from './size-production-status';
 
 export type TireSizeValidationTone = 'green' | 'amber' | 'red' | 'none';
 
@@ -22,39 +27,9 @@ export interface TireSizeValidationResult {
   showSuggestions: boolean;
 }
 
-const DATABASE_SIZES = new Set(
+/** Hub-page tire size catalog (editorial). Product DB coverage is separate. */
+const HUB_CATALOG_SIZES = new Set(
   TIRE_SIZES.map((entry) => normalizeSizeKey(entry.size)),
-);
-
-/** High-volume production sizes — exact matches show the green badge. */
-const COMMON_PRODUCTION_SIZES = new Set(
-  [
-    '205/55R16',
-    '215/55R17',
-    '225/55R17',
-    '225/65R17',
-    '235/55R18',
-    '235/60R18',
-    '235/65R17',
-    '245/45R18',
-    '245/60R18',
-    '255/55R19',
-    '265/60R18',
-    '265/65R18',
-    '265/70R17',
-    '275/55R20',
-    '275/60R20',
-    '275/65R18',
-    '275/70R18',
-    '285/55R20',
-    '285/65R20',
-    '285/70R17',
-    '285/75R16',
-    '305/55R20',
-    '305/70R18',
-    '315/70R17',
-    'LT265/75R16',
-  ].map(normalizeSizeKey),
 );
 
 const POPULARITY_SCORES: Record<string, number> = {
@@ -82,7 +57,11 @@ function normalizeSizeKey(size: string): string {
 export const normalizeTireSizeKey = normalizeSizeKey;
 
 export function isProductionTireSize(size: string): boolean {
-  return DATABASE_SIZES.has(normalizeSizeKey(size));
+  return HUB_CATALOG_SIZES.has(normalizeSizeKey(size));
+}
+
+function isKnownCatalogSize(size: string): boolean {
+  return HUB_CATALOG_SIZES.has(normalizeSizeKey(size)) || isInProductDatabase(size);
 }
 
 export function normalizeTireSizeInput(raw: string): string {
@@ -172,8 +151,10 @@ function tryParseDimensions(input: string) {
 function getPopularityScore(size: string): number {
   const key = normalizeSizeKey(size);
   if (POPULARITY_SCORES[key] !== undefined) return POPULARITY_SCORES[key];
-  if (COMMON_PRODUCTION_SIZES.has(key)) return 70;
-  if (DATABASE_SIZES.has(key)) return 45;
+  if (isCommonProductionSize(size)) return 70;
+  const stats = getSizeProductStats(size);
+  if (stats) return Math.min(60, 20 + stats.modelCount);
+  if (HUB_CATALOG_SIZES.has(key)) return 45;
   return 0;
 }
 
@@ -279,9 +260,7 @@ export function getTireSizeValidation(
     };
   }
 
-  const canonicalKey = normalizeSizeKey(parsed.canonical);
-
-  if (!DATABASE_SIZES.has(canonicalKey)) {
+  if (!isKnownCatalogSize(parsed.canonical)) {
     return {
       status: 'custom',
       tone: 'red',
@@ -293,7 +272,7 @@ export function getTireSizeValidation(
     };
   }
 
-  if (COMMON_PRODUCTION_SIZES.has(canonicalKey)) {
+  if (isCommonProductionSize(parsed.canonical)) {
     return {
       status: 'common',
       tone: 'green',

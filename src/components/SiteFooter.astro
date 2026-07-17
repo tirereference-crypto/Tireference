@@ -1,90 +1,58 @@
 ---
 import SiteLogo from './SiteLogo.astro';
-import { SITE_CALCULATORS } from '../lib/calculator-links';
 import {
   FOOTER_COMPANY_LINKS,
   FOOTER_LEGAL_LINKS,
+  FOOTER_RESOURCE_LINKS,
+  FOOTER_TOOL_LINKS,
 } from '../lib/info-pages';
 import { SITE_NAME, SITE_TAGLINE } from '../lib/site-brand';
 
-const calculatorLinks = [
-  { label: 'Tire Sizes Index', href: '/tire-sizes' },
-  ...SITE_CALCULATORS.map((calc) => ({
-    label: calc.label,
-    href: calc.href,
-  })),
-];
+const year = new Date().getFullYear();
+
+const columns = [
+  { id: 'tools', title: 'Tools', links: FOOTER_TOOL_LINKS },
+  { id: 'resources', title: 'Resources', links: FOOTER_RESOURCE_LINKS },
+  { id: 'company', title: 'Company', links: FOOTER_COMPANY_LINKS },
+  { id: 'legal', title: 'Legal', links: FOOTER_LEGAL_LINKS },
+] as const;
 ---
 
-<footer class="border-t border-white/10 bg-surface-dark">
-  <div class="tl-container py-10">
-    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="sm:col-span-2 lg:col-span-1">
-        <a href="/" class="site-logo-link site-logo-link--footer" aria-label="Tire Reference home">
+<footer class="site-footer">
+  <div class="tl-container site-footer__inner">
+    <div class="site-footer__grid">
+      <div class="site-footer__brand">
+        <a href="/" class="site-logo-link site-logo-link--footer" aria-label={`${SITE_NAME} home`}>
           <SiteLogo class="site-logo--footer" />
         </a>
-        <p class="mt-3 max-w-sm text-sm text-slate-400">
-          Accurate tire calculators for sizing, comparison, and fitment — built for enthusiasts and everyday drivers.
+        <p class="site-footer__tagline">
+          Tire sizing and comparison calculators with transparent nominal geometry — built for
+          enthusiasts and everyday drivers.
         </p>
       </div>
 
-      <div>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Calculators
-        </h2>
-        <ul class="mt-3 space-y-2">
-          {calculatorLinks.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                class="text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Company
-        </h2>
-        <ul class="mt-3 space-y-2">
-          {FOOTER_COMPANY_LINKS.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                class="text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Legal
-        </h2>
-        <ul class="mt-3 space-y-2">
-          {FOOTER_LEGAL_LINKS.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                class="text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {
+        columns.map((column) => (
+          <div class="site-footer__col">
+            <h2 class="site-footer__heading">{column.title}</h2>
+            <ul class="site-footer__list">
+              {column.links.map((link) => (
+                <li>
+                  <a href={link.href} class="site-footer__link">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
     </div>
 
-    <p class="mt-8 border-t border-white/10 pt-6 text-center text-xs text-slate-500 sm:text-left">
-      © {new Date().getFullYear()} {SITE_NAME}. {SITE_TAGLINE}
-    </p>
+    <div class="site-footer__bottom">
+      <p class="site-footer__copy">
+        © {year} {SITE_NAME}. {SITE_TAGLINE}
+      </p>
+    </div>
   </div>
 </footer>

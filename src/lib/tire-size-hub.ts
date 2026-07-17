@@ -15,7 +15,9 @@ import {
   metricToFlotation,
   type TireSpecs,
 } from './tire-math';
-import { comparisonPagePath, hubPagePath } from './tire-size-url';
+import { hubPagePath } from './tire-size-url';
+import { comparisonPagePath } from './tire-comparison-paths';
+import { isValidComparisonPair } from './tire-comparison-validation';
 import { resolveTireRatings, type ResolvedTireRatings } from './tire-ratings';
 import type { StatDisplay } from './calculator-types';
 import { formatTireSizeResults } from './format-tire-display';
@@ -25,11 +27,23 @@ import {
   buildPremiumSpecCards,
   buildSummaryBar,
   buildTypicalUses,
+  shortenHubIntro,
   type HeroHighlight,
   type PremiumSpecCard,
   type SummaryBarItem,
 } from './tire-size-hub-content';
+import { getExpertIntroForTireSize } from './tire-size-expert-intro';
 import { buildSearchableFaq } from './tire-size-searchable-faq';
+import {
+  buildProductDataFaqs,
+  getTireSizeDataCoverage,
+} from './tire-size-products';
+import {
+  getEquivalentSizes,
+  getPopularDownsizes,
+  getPopularUpgrades,
+  type SizeSuggestion,
+} from './tire-size-suggestions';
 
 export interface SizedEntry {
   entry: TireSizeEntry;
@@ -55,7 +69,7 @@ export interface QuickComparisonRow {
   widthMm: number;
   speedoErrorPercent: number;
   href: string;
-  comparisonHref: string;
+  comparisonHref: string | null;
 }
 
 export interface HubFaqItem {
@@ -73,7 +87,7 @@ export interface UpgradePathOption {
   speedoErrorPercent: number;
   groundClearanceChangeIn: number;
   href: string;
-  comparisonHref: string;
+  comparisonHref: string | null;
 }
 
 export interface RealWorldImpact {
@@ -174,33 +188,26 @@ function toRelatedLink(
   };
 }
 
-function pickUpgradeTiers(
-  sizes: SizedEntry[],
-  direction: 'up' | 'down',
+/** Map geometry-aware suggestions into upgrade path options for hub consumers. */
+function suggestionsToUpgradePaths(
   baseSize: string,
-  baseSpecs: TireSpecs,
+  suggestions: SizeSuggestion[],
+  direction: 'up' | 'down',
 ): UpgradePathOption[] {
-  if (sizes.length === 0) return [];
-
-  const indices =
-    sizes.length === 1
-      ? [0]
-      : sizes.length === 2
-        ? [0, 1]
-        : [0, Math.floor(sizes.length / 2), sizes.length - 1];
-
-  return indices.map((idx, tierIdx) => {
-    const s = sizes[idx];
-    const cmp = compareTires(baseSize, s.entry.size, 60);
+  return suggestions.map((s, idx) => {
+    const cmp = compareTires(baseSize, s.size, 60);
+    const comparisonHref = isValidComparisonPair(baseSize, s.size)
+      ? comparisonPagePath(baseSize, s.size)
+      : null;
     return {
-      tier: TIER_ORDER[Math.min(tierIdx, TIER_ORDER.length - 1)],
+      tier: TIER_ORDER[Math.min(idx, TIER_ORDER.length - 1)],
       direction,
-      size: s.entry.size,
-      diameterDiffPercent: percentDiameterDiff(baseSpecs, s.specs),
+      size: s.size,
+      diameterDiffPercent: s.diameterDiffPercent,
       speedoErrorPercent: cmp.speedometer.errorPercent,
       groundClearanceChangeIn: cmp.groundClearanceChangeIn,
-      href: hubPagePath(s.entry.size),
-      comparisonHref: comparisonPagePath(baseSize, s.entry.size),
+      href: s.href,
+      comparisonHref,
     };
   });
 }
@@ -275,19 +282,13 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
     (v) => `${v.manufacturer} ${v.model}`,
   );
 
-  const equivalents = all
-    .filter((s) => s.entry.size !== entry.size)
-    .map((s) => ({
-      size: s.entry.size,
-      diameterDiffPercent: percentDiameterDiff(specs, s.specs),
-      diameterIn: s.specs.overallDiameterIn,
-      href: hubPagePath(s.entry.size),
-    }))
-    .filter((e) => Math.abs(e.diameterDiffPercent) <= 3)
-    .sort(
-      (a, b) =>
-        Math.abs(a.diameterDiffPercent) - Math.abs(b.diameterDiffPercent),
-    );
+  const equivalentSuggestions = getEquivalentSizes(entry.size, 6);
+  const equivalents = equivalentSuggestions.map((e) => ({
+    size: e.size,
+    diameterDiffPercent: e.diameterDiffPercent,
+    diameterIn: e.diameterIn,
+    href: e.href,
+  }));
 
   const index = all.findIndex((s) => s.entry.size === entry.size);
   const plusOne =
@@ -307,19 +308,20 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
         }
       : null;
 
-  const larger = all.filter(
-    (s) =>
-      s.entry.size !== entry.size &&
-      s.specs.overallDiameterIn > specs.overallDiameterIn,
+  const upgradePathsUp = suggestionsToUpgradePaths(
+    entry.size,
+    getPopularUpgrades(entry.size, 6),
+    'up',
   );
-  const smaller = all.filter(
-    (s) =>
-      s.entry.size !== entry.size &&
-      s.specs.overallDiameterIn < specs.overallDiameterIn,
+  const upgradePathsDown = suggestionsToUpgradePaths(
+    entry.size,
+    getPopularDownsizes(entry.size, 6),
+    'down',
   );
 
   const quickComparisons = all
     .filter((s) => s.entry.size !== entry.size)
+    .filter((s) => isValidComparisonPair(entry.size, s.entry.size))
     .map((s) => {
       const cmp = compareTires(entry.size, s.entry.size, 60);
       return {
@@ -397,7 +399,15 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
     displaySize: formatDisplaySize(entry.size),
     categoryLabel,
     ratings: resolveTireRatings(entry.ratings),
-    intro: buildCategoryIntro(entry.size, specs, entry.category, flotation),
+    intro: (() => {
+      const raw = buildCategoryIntro(entry.size, specs, entry.category, flotation);
+      const expert = getExpertIntroForTireSize({
+        size: entry.size,
+        specs,
+        category: entry.category,
+      });
+      return expert ? shortenHubIntro(expert, 5) : shortenHubIntro(raw);
+    })(),
     heroHighlights: buildHeroHighlights(specs, flotation),
     summaryBar: buildSummaryBar(
       entry.category,
@@ -414,13 +424,8 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
     equivalents,
     plusOne,
     minusOne,
-    upgradePathsUp: pickUpgradeTiers(larger, 'up', entry.size, specs),
-    upgradePathsDown: pickUpgradeTiers(
-      [...smaller].reverse(),
-      'down',
-      entry.size,
-      specs,
-    ),
+    upgradePathsUp,
+    upgradePathsDown,
     realWorldImpact: buildRealWorldImpact(entry.size, specs, referenceEntry),
     quickComparisons,
     sameWidthSizes,
@@ -432,7 +437,20 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
     faq: [],
   };
 
-  hubData.faq = buildSearchableFaq(hubData);
+  const baseFaq = buildSearchableFaq(hubData);
+  const coverage = getTireSizeDataCoverage(entry.size);
+  const productFaqs = buildProductDataFaqs(hubData.displaySize, coverage);
+  // Prefer product-data FAQs, then keep concise category/expert answers (max 6).
+  const merged: HubFaqItem[] = [];
+  const seen = new Set<string>();
+  for (const item of [...productFaqs, ...baseFaq]) {
+    const key = item.question.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+    if (merged.length >= 6) break;
+  }
+  hubData.faq = merged;
   return hubData;
 }
 

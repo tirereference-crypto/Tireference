@@ -1,28 +1,69 @@
 /** FAQ copy for the tire size calculator page (UI + FAQPage schema). */
+export const TIRE_SIZE_CALCULATOR_FAQ_VISIBLE = 8;
+
+/**
+ * Ordered for two-column row balance on desktop:
+ * odd indices → left column, even pairing → right when interleaved.
+ */
 export const TIRE_SIZE_CALCULATOR_FAQS = [
   {
-    question: 'How do I use a tire size calculator?',
+    question: 'How accurate is this tire size calculator?',
     answer:
-      'Enter the tire width, aspect ratio, and wheel diameter, or paste a full size such as 275/70R18. The calculator converts those values into real dimensions: overall diameter, section width, sidewall height, circumference, and revolutions per mile. Those numbers explain how a tire will fit and behave, but they are not the same as comparing two sizes. For speedometer change, clearance gain, or gearing difference, use a tire comparison calculator with both the current and new tire sizes.',
+      'Results use standard ISO/ETRTO formulas from the size code you enter. They reflect nominal published dimensions for a new tire at rated pressure and are reliable for comparing sizes. Mounted tires can differ by model, tread depth, pressure, and load.',
   },
   {
-    question: 'What does a tire size like 275/70R18 mean?',
+    question: 'What does revolutions per mile mean?',
     answer:
-      'The first number is the section width in millimeters. The second number is the aspect ratio, meaning the sidewall height is that percentage of the width. The letter describes construction, usually R for radial. The final number is the wheel diameter in inches. Together, those values determine the tire’s real outside diameter and sidewall height. That is why two sizes that look close on paper can ride differently or fit differently once installed.',
+      'It is the theoretical number of complete tire revolutions over one mile, based on calculated circumference. Speedometers and odometers depend on rolling distance; manufacturer or measured values may differ slightly.',
   },
   {
-    question: 'Which tire dimension matters most for fitment?',
+    question: 'How are these dimensions calculated?',
     answer:
-      'Overall diameter and section width matter most. Diameter determines how much vertical wheel-well space the tire needs and how much it affects gearing. Section width determines inner clearance near suspension components and outer clearance near fenders. Wheel offset and wheel width can make the same tire size fit differently on two vehicles. Always treat calculator results as a measurement baseline, then verify clearance on the exact vehicle and wheel combination.',
+      'Sidewall height = width × aspect ratio. Overall diameter = wheel diameter + two sidewalls. Circumference = π × diameter. Revolutions per mile = inches per mile ÷ circumference. Metric sidewall uses width in millimetres and aspect ratio as a percentage. Results are nominal values from the size code.',
   },
   {
-    question: 'How does tire size affect driving?',
+    question: 'Can two different tire sizes use the same wheel?',
     answer:
-      'Tire size affects ride comfort, steering response, braking feel, fuel economy, and speedometer behavior. Taller tires can soften impacts and increase ground clearance, but they may feel heavier and reduce acceleration. Wider tires can improve dry grip, but they may increase road noise, tramlining, and rolling resistance. Lower-profile tires typically sharpen handling but transmit more impact into the cabin. The best size depends on whether the vehicle is used for commuting, towing, off-road travel, or performance driving.',
+      'Only when the wheel diameter in the size code matches—the number after the R (or in a flotation size). Overall diameter and section width can still differ. Always follow the tire maker’s approved rim width and diameter range.',
   },
   {
-    question: 'Can I choose a tire size based only on diameter?',
+    question: 'Why do actual tire sizes differ from calculated dimensions?',
     answer:
-      'Diameter is important, but it is not enough. Two tires can share a similar overall diameter while having different widths, sidewall heights, load ratings, and tread constructions. A narrow touring tire and a heavy all-terrain tire can calculate similarly but feel completely different on the road. Use diameter to protect speedometer accuracy and clearance, then evaluate width, load range, tread type, and intended use before choosing a final size.',
+      'Manufacturers build to nominal specs, but real mounted height and width change with tread wear, inflation, load, rim width, and construction. A tape-measured tire often reads slightly different from the label-based calculation.',
+  },
+  {
+    question: 'How does tire diameter affect the speedometer?',
+    answer:
+      'A taller tire travels farther per revolution, so the speedometer may read lower than actual speed—and the opposite when diameter decreases. Error scales roughly with diameter change. Use the tire comparison calculator with your stock and new sizes for a specific estimate.',
+  },
+  {
+    question: 'Does this calculator confirm vehicle fitment?',
+    answer:
+      'No. It reports mathematical dimensions only. Wheel width, offset, load rating, speed rating, and fender or suspension clearance must be verified with the vehicle and tire manufacturer or a qualified installer.',
+  },
+  {
+    question: 'What is the difference between overall diameter and radius?',
+    answer:
+      'Overall diameter is the full height of the mounted tire from ground to tread crown. Radius is half of that—the distance from the wheel centerline to the tread. Tire size labels encode values used to calculate diameter, not radius directly.',
+  },
+  {
+    question: 'What is the difference between metric and flotation sizes?',
+    answer:
+      'Metric sizes such as 275/70R18 list section width in millimetres, aspect ratio, construction, and wheel diameter in inches. Flotation sizes such as 33x12.50R17 list overall diameter and section width in inches, then wheel diameter.',
+  },
+  {
+    question: 'How is sidewall height calculated?',
+    answer:
+      'For metric sizes: sidewall height = section width × aspect ratio ÷ 100 (one sidewall, in millimetres). Convert to inches, then overall diameter = wheel diameter + two sidewalls. Flotation sizes derive sidewall from overall diameter minus wheel diameter.',
+  },
+  {
+    question: 'Where can I find the original tire size for my vehicle?',
+    answer:
+      'Check the driver-side door jamb placard, owner’s manual, or the sidewall of your current tires. Dealer parts departments and manufacturer fitment guides can confirm OE sizes by year, make, model, and trim.',
   },
 ] as const;
+
+/** FAQs included in JSON-LD — matches initially visible accordion rows. */
+export function getVisibleTireSizeCalculatorFaqs() {
+  return TIRE_SIZE_CALCULATOR_FAQS.slice(0, TIRE_SIZE_CALCULATOR_FAQ_VISIBLE);
+}

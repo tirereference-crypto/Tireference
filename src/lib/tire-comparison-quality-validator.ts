@@ -12,10 +12,8 @@ import {
   buildMeasuredBenefits,
   buildMeasuredConsiderations,
   buildEngineeringPersonalityBullets,
-  synthesizeUnderstandingDifference,
+  synthesizeWhatThisChangeMeans,
   synthesizeUpgradeRecommendation,
-  synthesizeWhatChanges,
-  synthesizeWhoShouldChoose,
 } from './tire-comparison-engineering-analysis';
 import {
   buildFuelEconomyFaqAnswer,
@@ -57,9 +55,7 @@ const MAX_REGENERATION_ATTEMPTS = 2;
 
 /** Block IDs checked for duplicate long-form narrative only. */
 const DUPLICATE_CHECK_PREFIXES = [
-  'understandingDifference',
-  'seo.whatChanges',
-  'seo.whoShouldChoose',
+  'whatThisChangeMeans',
   'seo.isGoodUpgrade.body',
 ] as const;
 
@@ -84,11 +80,9 @@ export function extractComparisonContentBlocks(
   insights: ComparisonInsights,
 ): ComparisonContentBlock[] {
   const blocks: ComparisonContentBlock[] = [
-    { id: 'understandingDifference', text: insights.understandingDifference },
-    { id: 'seo.whatChanges', text: insights.seo.whatChanges },
+    { id: 'whatThisChangeMeans', text: insights.whatThisChangeMeans },
     { id: 'seo.isGoodUpgrade.headline', text: insights.seo.isGoodUpgrade.headline },
     { id: 'seo.isGoodUpgrade.body', text: insights.seo.isGoodUpgrade.body },
-    { id: 'seo.whoShouldChoose', text: insights.seo.whoShouldChoose },
     { id: 'personality.summary', text: insights.personality.summary },
     ...insights.personality.pros.map((text, i) => ({ id: `personality.pros.${i}`, text })),
     ...insights.personality.cons.map((text, i) => ({ id: `personality.cons.${i}`, text })),
@@ -131,6 +125,7 @@ export function buildAllowedPercentages(analysis: EngineeringAnalysis): number[]
     sidewallPct,
     comparison.speedometer.errorPercent,
     comparison.revsPerMileDiffPercent,
+    analysis.measurements.revsDiffPct,
     fitmentScore * 10,
     fitmentScore,
   ];
@@ -373,7 +368,7 @@ function checkReasoningBeforeConclusion(blocks: ComparisonContentBlock[]): {
   suggestions: string[];
 } {
   const suggestions: string[] = [];
-  const targetPrefixes = ['performance.', 'understandingDifference', 'seo.whatChanges'];
+  const targetPrefixes = ['performance.', 'whatThisChangeMeans'];
 
   for (const block of blocks) {
     if (!targetPrefixes.some((prefix) => block.id.startsWith(prefix))) continue;
@@ -457,6 +452,25 @@ function checkExaggeratedClaims(blocks: ComparisonContentBlock[]): {
   return { failed: suggestions.length > 0, suggestions: [...new Set(suggestions)] };
 }
 
+/** Every comparison FAQ answer must cite at least one calculated measurement. */
+function checkFaqMeasurementSupport(blocks: ComparisonContentBlock[]): {
+  failed: boolean;
+  suggestions: string[];
+} {
+  const suggestions: string[] = [];
+
+  for (const block of blocks) {
+    if (!block.id.startsWith('faq.') || !block.id.endsWith('.answer')) continue;
+    if (!/\d/.test(block.text)) {
+      suggestions.push(
+        `FAQ answer "${block.id}" must cite at least one calculated value (%, mm, in, RPM, or fitment score).`,
+      );
+    }
+  }
+
+  return { failed: suggestions.length > 0, suggestions };
+}
+
 /**
  * Run the full second-pass quality review on generated comparison content.
  */
@@ -474,7 +488,17 @@ export function validateComparisonQuality(insights: ComparisonInsights): Compari
     },
     { id: 'generic-filler', result: checkGenericFiller(blocks) },
     { id: 'duplicate-content', result: checkDuplicateContent(duplicateBlocks) },
-    { id: 'measurement-support', result: checkMeasurementSupport(blocks) },
+    {
+      id: 'measurement-support',
+      result: {
+        failed:
+          checkMeasurementSupport(blocks).failed || checkFaqMeasurementSupport(blocks).failed,
+        suggestions: [
+          ...checkMeasurementSupport(blocks).suggestions,
+          ...checkFaqMeasurementSupport(blocks).suggestions,
+        ],
+      },
+    },
     { id: 'recommendation-rationale', result: checkRecommendationRationale(insights) },
     { id: 'internal-contradictions', result: checkInternalContradictions(insights) },
     { id: 'exaggerated-claims', result: checkExaggeratedClaims(blocks) },
@@ -547,7 +571,7 @@ export function regenerateComparisonProse(insights: ComparisonInsights): Compari
 
   return {
     ...insights,
-    understandingDifference: synthesizeUnderstandingDifference(engineeringAnalysis, sizeA, sizeB),
+    whatThisChangeMeans: synthesizeWhatThisChangeMeans(engineeringAnalysis, sizeA, sizeB),
     personality: {
       ...personality,
       summary: engineeringAnalysis.byId.recommendation.body.split('.')[0] + '.',
@@ -555,13 +579,7 @@ export function regenerateComparisonProse(insights: ComparisonInsights): Compari
       cons: repairedConsiderations.length > 0 ? repairedConsiderations : personality.cons,
     },
     personalityCards: repairedPersonalityCards,
-    thingsToConsider: buildFitmentConsiderations(
-      sizeA,
-      sizeB,
-      engineeringAnalysis.measurements.comparison,
-      engineeringAnalysis.measurements.specsA,
-      engineeringAnalysis.measurements.specsB,
-    ),
+    thingsToConsider: buildFitmentConsiderations(engineeringAnalysis),
     quickVerdict: {
       ...insights.quickVerdict,
       benefits: repairedBenefits,
@@ -569,9 +587,7 @@ export function regenerateComparisonProse(insights: ComparisonInsights): Compari
     },
     seo: {
       ...insights.seo,
-      whatChanges: synthesizeWhatChanges(engineeringAnalysis, sizeA, sizeB),
       isGoodUpgrade: upgrade,
-      whoShouldChoose: synthesizeWhoShouldChoose(engineeringAnalysis, sizeA, sizeB),
       faqs: repairedFaqs,
     },
   };

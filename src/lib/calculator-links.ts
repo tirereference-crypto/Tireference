@@ -1,6 +1,8 @@
-/** Canonical list of calculator tools that exist on TireLogic. */
+/** Canonical registry of calculator tools that exist on Tire Reference. */
 
-export type CalculatorIcon = 'size' | 'compare' | 'diameter' | 'offset' | 'gear';
+export type CalculatorIcon = 'size' | 'compare' | 'diameter' | 'offset' | 'gear' | 'speedometer';
+
+export type CalculatorPublicationStatus = 'published' | 'hidden' | 'deprecated';
 
 /** Canonical calculator paths — always /calculators/{slug}/ with trailing slash. */
 export const CALCULATOR_PATHS = {
@@ -8,6 +10,7 @@ export const CALCULATOR_PATHS = {
   tireComparison: '/calculators/tire-comparison-calculator/',
   tireDiameter: '/calculators/tire-diameter-calculator/',
   wheelOffset: '/calculators/wheel-offset-calculator/',
+  speedometerError: '/calculators/speedometer-error-calculator/',
   gearRatio: '/calculators/gear-ratio-calculator/',
 } as const;
 
@@ -20,40 +23,94 @@ export interface CalculatorLink {
   icon: CalculatorIcon;
 }
 
+export interface CalculatorRegistryEntry extends CalculatorLink {
+  id: CalculatorPathKey;
+  status: CalculatorPublicationStatus;
+  /**
+   * Related-tool priority when recommending calculators on other tool pages.
+   * Lower number = higher priority. Only published tools with a priority appear.
+   */
+  relatedPriority: number | null;
+}
+
 export type RelatedCalculatorItem = Pick<CalculatorLink, 'label' | 'description' | 'href'>;
 
-export const SITE_CALCULATORS: readonly CalculatorLink[] = [
+/**
+ * Single source of truth for implemented calculator routes.
+ * Do not list tools that lack a real page. Mark unused tools hidden/deprecated
+ * instead of inventing dead links in UI components.
+ */
+export const CALCULATOR_REGISTRY: readonly CalculatorRegistryEntry[] = [
   {
+    id: 'tireSize',
     label: 'Tire Size Calculator',
     description: 'Convert metric tire size into diameter, width, and revolutions per mile',
     href: CALCULATOR_PATHS.tireSize,
     icon: 'size',
+    status: 'published',
+    relatedPriority: 1,
   },
   {
+    id: 'tireComparison',
     label: 'Tire Comparison Calculator',
     description: 'Compare two tire sizes with fitment score and diameter change',
     href: CALCULATOR_PATHS.tireComparison,
     icon: 'compare',
+    status: 'published',
+    relatedPriority: 2,
   },
   {
+    id: 'tireDiameter',
     label: 'Tire Diameter Calculator',
     description: 'Reverse-search tire sizes by target overall diameter',
     href: CALCULATOR_PATHS.tireDiameter,
     icon: 'diameter',
+    status: 'published',
+    relatedPriority: 3,
   },
   {
+    id: 'wheelOffset',
     label: 'Wheel Offset Calculator',
     description: 'Compare offset, poke, and clearance before buying wheels',
     href: CALCULATOR_PATHS.wheelOffset,
     icon: 'offset',
+    status: 'published',
+    relatedPriority: 5,
   },
   {
+    id: 'speedometerError',
+    label: 'Speedometer Error Calculator',
+    description: 'See how tire-size changes affect indicated speed and odometer accuracy',
+    href: CALCULATOR_PATHS.speedometerError,
+    icon: 'speedometer',
+    status: 'published',
+    relatedPriority: 4,
+  },
+  {
+    id: 'gearRatio',
     label: 'Gear Ratio Calculator',
     description: 'Find ideal differential gears after changing tire size',
     href: CALCULATOR_PATHS.gearRatio,
     icon: 'gear',
+    status: 'published',
+    relatedPriority: 6,
   },
 ] as const;
+
+/** @deprecated Prefer getPublishedCalculators() — kept for existing imports. */
+export const SITE_CALCULATORS: readonly CalculatorLink[] = CALCULATOR_REGISTRY.filter(
+  (calc) => calc.status === 'published',
+).map(({ label, description, href, icon }) => ({ label, description, href, icon }));
+
+/** Published, non-deprecated calculators with real routes. */
+export function getPublishedCalculators(): CalculatorRegistryEntry[] {
+  return CALCULATOR_REGISTRY.filter((calc) => calc.status === 'published');
+}
+
+/** Full calculator registry (including hidden/deprecated entries, if any). */
+export function getCalculatorRegistry(): readonly CalculatorRegistryEntry[] {
+  return CALCULATOR_REGISTRY;
+}
 
 /** Ensure a calculator href uses the canonical trailing-slash form. */
 export function normalizeCalculatorHref(href: string): string {
@@ -74,16 +131,43 @@ export function calculatorPathWithQuery(
   return search ? `${path}?${search}` : path;
 }
 
-/** Related calculators for a page, excluding the current tool. */
-export function getRelatedCalculators(excludeHref?: string): RelatedCalculatorItem[] {
-  const normalizedExclude = excludeHref ? normalizeCalculatorHref(excludeHref) : undefined;
-  return SITE_CALCULATORS.filter((calc) => calc.href !== normalizedExclude).map(
-    ({ label, description, href }) => ({ label, description, href }),
-  );
+export interface RelatedCalculatorOptions {
+  /** Max cards to return (default 6). */
+  limit?: number;
 }
 
-/** Full calculator metadata (includes icons) for a page sidebar. */
-export function getRelatedCalculatorLinks(excludeHref?: string): CalculatorLink[] {
+function relatedFromRegistry(
+  excludeHref: string | undefined,
+  options?: RelatedCalculatorOptions,
+): CalculatorRegistryEntry[] {
   const normalizedExclude = excludeHref ? normalizeCalculatorHref(excludeHref) : undefined;
-  return SITE_CALCULATORS.filter((calc) => calc.href !== normalizedExclude);
+  const limit = options?.limit ?? 6;
+
+  return getPublishedCalculators()
+    .filter((calc) => calc.href !== normalizedExclude)
+    .filter((calc) => calc.relatedPriority != null)
+    .sort((a, b) => (a.relatedPriority ?? 99) - (b.relatedPriority ?? 99))
+    .slice(0, limit);
+}
+
+/** Related calculators for a page, excluding the current tool. */
+export function getRelatedCalculators(
+  excludeHref?: string,
+  options?: RelatedCalculatorOptions,
+): RelatedCalculatorItem[] {
+  return relatedFromRegistry(excludeHref, options).map(({ label, description, href }) => ({
+    label,
+    description,
+    href,
+  }));
+}
+
+/** Full calculator metadata (includes icons) for related-tool sidebars. */
+export function getRelatedCalculatorLinks(
+  excludeHref?: string,
+  options?: RelatedCalculatorOptions,
+): CalculatorLink[] {
+  return relatedFromRegistry(excludeHref, options).map(
+    ({ label, description, href, icon }) => ({ label, description, href, icon }),
+  );
 }

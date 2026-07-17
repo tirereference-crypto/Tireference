@@ -1,0 +1,178 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InfoPageHero from '../components/info/InfoPageHero.astro';
+import {
+  CALCULATION_LOGIC_UPDATED,
+  CATALOG_DATA_CHECKED,
+  DATA_STANDARDS_PATH,
+  REPORT_ISSUE_PATH,
+  formatMonthYear,
+} from '../lib/eeat-metadata';
+import { hasPublishedValidationResults } from '../data/manufacturer-validation-records';
+import { SITE_NAME } from '../lib/site-brand';
+import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
+import '../styles/info-pages.css';
+
+const title = `Data & Calculation Standards | ${SITE_NAME}`;
+const description = `How ${SITE_NAME} calculates nominal tire dimensions, distinguishes calculator output from catalog data, and accepts corrections.`;
+
+const schema = buildInfoPageSchema(title, description, DATA_STANDARDS_PATH, 'Data & Calculation Standards');
+const showValidationRoadmap = !hasPublishedValidationResults();
+---
+
+<Layout title={title} description={description} canonical={DATA_STANDARDS_PATH} schema={schema}>
+  <div class="info-page">
+    <div class="info-shell info-shell--narrow">
+      <InfoPageHero
+        title="Data & Calculation Standards"
+        lead={`${SITE_NAME} separates nominal geometry calculated from a tire code from dataset-derived facts such as product coverage and production-status labels.`}
+      />
+
+      <section class="info-section" aria-labelledby="ds-nominal-title">
+        <h2 id="ds-nominal-title" class="info-section__title">Nominal tire calculations</h2>
+        <div class="info-section__body">
+          <p>
+            Metric sizes (for example <code>275/70R18</code> or <code>LT265/75R16</code>) are parsed
+            into section width, aspect ratio, construction letter and wheel diameter. Flotation sizes
+            (for example <code>33x12.50R17</code>) are parsed into overall diameter, section width,
+            construction and wheel diameter.
+          </p>
+          <ul>
+            <li>
+              <strong>Sidewall height</strong> = section width × (aspect ratio ÷ 100), converted to
+              inches when displayed in imperial units.
+            </li>
+            <li>
+              <strong>Overall diameter</strong> = wheel diameter + two sidewalls (metric path) or the
+              stated flotation diameter.
+            </li>
+            <li><strong>Circumference</strong> = π × overall diameter.</li>
+            <li>
+              <strong>Theoretical revolutions per mile</strong> = inches per mile ÷ circumference.
+            </li>
+          </ul>
+          <p>
+            Rounding is applied for display so values stay readable. Underlying geometry uses full
+            floating-point precision before formatting. These figures are nominal — not mounted
+            measurements for a specific tire model.
+          </p>
+          {
+            CALCULATION_LOGIC_UPDATED ? (
+              <p>
+                Calculator logic last updated:{' '}
+                <strong>{formatMonthYear(CALCULATION_LOGIC_UPDATED)}</strong>.
+              </p>
+            ) : null
+          }
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="ds-vs-title">
+        <h2 id="ds-vs-title" class="info-section__title">Calculated data versus catalog data</h2>
+        <div class="info-section__body">
+          <h3>Calculated values</h3>
+          <ul>
+            <li>Overall diameter</li>
+            <li>Section width</li>
+            <li>Sidewall height</li>
+            <li>Circumference</li>
+            <li>Theoretical revolutions per mile</li>
+            <li>Dimensional differences between sizes</li>
+          </ul>
+          <h3>Dataset-derived values</h3>
+          <ul>
+            <li>Production-size status (common / limited coverage in our index)</li>
+            <li>Tire categories</li>
+            <li>Tire models offered in a size</li>
+            <li>Brand availability</li>
+            <li>Vehicle-type classifications</li>
+            <li>Known vehicle examples where supported</li>
+          </ul>
+          {
+            CATALOG_DATA_CHECKED ? (
+              <p>
+                Structured catalog data last checked:{' '}
+                <strong>{formatMonthYear(CATALOG_DATA_CHECKED)}</strong>.
+              </p>
+            ) : null
+          }
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="ds-product-title">
+        <h2 id="ds-product-title" class="info-section__title">Product and model availability</h2>
+        <div class="info-section__body">
+          <p>
+            Model availability may change as manufacturers update product lines. A tire model is
+            shown as available for a size only when our structured database contains an exact
+            selected-size record. Absence from {SITE_NAME} does not prove that a tire is unavailable
+            elsewhere. Confirm availability and service specifications with the manufacturer or
+            seller.
+          </p>
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="ds-fitment-title">
+        <h2 id="ds-fitment-title" class="info-section__title">Vehicle fitment limitations</h2>
+        <div class="info-section__body">
+          <p>
+            {SITE_NAME} does not confirm vehicle fitment. Fitment can vary by model year, trim,
+            wheel width, offset, load requirements, suspension configuration and available clearance.
+          </p>
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="ds-corrections-title">
+        <h2 id="ds-corrections-title" class="info-section__title">Corrections</h2>
+        <div class="info-section__body">
+          <p>You can submit:</p>
+          <ul>
+            <li>Calculation issues</li>
+            <li>Incorrect product availability</li>
+            <li>Broken links</li>
+            <li>Outdated tire data</li>
+            <li>Vehicle-classification corrections</li>
+          </ul>
+          <p>
+            Use the <a href={REPORT_ISSUE_PATH}>report an issue</a> form or{' '}
+            <a href="/contact/">contact</a> page. Include the tire size, page URL and a brief
+            description when possible.
+          </p>
+        </div>
+      </section>
+
+      <section class="info-section" aria-labelledby="ds-update-title">
+        <h2 id="ds-update-title" class="info-section__title">Update policy</h2>
+        <div class="info-section__body">
+          <p>Visible update dates change only when:</p>
+          <ul>
+            <li>Calculation logic changes</li>
+            <li>Relevant catalog data is reviewed</li>
+            <li>Product records are updated</li>
+            <li>Material explanatory content is revised</li>
+          </ul>
+          <p>
+            Dates are not auto-generated on every build. We do not publish a fixed manual-review
+            cadence.
+          </p>
+        </div>
+      </section>
+
+      {
+        showValidationRoadmap ? (
+          <section class="info-section" aria-labelledby="ds-validation-title">
+            <h2 id="ds-validation-title" class="info-section__title">Manufacturer-spec validation</h2>
+            <div class="info-section__body">
+              <p>
+                We are building a manufacturer-specification validation dataset that compares
+                nominal calculated overall diameters with published manufacturer values. Results
+                will be published only after sufficient records have been independently checked.
+                No accuracy percentage is shown until then.
+              </p>
+            </div>
+          </section>
+        ) : null
+      }
+    </div>
+  </div>
+</Layout>

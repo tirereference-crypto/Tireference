@@ -27,11 +27,13 @@ describe('editorial E-E-A-T content', () => {
     expect(DATA_SOURCES.some((s) => /ETRTO|load index/i.test(s.detail))).toBe(true);
   });
 
-  it('author and reviewer are teams, not fabricated individuals', () => {
-    expect(EDITORIAL_AUTHOR.name).toContain('Team');
-    expect(EDITORIAL_REVIEWER.name).toContain('Technical Review');
-    expect(EDITORIAL_AUTHOR.bio).not.toMatch(/Ph\.D|certified|licensed mechanic/i);
-    expect(EDITORIAL_REVIEWER.bio).toMatch(/automated|validation|structural/i);
+  it('default author and reviewer link to profile pages', () => {
+    expect(EDITORIAL_AUTHOR.profileUrl).toMatch(/^\/author\//);
+    expect(EDITORIAL_REVIEWER.profileUrl).toMatch(/^\/author\//);
+    expect(EDITORIAL_AUTHOR.name).not.toContain('Editorial Team');
+    expect(EDITORIAL_REVIEWER.name).not.toContain('Technical Review');
+    expect(EDITORIAL_AUTHOR.bio.length).toBeGreaterThan(20);
+    expect(EDITORIAL_REVIEWER.bio.length).toBeGreaterThan(20);
   });
 
   it('formats the site-wide update date', () => {

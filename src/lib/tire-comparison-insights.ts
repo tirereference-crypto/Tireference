@@ -3,6 +3,8 @@ import { getVehicleFitment, type VehicleFitment } from '../data/vehicle-fitment'
 import {
   buildPopularComparisonsForSize,
   buildUpgradePathsFromDatabase,
+  comparisonSlugFromSizes,
+  POPULAR_COMPARISON_LIMIT,
   type UpgradePathCard,
   type UpgradePathsData,
 } from './tire-comparison-links';
@@ -15,8 +17,6 @@ import {
   formatRevsDiff,
   formatRevsLabel,
   formatRevsValue,
-  rpmAtSpeed,
-  speedUnitLabel,
 } from './tire-comparison-units';
 import { fmtDiffWithPct, fmtInQuote, fmtPct, fmtSigned } from './tire-comparison-format';
 import {
@@ -24,6 +24,8 @@ import {
   FITMENT_WIDTH_PCT,
   fitmentLabelFromScore,
   fitmentStatusFromThreshold,
+  overallFitStatusFromScore,
+  overallFitStatusLabelFromScore,
   recommendationFromScore,
   rubbingRiskStatus,
   suspensionClearanceStatus,
@@ -31,14 +33,13 @@ import {
   type FitmentStatus,
 } from './tire-comparison-fitment';
 import {
-  buildEngineeringAnalysis,
+  buildComparisonAnalysis,
   buildEngineeringPersonalityBullets,
   buildMeasuredBenefits,
   buildMeasuredConsiderations,
-  synthesizeUnderstandingDifference,
   synthesizeUpgradeRecommendation,
-  synthesizeWhatChanges,
-  synthesizeWhoShouldChoose,
+  synthesizeWhatThisChangeMeans,
+  type ComparisonMeasurements,
   type EngineeringAnalysis,
 } from './tire-comparison-engineering-analysis';
 import { applyComparisonQualityGate, type ComparisonQualityResult } from './tire-comparison-quality-validator';
@@ -92,14 +93,11 @@ export type { ComparisonQualityResult };
 
 export const COMPARISON_PAGE_INTRO_FALLBACK: ComparisonPageIntro = {
   sentence:
-    'Compare two tire sizes to see differences in overall diameter, width, sidewall height, circumference, speedometer accuracy, and real-world fitment impact.',
+    'Compare two tire sizes side by side to see differences in overall diameter, section width, sidewall height, circumference, revolutions per mile, speedometer error, and wheel requirements.',
 };
 
-export function buildComparisonPageIntro(sizeA: string, sizeB: string): ComparisonPageIntro {
-  const sentence = `Compare ${sizeA} vs ${sizeB} to see differences in overall diameter, width, sidewall height, circumference, speedometer accuracy, and real-world fitment impact.`;
-  return {
-    sentence: sentence.length <= 160 ? sentence : `${sentence.slice(0, 157).trimEnd()}…`,
-  };
+export function buildComparisonPageIntro(_sizeA?: string, _sizeB?: string): ComparisonPageIntro {
+  return COMPARISON_PAGE_INTRO_FALLBACK;
 }
 
 export function willThisFitStatusLabel(status: FitmentStatus): 'Safe' | 'Check' | 'Not Recommended' {
@@ -108,31 +106,33 @@ export function willThisFitStatusLabel(status: FitmentStatus): 'Safe' | 'Check' 
   return 'Not Recommended';
 }
 
-function buildSummaryChips(
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
-): ComparisonSummaryChip[] {
-  const widthPct = ((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100;
+function summaryChipTone(absPct: number, pass: number, warning: number): ComparisonSummaryChip['tone'] {
+  if (absPct <= pass) return 'within';
+  if (absPct <= warning) return 'caution';
+  return 'neutral';
+}
+
+function buildSummaryChips(m: ComparisonMeasurements): ComparisonSummaryChip[] {
+  const { comparison, widthPct, absDiamPct, absWidthPct, absSpeedoPct } = m;
 
   return [
     {
       id: 'diameter',
-      label: 'Diameter',
+      label: 'Diameter difference',
       value: fmtPct(comparison.diameterDiffPercent),
-      tone: toneFromSigned(comparison.diameterDiffPercent),
+      tone: summaryChipTone(absDiamPct, FITMENT_DIAMETER_PCT.pass, FITMENT_DIAMETER_PCT.warning),
     },
     {
       id: 'width',
-      label: 'Width',
+      label: 'Width difference',
       value: fmtPct(widthPct),
-      tone: toneFromSigned(specsB.widthMm - specsA.widthMm),
+      tone: summaryChipTone(absWidthPct, FITMENT_WIDTH_PCT.pass, FITMENT_WIDTH_PCT.warning),
     },
     {
       id: 'speedometer',
-      label: 'Speedometer',
+      label: 'Speedometer difference',
       value: fmtPct(comparison.speedometer.errorPercent),
-      tone: toneFromSigned(comparison.speedometer.errorPercent),
+      tone: summaryChipTone(absSpeedoPct, FITMENT_DIAMETER_PCT.pass, FITMENT_DIAMETER_PCT.warning),
     },
   ];
 }
@@ -176,26 +176,24 @@ function buildPersonalityCards(
   }));
 }
 
-function buildWillThisFitRows(
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
-): WillThisFitRow[] {
-  const diamPct = Math.abs(comparison.diameterDiffPercent);
-  const speedoPct = Math.abs(comparison.speedometer.errorPercent);
-  const widthPct = Math.abs(((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100);
-  const wheelDelta = specsB.wheelDiameterIn - specsA.wheelDiameterIn;
+function buildWillThisFitRows(m: ComparisonMeasurements): WillThisFitRow[] {
+  const { comparison, fitmentScore, absDiamPct, absWidthPct, absSpeedoPct, wheelDelta } = m;
 
   const rows: Array<{ id: string; label: string; status: FitmentStatus }> = [
     {
+      id: 'overall',
+      label: 'Overall Fitment',
+      status: overallFitStatusFromScore(fitmentScore),
+    },
+    {
       id: 'diameter',
       label: 'Diameter Change',
-      status: suspensionClearanceStatus(diamPct),
+      status: suspensionClearanceStatus(absDiamPct),
     },
     {
       id: 'speedo',
       label: 'Speedometer Accuracy',
-      status: speedoPct < 3 ? 'pass' : speedoPct <= 5 ? 'warning' : 'fail',
+      status: absSpeedoPct < 3 ? 'pass' : absSpeedoPct <= 5 ? 'warning' : 'fail',
     },
     {
       id: 'wheel',
@@ -205,23 +203,26 @@ function buildWillThisFitRows(
     {
       id: 'fender',
       label: 'Fender Clearance',
-      status: fitmentStatusFromThreshold(widthPct, FITMENT_WIDTH_PCT.pass, FITMENT_WIDTH_PCT.warning),
+      status: fitmentStatusFromThreshold(absWidthPct, FITMENT_WIDTH_PCT.pass, FITMENT_WIDTH_PCT.warning),
     },
     {
       id: 'suspension',
       label: 'Suspension Clearance',
-      status: suspensionClearanceStatus(diamPct),
+      status: suspensionClearanceStatus(absDiamPct),
     },
     {
       id: 'rubbing',
       label: 'Rubbing Risk',
-      status: rubbingRiskStatus(diamPct, widthPct),
+      status: rubbingRiskStatus(comparison.diameterDiffPercent, m.widthPct),
     },
   ];
 
   return rows.map((row) => ({
     ...row,
-    statusLabel: willThisFitStatusLabel(row.status),
+    statusLabel:
+      row.id === 'overall'
+        ? overallFitStatusLabelFromScore(m.fitmentScore)
+        : willThisFitStatusLabel(row.status),
   }));
 }
 
@@ -243,26 +244,6 @@ function buildVehicleCompatibility(sizeA: string, sizeB: string): VehicleCompati
 function toneFromSigned(n: number): 'positive' | 'negative' | 'neutral' {
   if (Math.abs(n) < 0.001) return 'neutral';
   return n > 0 ? 'positive' : 'negative';
-}
-
-function computeFitmentScore(
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
-): { score: number; tone: 'green' | 'yellow' | 'red'; label: string } {
-  let score = 10;
-  const diamPct = Math.abs(comparison.diameterDiffPercent);
-  const widthPct = Math.abs(((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100);
-  const speedo = Math.abs(comparison.speedometer.errorPercent);
-
-  score -= diamPct * 0.35;
-  score -= widthPct * 0.12;
-  score -= speedo * 0.18;
-  if (specsB.wheelDiameterIn !== specsA.wheelDiameterIn) score -= 0.6;
-
-  score = Math.max(1, Math.min(10, Math.round(score * 10) / 10));
-
-  return fitmentLabelFromScore(score);
 }
 
 function recommendationContextFromAnalysis(analysis: EngineeringAnalysis) {
@@ -343,15 +324,13 @@ function buildSeoContent(
   const speedo = fmtPct(comparison.speedometer.errorPercent);
   const upgrade = synthesizeUpgradeRecommendation(analysis);
 
-  const faqs = buildComparisonFaqs(sizeA, sizeB, comparison, specsA, specsB, analysis);
+  const faqs = buildComparisonFaqs(sizeA, sizeB, analysis);
 
   return {
     title: `${sizeA} vs ${sizeB} Tire Size Comparison | Tire Reference`,
     metaDescription: `Compare ${sizeA} and ${sizeB}: ${fmtPct(comparison.diameterDiffPercent)} diameter change, ${speedo} speedometer impact, fitment score ${score.toFixed(1)}/10, and detailed specs.`,
     h1: 'Tire Size Comparison Calculator',
-    whatChanges: synthesizeWhatChanges(analysis, sizeA, sizeB),
     isGoodUpgrade: { headline: upgrade.headline, body: upgrade.body },
-    whoShouldChoose: synthesizeWhoShouldChoose(analysis, sizeA, sizeB),
     faqs,
   };
 }
@@ -374,129 +353,148 @@ export function buildComparisonInsights(
   specsA: TireSpecs,
   specsB: TireSpecs,
   unitSystem: UnitSystem = 'imperial',
+  options?: { omitInternalLinks?: boolean },
 ): ComparisonInsights {
-  const signedDiamDiffIn = specsB.overallDiameterIn - specsA.overallDiameterIn;
-  const widthDiffIn = specsB.sectionWidthIn - specsA.sectionWidthIn;
-  const widthPct = ((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100;
-  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
-  const sidewallPct = ((specsB.sidewallIn - specsA.sidewallIn) / specsA.sidewallIn) * 100;
-
-  const fitment = computeFitmentScore(comparison, specsA, specsB);
-  const rec = recommendationFromScore(fitment.score);
-  const engineeringAnalysis = buildEngineeringAnalysis(
+  const engineeringAnalysis = buildComparisonAnalysis(
     sizeA,
     sizeB,
     comparison,
     specsA,
     specsB,
     unitSystem,
-    fitment.score,
   );
-  const speedUnit = speedUnitLabel(unitSystem);
-  const indicatedSpeed = comparison.speedometer.indicatedSpeed;
-  const trueSpeed = comparison.speedometer.trueSpeed;
-  const rpmDelta = Math.round(rpmAtSpeed(indicatedSpeed, specsB, unitSystem) - rpmAtSpeed(indicatedSpeed, specsA, unitSystem));
-  const revsDiffPct = unitSystem === 'metric'
-    ? ((specsB.revsPerKm - specsA.revsPerKm) / specsA.revsPerKm) * 100
-    : comparison.revsPerMileDiffPercent;
+  const m = engineeringAnalysis.measurements;
+  const fitment = fitmentLabelFromScore(m.fitmentScore);
+  const rec = recommendationFromScore(m.fitmentScore);
 
   const kpiCards: KpiCard[] = unitSystem === 'metric'
     ? [
         {
           id: 'diameter',
           label: 'Overall Diameter',
-          diffAmount: formatDimensionDiff(signedDiamDiffIn, unitSystem),
+          diffAmount: formatDimensionDiff(m.diamDiffIn, unitSystem),
           diffPercent: fmtPct(comparison.diameterDiffPercent),
-          tone: toneFromSigned(comparison.diameterDiffPercent),
+          originalValue: formatDimension(specsA.overallDiameterIn, unitSystem),
+          newValue: formatDimension(specsB.overallDiameterIn, unitSystem),
+          icon: 'diameter',
+          tone: 'neutral',
         },
         {
           id: 'width',
-          label: 'Width',
-          diffAmount: `${comparison.widthDiffMm >= 0 ? '+' : '−'}${Math.abs(comparison.widthDiffMm).toFixed(1)} mm`,
-          diffPercent: fmtPct(widthPct),
-          tone: toneFromSigned(comparison.widthDiffMm),
+          label: 'Section Width',
+          diffAmount: `${m.widthDiffMm >= 0 ? '+' : '−'}${Math.abs(m.widthDiffMm).toFixed(1)} mm`,
+          diffPercent: fmtPct(m.widthPct),
+          originalValue: formatDimension(specsA.sectionWidthIn, unitSystem),
+          newValue: formatDimension(specsB.sectionWidthIn, unitSystem),
+          icon: 'width',
+          tone: 'neutral',
         },
         {
           id: 'sidewall',
           label: 'Sidewall Height',
-          diffAmount: `${comparison.sidewallDiffMm >= 0 ? '+' : '−'}${Math.abs(comparison.sidewallDiffMm).toFixed(1)} mm`,
-          diffPercent: fmtPct(sidewallPct),
-          tone: toneFromSigned(comparison.sidewallDiffMm),
+          diffAmount: `${m.sidewallDiffMm >= 0 ? '+' : '−'}${Math.abs(m.sidewallDiffMm).toFixed(1)} mm`,
+          diffPercent: fmtPct(m.sidewallPct),
+          originalValue: formatDimension(specsA.sidewallIn, unitSystem),
+          newValue: formatDimension(specsB.sidewallIn, unitSystem),
+          icon: 'sidewall',
+          tone: 'neutral',
         },
         {
           id: 'circumference',
           label: 'Circumference',
-          diffAmount: formatCircumferenceDiff(comparison.circumferenceDiffIn, unitSystem),
+          diffAmount: formatCircumferenceDiff(m.circumferenceDiffIn, unitSystem),
           diffPercent: fmtPct(comparison.diameterDiffPercent),
-          tone: toneFromSigned(comparison.circumferenceDiffIn),
+          originalValue: formatCircumference(specsA.circumferenceIn, unitSystem),
+          newValue: formatCircumference(specsB.circumferenceIn, unitSystem),
+          icon: 'circumference',
+          tone: 'neutral',
         },
         {
           id: 'speedo',
-          label: 'Speedometer Error',
+          label: 'Speedometer Difference',
           diffAmount: fmtSigned(comparison.speedometer.errorPercent, 2, '%'),
-          diffPercent: `${trueSpeed.toFixed(1)} ${speedUnit} true`,
-          tone: toneFromSigned(comparison.speedometer.errorPercent),
+          diffPercent: fmtPct(comparison.speedometer.errorPercent),
+          originalValue: `${m.indicatedSpeed.toFixed(0)} ${m.speedUnit}`,
+          newValue: `${m.trueSpeed.toFixed(1)} ${m.speedUnit} true`,
+          icon: 'speedo',
+          tone: 'neutral',
         },
         {
           id: 'revs',
           label: formatRevsLabel(unitSystem),
-          diffAmount: formatRevsDiff(comparison.revsPerMileDiff, unitSystem, specsA, specsB),
-          diffPercent: fmtPct(revsDiffPct),
-          tone: toneFromSigned(-comparison.revsPerMileDiff),
+          diffAmount: formatRevsDiff(m.revsDiff, unitSystem, specsA, specsB),
+          diffPercent: fmtPct(m.revsDiffPct),
+          originalValue: formatRevsValue(specsA, unitSystem),
+          newValue: formatRevsValue(specsB, unitSystem),
+          icon: 'revs',
+          tone: 'neutral',
         },
       ]
     : [
     {
       id: 'diameter',
       label: 'Overall Diameter',
-      diffAmount: fmtSigned(signedDiamDiffIn, 2, '"'),
+      diffAmount: fmtSigned(m.diamDiffIn, 2, ' in'),
       diffPercent: fmtPct(comparison.diameterDiffPercent),
-      tone: toneFromSigned(comparison.diameterDiffPercent),
+      originalValue: `${specsA.overallDiameterIn.toFixed(2)} in`,
+      newValue: `${specsB.overallDiameterIn.toFixed(2)} in`,
+      icon: 'diameter',
+      tone: 'neutral',
     },
     {
       id: 'width',
-      label: 'Width',
-      diffAmount: fmtSigned(widthDiffIn, 2, '"'),
-      diffPercent: fmtPct(widthPct),
-      tone: toneFromSigned(widthDiffIn),
+      label: 'Section Width',
+      diffAmount: fmtSigned(m.widthDiffIn, 2, ' in'),
+      diffPercent: fmtPct(m.widthPct),
+      originalValue: `${specsA.sectionWidthIn.toFixed(2)} in`,
+      newValue: `${specsB.sectionWidthIn.toFixed(2)} in`,
+      icon: 'width',
+      tone: 'neutral',
     },
     {
       id: 'sidewall',
       label: 'Sidewall Height',
-      diffAmount: fmtSigned(sidewallDiff, 2, '"'),
-      diffPercent: fmtPct(sidewallPct),
-      tone: toneFromSigned(sidewallDiff),
+      diffAmount: fmtSigned(m.sidewallDiffIn, 2, ' in'),
+      diffPercent: fmtPct(m.sidewallPct),
+      originalValue: `${specsA.sidewallIn.toFixed(2)} in`,
+      newValue: `${specsB.sidewallIn.toFixed(2)} in`,
+      icon: 'sidewall',
+      tone: 'neutral',
     },
     {
       id: 'circumference',
       label: 'Circumference',
-      diffAmount: fmtSigned(comparison.circumferenceDiffIn, 2, '"'),
+      diffAmount: fmtSigned(m.circumferenceDiffIn, 2, ' in'),
       diffPercent: fmtPct(comparison.diameterDiffPercent),
-      tone: toneFromSigned(comparison.circumferenceDiffIn),
+      originalValue: `${specsA.circumferenceIn.toFixed(2)} in`,
+      newValue: `${specsB.circumferenceIn.toFixed(2)} in`,
+      icon: 'circumference',
+      tone: 'neutral',
     },
     {
       id: 'speedo',
-      label: 'Speedometer Error',
+      label: 'Speedometer Difference',
       diffAmount: fmtSigned(comparison.speedometer.errorPercent, 2, '%'),
-      diffPercent: `${comparison.speedometer.trueSpeed.toFixed(1)} mph true`,
-      tone: toneFromSigned(comparison.speedometer.errorPercent),
+      diffPercent: fmtPct(comparison.speedometer.errorPercent),
+      originalValue: `${m.indicatedSpeed.toFixed(0)} mph`,
+      newValue: `${m.trueSpeed.toFixed(1)} mph true`,
+      icon: 'speedo',
+      tone: 'neutral',
     },
     {
       id: 'revs',
-      label: 'Revs Per Mile',
-      diffAmount: fmtSigned(comparison.revsPerMileDiff, 0),
-      diffPercent: fmtPct(comparison.revsPerMileDiffPercent),
-      tone: toneFromSigned(-comparison.revsPerMileDiff),
+      label: 'Revolutions per Mile',
+      diffAmount: fmtSigned(m.revsDiff, 0),
+      diffPercent: fmtPct(m.revsDiffPct),
+      originalValue: formatRevsValue(specsA, unitSystem),
+      newValue: formatRevsValue(specsB, unitSystem),
+      icon: 'revs',
+      tone: 'neutral',
     },
   ];
 
   const performanceCards: PerformanceImpactCard[] = buildComparisonPerformanceImpactCards(
-    sizeA,
-    sizeB,
-    comparison,
-    specsA,
-    specsB,
-    unitSystem,
+    engineeringAnalysis,
   );
 
   const fitmentChecks: FitmentCheckRow[] = [
@@ -510,21 +508,21 @@ export function buildComparisonInsights(
     {
       id: 'fender',
       label: 'Fender Clearance',
-      status: fitmentStatusFromThreshold(widthPct, 3, 7),
+      status: fitmentStatusFromThreshold(m.absWidthPct, 3, 7),
       statusLabel: '',
-      explanation: `${unitSystem === 'metric' ? `${comparison.widthDiffMm >= 0 ? '+' : '−'}${Math.abs(comparison.widthDiffMm).toFixed(1)} mm` : fmtSigned(widthDiffIn, 2, '"')} width change affects outer clearance.`,
+      explanation: `${unitSystem === 'metric' ? `${m.widthDiffMm >= 0 ? '+' : '−'}${Math.abs(m.widthDiffMm).toFixed(1)} mm` : fmtSigned(m.widthDiffIn, 2, '"')} width change affects outer clearance.`,
     },
     {
       id: 'steering',
       label: 'Steering Clearance',
-      status: fitmentStatusFromThreshold(widthPct + comparison.diameterDiffPercent * 0.5, 4, 8),
+      status: fitmentStatusFromThreshold(m.absWidthPct + m.absDiamPct * 0.5, 4, 8),
       statusLabel: '',
       explanation: 'Combined width and diameter affect lock-to-lock clearance.',
     },
     {
       id: 'rubbing',
       label: 'Rubbing Risk',
-      status: rubbingRiskStatus(comparison.diameterDiffPercent, widthPct),
+      status: rubbingRiskStatus(comparison.diameterDiffPercent, m.widthPct),
       statusLabel: '',
       explanation: 'Estimated based on dimensional deltas versus common fitment margins.',
     },
@@ -538,7 +536,7 @@ export function buildComparisonInsights(
     {
       id: 'speedo',
       label: 'Speedometer Tolerance',
-      status: fitmentStatusFromThreshold(comparison.speedometer.errorPercent, 3, 5),
+      status: fitmentStatusFromThreshold(m.absSpeedoPct, 3, 5),
       statusLabel: '',
       explanation: `${fmtPct(comparison.speedometer.errorPercent)} indicated vs true speed error.`,
     },
@@ -553,42 +551,42 @@ export function buildComparisonInsights(
           label: 'Diameter',
           current: formatDimension(specsA.overallDiameterIn, unitSystem),
           newTire: formatDimension(specsB.overallDiameterIn, unitSystem),
-          difference: fmtDiffWithPctUnit(signedDiamDiffIn, comparison.diameterDiffPercent, unitSystem),
-          tone: toneFromSigned(signedDiamDiffIn),
+          difference: fmtDiffWithPctUnit(m.diamDiffIn, comparison.diameterDiffPercent, unitSystem),
+          tone: toneFromSigned(m.diamDiffIn),
         },
         {
           label: 'Width',
           current: formatDimension(specsA.sectionWidthIn, unitSystem),
           newTire: formatDimension(specsB.sectionWidthIn, unitSystem),
-          difference: fmtDiffWithPctUnit(widthDiffIn, widthPct, unitSystem),
-          tone: toneFromSigned(widthDiffIn),
+          difference: fmtDiffWithPctUnit(m.widthDiffIn, m.widthPct, unitSystem),
+          tone: toneFromSigned(m.widthDiffIn),
         },
         {
           label: 'Sidewall',
           current: formatDimension(specsA.sidewallIn, unitSystem),
           newTire: formatDimension(specsB.sidewallIn, unitSystem),
-          difference: fmtDiffWithPctUnit(sidewallDiff, sidewallPct, unitSystem),
-          tone: toneFromSigned(sidewallDiff),
+          difference: fmtDiffWithPctUnit(m.sidewallDiffIn, m.sidewallPct, unitSystem),
+          tone: toneFromSigned(m.sidewallDiffIn),
         },
         {
           label: 'Circumference',
           current: formatCircumference(specsA.circumferenceIn, unitSystem),
           newTire: formatCircumference(specsB.circumferenceIn, unitSystem),
-          difference: fmtCircDiffWithPct(comparison.circumferenceDiffIn, comparison.diameterDiffPercent, unitSystem),
-          tone: toneFromSigned(comparison.circumferenceDiffIn),
+          difference: fmtCircDiffWithPct(m.circumferenceDiffIn, comparison.diameterDiffPercent, unitSystem),
+          tone: toneFromSigned(m.circumferenceDiffIn),
         },
         {
           label: formatRevsLabel(unitSystem),
           current: formatRevsValue(specsA, unitSystem),
           newTire: formatRevsValue(specsB, unitSystem),
-          difference: `${formatRevsDiff(comparison.revsPerMileDiff, unitSystem, specsA, specsB)} (${fmtPct(revsDiffPct)})`,
-          tone: toneFromSigned(-comparison.revsPerMileDiff),
+          difference: `${formatRevsDiff(m.revsDiff, unitSystem, specsA, specsB)} (${fmtPct(m.revsDiffPct)})`,
+          tone: toneFromSigned(-m.revsDiff),
         },
         {
           label: 'Speedo Error',
           current: '—',
           newTire: fmtPct(comparison.speedometer.errorPercent),
-          difference: `At ${indicatedSpeed} ${speedUnit}`,
+          difference: `At ${m.indicatedSpeed} ${m.speedUnit}`,
           tone: 'neutral',
           differenceVariant: 'info',
         },
@@ -598,42 +596,42 @@ export function buildComparisonInsights(
       label: 'Diameter',
       current: fmtInQuote(specsA.overallDiameterIn),
       newTire: fmtInQuote(specsB.overallDiameterIn),
-      difference: fmtDiffWithPct(signedDiamDiffIn, comparison.diameterDiffPercent),
-      tone: toneFromSigned(signedDiamDiffIn),
+      difference: fmtDiffWithPct(m.diamDiffIn, comparison.diameterDiffPercent),
+      tone: toneFromSigned(m.diamDiffIn),
     },
     {
       label: 'Width',
       current: fmtInQuote(specsA.sectionWidthIn),
       newTire: fmtInQuote(specsB.sectionWidthIn),
-      difference: fmtDiffWithPct(widthDiffIn, widthPct),
-      tone: toneFromSigned(widthDiffIn),
+      difference: fmtDiffWithPct(m.widthDiffIn, m.widthPct),
+      tone: toneFromSigned(m.widthDiffIn),
     },
     {
       label: 'Sidewall',
       current: fmtInQuote(specsA.sidewallIn),
       newTire: fmtInQuote(specsB.sidewallIn),
-      difference: fmtDiffWithPct(sidewallDiff, sidewallPct),
-      tone: toneFromSigned(sidewallDiff),
+      difference: fmtDiffWithPct(m.sidewallDiffIn, m.sidewallPct),
+      tone: toneFromSigned(m.sidewallDiffIn),
     },
     {
       label: 'Circumference',
       current: fmtInQuote(specsA.circumferenceIn),
       newTire: fmtInQuote(specsB.circumferenceIn),
-      difference: fmtDiffWithPct(comparison.circumferenceDiffIn, comparison.diameterDiffPercent),
-      tone: toneFromSigned(comparison.circumferenceDiffIn),
+      difference: fmtDiffWithPct(m.circumferenceDiffIn, comparison.diameterDiffPercent),
+      tone: toneFromSigned(m.circumferenceDiffIn),
     },
     {
       label: 'Revs per Mile',
       current: specsA.revsPerMile.toFixed(1),
       newTire: specsB.revsPerMile.toFixed(1),
-      difference: `${fmtSigned(comparison.revsPerMileDiff, 1)} (${fmtPct(comparison.revsPerMileDiffPercent)})`,
-      tone: toneFromSigned(-comparison.revsPerMileDiff),
+      difference: `${fmtSigned(m.revsDiff, 1)} (${fmtPct(m.revsDiffPct)})`,
+      tone: toneFromSigned(-m.revsDiff),
     },
     {
       label: 'Speedo Error',
       current: '—',
       newTire: fmtPct(comparison.speedometer.errorPercent),
-      difference: `At ${indicatedSpeed} ${speedUnit}`,
+      difference: `At ${m.indicatedSpeed} ${m.speedUnit}`,
       tone: 'neutral',
       differenceVariant: 'info',
     },
@@ -641,15 +639,20 @@ export function buildComparisonInsights(
 
   const personality = buildPersonality(comparison, specsA, specsB, engineeringAnalysis);
 
-  const thingsToConsider = buildFitmentConsiderations(sizeA, sizeB, comparison, specsA, specsB);
+  const thingsToConsider = buildFitmentConsiderations(engineeringAnalysis);
 
-  const quickVerdict = buildQuickVerdict(fitment.score, comparison, specsA, specsB, engineeringAnalysis);
+  const quickVerdict = buildQuickVerdict(m.fitmentScore, comparison, specsA, specsB, engineeringAnalysis);
+
+  const linkOptions = {
+    requirePublished: true,
+    excludePagePair: { current: sizeA, new: sizeB },
+  } as const;
 
   const draft: ComparisonInsights = {
-    fitmentScore: fitment.score,
+    fitmentScore: m.fitmentScore,
     fitmentLabel: fitment.label,
     fitmentTone: fitment.tone,
-    starRating: Math.max(1, Math.min(5, Math.round((fitment.score / 10) * 5 * 2) / 2)),
+    starRating: Math.max(1, Math.min(5, Math.round((m.fitmentScore / 10) * 5 * 2) / 2)),
     recommendation: rec.level,
     recommendationLabel: rec.label,
     kpiCards,
@@ -660,14 +663,18 @@ export function buildComparisonInsights(
     specRows,
     quickVerdict,
     pageIntro: buildComparisonPageIntro(sizeA, sizeB),
-    summaryChips: buildSummaryChips(comparison, specsA, specsB),
-    understandingDifference: synthesizeUnderstandingDifference(engineeringAnalysis, sizeA, sizeB),
+    summaryChips: buildSummaryChips(m),
+    whatThisChangeMeans: synthesizeWhatThisChangeMeans(engineeringAnalysis, sizeA, sizeB),
     personalityCards: buildPersonalityCards(engineeringAnalysis),
-    willThisFitRows: buildWillThisFitRows(comparison, specsA, specsB),
-    upgradePaths: buildUpgradePathsFromDatabase(sizeA),
-    popularComparisons: buildPopularComparisonsForSize(sizeA),
+    willThisFitRows: buildWillThisFitRows(m),
+    upgradePaths: options?.omitInternalLinks
+      ? null
+      : buildUpgradePathsFromDatabase(sizeA, linkOptions),
+    popularComparisons: options?.omitInternalLinks
+      ? []
+      : buildPopularComparisonsForSize(sizeA, POPULAR_COMPARISON_LIMIT, linkOptions),
     vehicleCompatibility: buildVehicleCompatibility(sizeA, sizeB),
-    seo: buildSeoContent(sizeA, sizeB, comparison, specsA, specsB, fitment.score, engineeringAnalysis),
+    seo: buildSeoContent(sizeA, sizeB, comparison, specsA, specsB, m.fitmentScore, engineeringAnalysis),
     engineeringAnalysis,
     qualityValidation: { approved: true },
   };
@@ -676,10 +683,27 @@ export function buildComparisonInsights(
   return { ...insights, qualityValidation: quality };
 }
 
+const publishableComparisonCache = new Map<string, boolean>();
+
 /** Whether a comparison pair passes the content quality gate for publishing. */
 export function isComparisonPublishable(sizeA: string, sizeB: string): boolean {
+  const key = comparisonSlugFromSizes(sizeA, sizeB);
+  const cached = publishableComparisonCache.get(key);
+  if (cached !== undefined) return cached;
+
   const specsA = getTireSpecs(sizeA);
   const specsB = getTireSpecs(sizeB);
   const comparison = compareTires(sizeA, sizeB, 60);
-  return buildComparisonInsights(sizeA, sizeB, comparison, specsA, specsB).qualityValidation.approved;
+  const approved = buildComparisonInsights(
+    sizeA,
+    sizeB,
+    comparison,
+    specsA,
+    specsB,
+    'imperial',
+    { omitInternalLinks: true },
+  ).qualityValidation.approved;
+
+  publishableComparisonCache.set(key, approved);
+  return approved;
 }

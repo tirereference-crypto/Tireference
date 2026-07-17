@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { comparisonPagePath } from '../../../lib/tire-size-url';
+import { comparisonPagePath } from '../../../lib/tire-comparison-paths';
+import { isValidComparisonPair } from '../../../lib/tire-comparison-validation';
 import { Button } from '../../ui/Button';
 
 export interface PopularComparison {
@@ -23,27 +24,37 @@ export default function CompareThisSize({
   popularComparisons,
   defaultTarget,
 }: CompareThisSizeProps) {
+  const validSizeOptions = useMemo(
+    () => sizeOptions.filter((size) => isValidComparisonPair(currentSize, size)),
+    [sizeOptions, currentSize],
+  );
+
+  const validPopularComparisons = useMemo(
+    () => popularComparisons.filter(({ target }) => isValidComparisonPair(currentSize, target)),
+    [popularComparisons, currentSize],
+  );
+
   const listId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState(
-    defaultTarget && sizeOptions.includes(defaultTarget)
+    defaultTarget && validSizeOptions.includes(defaultTarget)
       ? defaultTarget
-      : sizeOptions[0] ?? '',
+      : validSizeOptions[0] ?? '',
   );
   const [query, setQuery] = useState(
-    defaultTarget && sizeOptions.includes(defaultTarget)
+    defaultTarget && validSizeOptions.includes(defaultTarget)
       ? formatSizeLabel(defaultTarget)
-      : sizeOptions[0]
-        ? formatSizeLabel(sizeOptions[0])
+      : validSizeOptions[0]
+        ? formatSizeLabel(validSizeOptions[0])
         : '',
   );
   const [open, setOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return sizeOptions;
-    return sizeOptions.filter((s) => s.toLowerCase().includes(q));
-  }, [sizeOptions, query]);
+    if (!q) return validSizeOptions;
+    return validSizeOptions.filter((s) => s.toLowerCase().includes(q));
+  }, [validSizeOptions, query]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -63,7 +74,9 @@ export default function CompareThisSize({
 
   function handleCompare(target = selected) {
     if (!target) return;
-    window.location.href = comparisonPagePath(currentSize, target);
+    const href = comparisonPagePath(currentSize, target);
+    if (!href) return;
+    window.location.href = href;
   }
 
   const displayCurrent = formatSizeLabel(currentSize);
@@ -117,7 +130,7 @@ export default function CompareThisSize({
               onChange={(e) => {
                 setQuery(e.target.value);
                 setOpen(true);
-                const match = sizeOptions.find(
+                const match = validSizeOptions.find(
                   (s) => formatSizeLabel(s).toLowerCase() === e.target.value.trim().toLowerCase(),
                 );
                 if (match) setSelected(match);
@@ -172,11 +185,11 @@ export default function CompareThisSize({
         </svg>
       </Button>
 
-      {popularComparisons.length > 0 && (
+      {validPopularComparisons.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">Popular Comparisons</p>
           <div className="mt-2.5 flex flex-wrap gap-2">
-            {popularComparisons.map(({ target }) => (
+            {validPopularComparisons.map(({ target }) => (
               <button
                 key={target}
                 type="button"

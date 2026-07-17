@@ -10,15 +10,14 @@ export interface QuickTakeData {
 const QUICK_TAKE_BY_SIZE: Record<string, QuickTakeData> = {
   '275/70R18': {
     bestFor: [
-      'Drivers upgrading from factory truck or SUV tires who want additional ground clearance without moving into extreme tire sizes.',
-      'Overlanding and long-distance adventure travel where highway comfort remains important.',
-      'Mixed-use trucks and SUVs that spend time on pavement, gravel roads, forest trails, and moderate off-road terrain.',
-      'Owners who want a more aggressive appearance without the compromises often associated with larger 35-inch tire setups.',
+      'Near-33-inch truck tire with meaningful sidewall, stronger load-range availability, and broad all-terrain coverage.',
+      'Daily-driven pickups and body-on-frame SUVs that also see towing, gravel, trails, or overland use.',
+      'Owners who want more clearance and load capacity without stepping into a full 35-inch setup.',
     ],
     considerAnotherSizeIf: [
-      'Your priority is maximum fuel economy and highway efficiency.',
-      'You are building a dedicated rock-crawling or extreme off-road vehicle.',
-      'You want the largest tire possible regardless of fitment, gearing, or ride quality tradeoffs.',
+      'Fuel economy, light steering, and factory-like ride comfort matter more than clearance and tire strength.',
+      'You prefer a smaller, more stock look or the quietest possible highway commute.',
+      'You are building a dedicated rock-crawler that needs the largest tire possible regardless of daily drivability.',
     ],
   },
 };
@@ -117,6 +116,22 @@ export function buildQuickTakeForSize(hub: TireSizeHubData): QuickTakeData {
   const override = getPremiumOverride(hub.entry.size);
   if (override?.quickTake) return override.quickTake;
   return QUICK_TAKE_BY_SIZE[hub.entry.size.toUpperCase()] ?? buildCategoryQuickTake(hub);
+}
+
+/** Condensed use-case summary for the hero — merges Quick Take with typical usage tags. */
+export interface HeroUseSummary {
+  typicalUses: string[];
+  bestFor: string[];
+  considerIf: string[];
+}
+
+export function buildHeroUseSummary(hub: TireSizeHubData): HeroUseSummary {
+  const quickTake = buildQuickTakeForSize(hub);
+  return {
+    typicalUses: hub.typicalUses,
+    bestFor: quickTake.bestFor.slice(0, 3),
+    considerIf: quickTake.considerAnotherSizeIf.slice(0, 2),
+  };
 }
 
 /** @deprecated Use buildQuickTakeForSize */

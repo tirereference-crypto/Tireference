@@ -1,0 +1,114 @@
+---
+import {
+  HOME_FEATURED_COMPARISON,
+  buildFeaturedComparisonPreview,
+} from '../../lib/home-landing';
+
+const preview = buildFeaturedComparisonPreview();
+const featured = HOME_FEATURED_COMPARISON;
+const previewDescription = `Example comparison of ${preview.currentSize} versus ${preview.newSize}, showing diameter, width, sidewall, circumference, and speedometer difference.`;
+const currentScale = Math.min(1.12, Math.max(0.88, preview.currentScale)).toFixed(3);
+const newScale = Math.min(1.12, Math.max(0.88, preview.newScale)).toFixed(3);
+---
+
+<section class="home-section home-reveal home-featured" aria-labelledby="home-featured-title">
+  <div class="home-featured__panel">
+    <div class="home-featured__grid">
+      <div class="home-featured__copy">
+        <p class="home-featured__eyebrow">{featured.eyebrow}</p>
+        <h2 id="home-featured-title" class="home-featured__title">{featured.title}</h2>
+        <p class="home-featured__desc">{featured.description}</p>
+
+        <ul class="home-featured__points">
+          {
+            featured.points.map((point) => (
+              <li class="home-featured__point">
+                <span class="home-featured__check" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 10.5l3 3 7-7" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span>{point}</span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <a href={featured.href} class="home-featured__cta">
+          {featured.cta}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path d="M7 10h8M11 6l4 4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </div>
+
+      <div class="home-featured__preview" role="region" aria-label={previewDescription}>
+        <p class="home-featured__example-label">Example comparison</p>
+
+        <div class="home-featured__preview-head">
+          <div class="home-featured__tire home-featured__tire--current">
+            <span
+              class="home-featured__tire-silhouette"
+              style={`--tire-scale: ${currentScale}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="18" stroke="currentColor" stroke-width="3.5" />
+                <circle cx="24" cy="24" r="8" stroke="currentColor" stroke-width="2.5" />
+                <circle cx="24" cy="24" r="3" fill="currentColor" />
+                <path d="M24 6v4M24 38v4M6 24h4M38 24h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="home-featured__tire-label">Tire 1</span>
+            <span class="home-featured__size">{preview.currentSize}</span>
+          </div>
+          <span class="home-featured__vs" aria-hidden="true">vs</span>
+          <div class="home-featured__tire home-featured__tire--new">
+            <span
+              class="home-featured__tire-silhouette"
+              style={`--tire-scale: ${newScale}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="18" stroke="currentColor" stroke-width="3.5" />
+                <circle cx="24" cy="24" r="8" stroke="currentColor" stroke-width="2.5" />
+                <circle cx="24" cy="24" r="3" fill="currentColor" />
+                <path d="M24 6v4M24 38v4M6 24h4M38 24h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="home-featured__tire-label">Tire 2</span>
+            <span class="home-featured__size">{preview.newSize}</span>
+          </div>
+        </div>
+
+        <table class="home-featured__table">
+          <caption class="sr-only">
+            {previewDescription}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Metric</th>
+              <th scope="col" class="home-featured__col--current">Current</th>
+              <th scope="col" class="home-featured__col--new">New</th>
+              <th scope="col">Difference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              preview.rows.map((row) => (
+                <tr>
+                  <th scope="row">{row.label}</th>
+                  <td class="home-featured__col--current">{row.current}</td>
+                  <td class="home-featured__col--new">{row.next}</td>
+                  <td>
+                    <span class="home-featured__diff">{row.diff}</span>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

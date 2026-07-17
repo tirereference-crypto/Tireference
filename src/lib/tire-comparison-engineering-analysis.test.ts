@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compareTires, getTireSpecs } from './tire-math';
 import {
+  buildComparisonAnalysis,
   buildEngineeringAnalysis,
   buildHandlingCardLabels,
 } from './tire-comparison-engineering-analysis';
@@ -81,9 +82,16 @@ describe('buildEngineeringAnalysis', () => {
   });
 
   it('buildHandlingCardLabels uses sidewall delta instead of generic Improved', () => {
-    const specsA = getTireSpecs('225/45R17');
-    const specsB = getTireSpecs('235/40R18');
-    const labels = buildHandlingCardLabels(specsA, specsB);
+    const sizeA = '225/45R17';
+    const sizeB = '235/40R18';
+    const analysis = buildComparisonAnalysis(
+      sizeA,
+      sizeB,
+      compareTires(sizeA, sizeB, 60),
+      getTireSpecs(sizeA),
+      getTireSpecs(sizeB),
+    );
+    const labels = buildHandlingCardLabels(analysis);
 
     expect(labels.value).not.toBe('Improved');
     expect(labels.value).not.toBe('Balanced');

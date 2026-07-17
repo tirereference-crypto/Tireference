@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compareTires, getTireSpecs } from './tire-math';
+import { buildComparisonAnalysis } from './tire-comparison-engineering-analysis';
 import {
   buildComparisonPerformanceImpactCards,
   buildRideComfortImpactCopy,
@@ -34,13 +35,8 @@ describe('tire-real-world-impact', () => {
     const specsA = getTireSpecs(sizeA);
     const specsB = getTireSpecs(sizeB);
     const comparison = compareTires(sizeA, sizeB, 60);
-    const cards = buildComparisonPerformanceImpactCards(
-      sizeA,
-      sizeB,
-      comparison,
-      specsA,
-      specsB,
-    );
+    const analysis = buildComparisonAnalysis(sizeA, sizeB, comparison, specsA, specsB);
+    const cards = buildComparisonPerformanceImpactCards(analysis);
 
     expect(cards).toHaveLength(6);
     for (const card of cards) {

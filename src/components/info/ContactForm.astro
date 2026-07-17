@@ -2,17 +2,18 @@
 import { CONTACT_EMAIL } from '../../lib/info-pages';
 
 interface Props {
-  reasons: ReadonlyArray<{ title: string; description: string }>;
+  reasons?: ReadonlyArray<{ title: string; description: string }>;
+  initialSubject?: string;
+  initialMessage?: string;
 }
 
-const { reasons } = Astro.props;
+const { initialSubject = '', initialMessage = '' } = Astro.props;
 ---
 
 <form class="info-form" id="contact-form" novalidate>
   <!--
-    Form handling: connect to your email/API provider here.
-    Options: Formspree, Netlify Forms, Resend, or a custom /api/contact endpoint.
-    Replace the submit handler below when the backend is ready.
+    No private API keys in client code. When a backend is ready, POST FormData
+    to your provider. Until then, submit opens a mailto draft as a safe fallback.
   -->
   <div class="info-form__field">
     <label class="info-form__label" for="contact-name">Name</label>
@@ -45,6 +46,7 @@ const { reasons } = Astro.props;
       type="text"
       id="contact-subject"
       name="subject"
+      value={initialSubject}
       required
     />
   </div>
@@ -56,21 +58,27 @@ const { reasons } = Astro.props;
       id="contact-message"
       name="message"
       required
-    ></textarea>
+    >{initialMessage}</textarea>
   </div>
 
   <button type="submit" class="tl-btn-primary info-form__submit">
-    Send message
+    Open email to send message
   </button>
 
   <p class="info-form__status" id="contact-form-status" role="status" aria-live="polite" hidden>
-    Thank you for your message. We will review it and respond to the email address you provided.
+    Your email client should open with a message to {CONTACT_EMAIL}. Send it to complete contact.
+  </p>
+
+  <p class="info-form__privacy">
+    Contact details are used only to respond to your message. See our{' '}
+    <a href="/privacy-policy/">Privacy Policy</a>. Preferred corrections flow:{' '}
+    <a href="/report-an-issue/">Report an Issue</a>.
   </p>
 </form>
 
-<script>
+<script define:vars={{ contactEmail: CONTACT_EMAIL }}>
   function initContactForm() {
-    const form = document.getElementById('contact-form') as HTMLFormElement | null;
+    const form = document.getElementById('contact-form');
     const status = document.getElementById('contact-form-status');
 
     if (!form || form.dataset.bound === 'true') return;
@@ -84,15 +92,16 @@ const { reasons } = Astro.props;
         return;
       }
 
-      /*
-       * TODO: POST form data to your contact endpoint, e.g.:
-       * await fetch('/api/contact', { method: 'POST', body: new FormData(form) });
-       */
-
-      form.reset();
-      if (status) {
-        status.hidden = false;
-      }
+      const data = new FormData(form);
+      const subject = String(data.get('subject') || 'Tire Reference contact');
+      const body = [
+        `From: ${data.get('name')} <${data.get('email')}>`,
+        '',
+        String(data.get('message') || ''),
+      ].join('\n');
+      const params = new URLSearchParams({ subject, body });
+      window.location.href = `mailto:${contactEmail}?${params.toString()}`;
+      if (status) status.hidden = false;
     });
   }
 

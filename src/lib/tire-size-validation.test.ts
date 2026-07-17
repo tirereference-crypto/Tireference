@@ -20,7 +20,7 @@ describe('normalizeTireSizeInput', () => {
 });
 
 describe('getTireSizeValidation', () => {
-  it('marks common production sizes as green', () => {
+  it('marks common production sizes as green from product database coverage', () => {
     const result = getTireSizeValidation('275/70R18', EMPTY_FIELDS);
     expect(result.status).toBe('common');
     expect(result.tone).toBe('green');
@@ -28,11 +28,19 @@ describe('getTireSizeValidation', () => {
     expect(result.showSuggestions).toBe(false);
   });
 
-  it('marks database sizes outside the common list as uncommon', () => {
-    const result = getTireSizeValidation('225/45R17', EMPTY_FIELDS);
+  it('marks thin product-database sizes as uncommon', () => {
+    // 305/70R18 is in the hub catalog but has narrow master coverage
+    const result = getTireSizeValidation('305/70R18', EMPTY_FIELDS);
     expect(result.status).toBe('uncommon');
     expect(result.tone).toBe('amber');
     expect(result.badgeLabel).toBe('Limited Availability');
+  });
+
+  it('treats broad passenger sizes as common when the master catalog supports them', () => {
+    const result = getTireSizeValidation('225/45R17', EMPTY_FIELDS);
+    expect(result.status).toBe('common');
+    expect(result.tone).toBe('green');
+    expect(result.badgeLabel).toBe('Common Production Tire Size');
   });
 
   it('suggests nearby sizes when no exact database match exists', () => {

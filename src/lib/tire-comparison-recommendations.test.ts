@@ -80,7 +80,7 @@ describe('tire-comparison-recommendations', () => {
     }
   });
 
-  it('whoShouldChoose is category-specific, not generic daily/highway paste', () => {
+  it('upgrade recommendation body is category-specific, not generic daily/highway paste', () => {
     const perf = buildComparisonInsights(
       '225/45R17',
       '235/40R18',
@@ -88,7 +88,7 @@ describe('tire-comparison-recommendations', () => {
       getTireSpecs('225/45R17'),
       getTireSpecs('235/40R18'),
     );
-    expect(perf.seo.whoShouldChoose).toMatch(/performance|steering response|paved roads/i);
+    expect(perf.seo.isGoodUpgrade.body).toMatch(/performance|steering|paved|fitment score/i);
     expect(perf.quickVerdict.bestFor).not.toContain('Overlanding');
     expect(perf.quickVerdict.bestFor).not.toContain('Towing');
 
@@ -99,7 +99,7 @@ describe('tire-comparison-recommendations', () => {
       getTireSpecs('265/70R17'),
       getTireSpecs('285/75R16'),
     );
-    expect(truck.seo.whoShouldChoose).toMatch(/truck|load index|payload|placard/i);
+    expect(truck.seo.isGoodUpgrade.body).toMatch(/truck|load|payload|fitment score|placard/i);
   });
 
   it('off-road personality card bullets do not sell track use on LT sizes', () => {

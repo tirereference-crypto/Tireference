@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { getActiveNavItem } from './site-nav';
+import { CALCULATOR_PATHS } from './calculator-links';
+import { getActiveNavItem, NAV_CALCULATORS } from './site-nav';
+
+describe('NAV_CALCULATORS', () => {
+  it('maps each calculator label to its canonical href', () => {
+    const byLabel = Object.fromEntries(NAV_CALCULATORS.map((item) => [item.label, item.href]));
+    expect(byLabel['Gear Ratio Calculator']).toBe(CALCULATOR_PATHS.gearRatio);
+    expect(byLabel['Wheel Offset Calculator']).toBe(CALCULATOR_PATHS.wheelOffset);
+    expect(byLabel['Tire Size Calculator']).toBe(CALCULATOR_PATHS.tireSize);
+    expect(byLabel['Tire Comparison Calculator']).toBe(CALCULATOR_PATHS.tireComparison);
+    expect(byLabel['Tire Diameter Calculator']).toBe(CALCULATOR_PATHS.tireDiameter);
+    expect(byLabel['Speedometer Error Calculator']).toBe(CALCULATOR_PATHS.speedometerError);
+  });
+});
 
 describe('getActiveNavItem', () => {
   it('marks tire size hub pages', () => {
-    expect(getActiveNavItem('/tire-sizes')).toBe('tire-sizes');
-    expect(getActiveNavItem('/tire-size/275-70r18')).toBe('tire-sizes');
+    expect(getActiveNavItem('/tire-sizes/')).toBe('tire-sizes');
+    expect(getActiveNavItem('/tire-size/275-70r18/')).toBe('tire-sizes');
   });
 
   it('marks calculator pages', () => {

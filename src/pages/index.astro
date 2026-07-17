@@ -1,12 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import HomeHero from '../components/home/HomeHero.astro';
+import HomeHeroTrust from '../components/home/HomeHeroTrust.astro';
 import HomeQuickActions from '../components/home/HomeQuickActions.astro';
-import HomePopularSizes from '../components/home/HomePopularSizes.astro';
-import HomePopularComparisons from '../components/home/HomePopularComparisons.astro';
+import HomeFeaturedComparison from '../components/home/HomeFeaturedComparison.astro';
 import HomeCategories from '../components/home/HomeCategories.astro';
-import HomeFindByVehicle from '../components/home/HomeFindByVehicle.astro';
-import HomeWhyTireLogic from '../components/home/HomeWhyTireLogic.astro';
+import HomeExploreTrust from '../components/home/HomeExploreTrust.astro';
+import HomePopularLinks from '../components/home/HomePopularLinks.astro';
 import HomeSeoContent from '../components/home/HomeSeoContent.astro';
 import HomeScrollReveal from '../components/home/HomeScrollReveal.astro';
 import {
@@ -29,15 +29,18 @@ const schema = buildHomePageSchema();
 >
   <div class="home-page">
     <div class="home-shell">
-      <HomeHero />
-      <HomeQuickActions />
+      {/* Mobile order: Hero → Trust micro-row → Calculators → … */}
+      <div class="home-hero-stack">
+        <HomeHero />
+        <HomeHeroTrust />
+        <HomeQuickActions />
+      </div>
 
       <div class="home-sections">
-        <HomePopularSizes />
-        <HomePopularComparisons />
-        <HomeFindByVehicle />
+        <HomeFeaturedComparison />
         <HomeCategories />
-        <HomeWhyTireLogic />
+        <HomeExploreTrust />
+        <HomePopularLinks />
         <HomeSeoContent />
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
 import { MOST_SEARCHED_COMPARISON_PAIRS } from './tire-comparison-links';
 import { getTireSpecs, type TireSpecs } from './tire-math';
 import { hubPagePath } from './tire-size-url';
+import { compareDiameterMatches } from './tire-diameter-ranking';
 
 export const WHEEL_DIAMETER_OPTIONS = [15, 16, 17, 18, 20, 22] as const;
 export type WheelDiameterOption = (typeof WHEEL_DIAMETER_OPTIONS)[number];
@@ -53,7 +54,48 @@ export interface TireDiameterSearchResult {
   suggestion?: string;
 }
 
-const INCHES_PER_CM = 0.393701;
+const MM_PER_INCH = 25.4;
+
+/** Convert a user-entered diameter value into inches. Metric unit = millimetres. */
+export function inchesFromUnit(value: number, unit: 'imperial' | 'metric'): number {
+  return unit === 'metric' ? value / MM_PER_INCH : value;
+}
+
+/** Convert inches into the active display unit (inches or millimetres). */
+export function valueFromInches(inches: number, unit: 'imperial' | 'metric'): number {
+  return unit === 'metric' ? inches * MM_PER_INCH : inches;
+}
+
+/** Format a physical inch value for the active unit input/display. */
+export function formatDiameterInputValue(
+  inches: number,
+  unit: 'imperial' | 'metric',
+): string {
+  if (!Number.isFinite(inches)) return '';
+  if (unit === 'metric') {
+    const mm = inches * MM_PER_INCH;
+    return String(Math.round(mm * 10) / 10);
+  }
+  return String(Math.round(inches * 100) / 100);
+}
+
+/** Format a tolerance stored in inches for the active unit. */
+export function formatToleranceLabel(
+  toleranceIn: number,
+  unit: 'imperial' | 'metric',
+): string {
+  if (unit === 'metric') {
+    const mm = Math.round(toleranceIn * MM_PER_INCH);
+    return `±${mm} mm`;
+  }
+  return `±${toleranceIn.toFixed(1)}"`;
+}
+
+export function unitShortLabel(unit: 'imperial' | 'metric'): string {
+  return unit === 'metric' ? 'mm' : 'in';
+}
+
+export { MM_PER_INCH };
 
 let catalogCache: TireDiameterCatalogEntry[] | null = null;
 let popularityCache: Map<string, number> | null = null;
@@ -90,10 +132,6 @@ export function getTireDiameterCatalog(): TireDiameterCatalogEntry[] {
   }));
 
   return catalogCache;
-}
-
-export function inchesFromUnit(value: number, unit: 'imperial' | 'metric'): number {
-  return unit === 'metric' ? value * INCHES_PER_CM : value;
 }
 
 export function formatDiameterDiff(diffIn: number, targetIn: number): {
@@ -160,12 +198,7 @@ function filterMatches(
       return diff <= toleranceIn;
     })
     .map((entry) => toMatch(entry, targetDiameterIn))
-    .sort((a, b) => {
-      const diffA = Math.abs(a.diameterDiffIn);
-      const diffB = Math.abs(b.diameterDiffIn);
-      if (diffA !== diffB) return diffA - diffB;
-      return b.popularity - a.popularity;
-    });
+    .sort((a, b) => compareDiameterMatches(a, b, wheelDiameterIn));
 }
 
 /** Search with automatic tolerance widening — never returns an empty list when the catalog has wheel matches. */
@@ -196,12 +229,7 @@ export function searchTiresByDiameter(
   const fallback = catalog
     .filter((entry) => Math.round(entry.specs.wheelDiameterIn) === params.wheelDiameterIn)
     .map((entry) => toMatch(entry, params.targetDiameterIn))
-    .sort((a, b) => {
-      const diffA = Math.abs(a.diameterDiffIn);
-      const diffB = Math.abs(b.diameterDiffIn);
-      if (diffA !== diffB) return diffA - diffB;
-      return b.popularity - a.popularity;
-    })
+    .sort((a, b) => compareDiameterMatches(a, b, params.wheelDiameterIn))
     .slice(0, 8);
 
   return {

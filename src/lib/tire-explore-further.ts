@@ -6,7 +6,7 @@ import {
   rankComparisonCandidates,
   type ComparisonCandidateInput,
 } from './tire-comparison-relevance';
-import { comparisonPagePath } from './tire-size-url';
+import { comparisonPagePath } from './tire-comparison-paths';
 
 export interface UpgradePathSuggestion {
   size: string;
@@ -177,13 +177,20 @@ function buildUpgradePaths(
     }
   }
 
-  return picks.slice(0, 3).map((item) => ({
-    size: item.size,
-    diameterChangeIn: item.diameterDiffIn,
-    diameterChangePercent: item.diameterDiffPercent,
-    fitmentNote: buildFitmentNote(item.diameterDiffPercent, item.diameterDiffIn),
-    comparisonHref: comparisonPagePath(baseSize, item.size),
-  }));
+  return picks
+    .slice(0, 3)
+    .map((item) => {
+      const comparisonHref = comparisonPagePath(baseSize, item.size);
+      if (!comparisonHref) return null;
+      return {
+        size: item.size,
+        diameterChangeIn: item.diameterDiffIn,
+        diameterChangePercent: item.diameterDiffPercent,
+        fitmentNote: buildFitmentNote(item.diameterDiffPercent, item.diameterDiffIn),
+        comparisonHref,
+      };
+    })
+    .filter((item): item is UpgradePathSuggestion => item !== null);
 }
 
 function buildComparisons(
@@ -206,19 +213,24 @@ function buildComparisons(
     });
   }
 
-  return rankComparisonCandidates(baseSize, inputs, 3).map(({ target: targetSize }) => {
-    const cmp = compareTires(baseSize, targetSize, INDICATED_SPEED);
-    const targetSpecs = getTireSpecs(targetSize);
+  return rankComparisonCandidates(baseSize, inputs, 3)
+    .map(({ target: targetSize }) => {
+      const comparisonHref = comparisonPagePath(baseSize, targetSize);
+      if (!comparisonHref) return null;
 
-    return {
-      targetSize,
-      label: `${baseSize} vs ${targetSize}`,
-      diameterChangeIn: targetSpecs.overallDiameterIn - baseSpecs.overallDiameterIn,
-      sidewallChangeIn: targetSpecs.sidewallIn - baseSpecs.sidewallIn,
-      speedometerErrorPercent: cmp.speedometer.errorPercent,
-      comparisonHref: comparisonPagePath(baseSize, targetSize),
-    };
-  });
+      const cmp = compareTires(baseSize, targetSize, INDICATED_SPEED);
+      const targetSpecs = getTireSpecs(targetSize);
+
+      return {
+        targetSize,
+        label: `${baseSize} vs ${targetSize}`,
+        diameterChangeIn: targetSpecs.overallDiameterIn - baseSpecs.overallDiameterIn,
+        sidewallChangeIn: targetSpecs.sidewallIn - baseSpecs.sidewallIn,
+        speedometerErrorPercent: cmp.speedometer.errorPercent,
+        comparisonHref,
+      };
+    })
+    .filter((item): item is SizeComparisonSuggestion => item !== null);
 }
 
 export function buildExploreFurtherData(

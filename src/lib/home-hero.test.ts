@@ -9,8 +9,8 @@ import { hubPagePath } from './tire-size-url';
 
 describe('resolveHomeSearch', () => {
   it('routes metric tire sizes to their hub page', () => {
-    expect(resolveHomeSearch('285/75R16')).toBe('/tire-size/285-75r16');
-    expect(resolveHomeSearch('275/70R18')).toBe('/tire-size/275-70r18');
+    expect(resolveHomeSearch('285/75R16')).toBe('/tire-size/285-75r16/');
+    expect(resolveHomeSearch('275/70R18')).toBe('/tire-size/275-70r18/');
   });
 
   it('routes flotation tire sizes without hub pages to the calculator', () => {

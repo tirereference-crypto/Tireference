@@ -80,12 +80,21 @@
   }
 
   /* ── Calculator layout flow (title → inputs → results → sidebars) ── */
-  .cmp-layout {
+  .cmp-layout,
+  .cmp-dashboard {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    height: auto;
+    min-height: 0;
   }
 
+  .cmp-page-header--full {
+    order: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .cmp-layout > .cmp-comparison-workspace,
   .cmp-layout > .cmp-main {
     display: contents;
   }
@@ -98,11 +107,21 @@
     order: 2;
   }
 
+  .cmp-comparison-workspace > *:not(.cmp-page-header),
   .cmp-main > *:not(.cmp-page-header) {
     order: 3;
   }
 
+  .cmp-comparison-stage {
+    display: contents;
+  }
+
+  .cmp-visual-stage {
+    display: contents;
+  }
+
   .cmp-layout > .cmp-sidebar-right,
+  .cmp-comparison-stage > .cmp-sidebar-right,
   .cmp-layout > .wof-sidebar-right {
     order: 10;
   }
@@ -116,6 +135,8 @@
   }
 
   .cmp-page:not(.dia-page) .cmp-sidebar-right,
+  .cmp-page:not(.dia-page) .cmp-comparison-stage,
+  .cmp-page:not(.dia-page) .cmp-visual-stage,
   .cmp-page:not(.dia-page) .cmp-bottom-row {
     display: contents;
   }
@@ -123,8 +144,10 @@
   /* Rely on the flex gap alone for section spacing (removes stray/uneven
      top-bottom margins that made spacing feel excessive). */
   .cmp-page:not(.dia-page) .cmp-layout > .cmp-sidebar-left,
+  .cmp-page:not(.dia-page) .cmp-comparison-workspace > *,
   .cmp-page:not(.dia-page) .cmp-main > *,
   .cmp-page:not(.dia-page) .cmp-sidebar-right > *,
+  .cmp-page:not(.dia-page) .cmp-visual-stage > *,
   .cmp-page:not(.dia-page) .cmp-bottom-row > * {
     margin-top: 0;
     margin-bottom: 0;
@@ -132,26 +155,25 @@
 
   .cmp-page .cmp-page-header { order: 1; }
   .cmp-page .cmp-sidebar-left:not(.dia-sidebar-left) { order: 2; }
-  .cmp-page .cmp-results-anchor { order: 3; }
-  .cmp-page .cmp-viz-panel { order: 4; }               /* 2. Visual Tire Comparison */
-  .cmp-page .cmp-summary-bar { order: 5; }             /* 3. Tire Specifications Summary */
-  .cmp-page .cmp-kpi-row { order: 6; }                 /* 3. Tire Specifications Summary */
-  .cmp-page .cmp-verdict { order: 7; }                 /* 4. Overall Verdict */
-  .cmp-page .cmp-card--perf-impact { order: 8; }       /* 5. Performance Impact cards */
-  .cmp-page .cmp-insights-row { order: 9; }            /* 6. Charts & graphs */
-  .cmp-page .cmp-seo-block--understanding { order: 10; } /* 7. Understanding (collapsed) */
-  .cmp-page .cmp-seo-block--good-upgrade { order: 11; }
-  .cmp-page .cmp-seo-block--what-changes { order: 12; }
-  .cmp-page .cmp-seo-block--who-should { order: 13; }
-  .cmp-page .cmp-upgrade-paths { order: 14; }          /* 8. Alternative Tire Sizes */
-  .cmp-page .cmp-consider-card { order: 15; }
-  .cmp-page .cmp-panel--personality { order: 16; }
-  .cmp-page .cmp-panel--will-fit { order: 17; }
-  .cmp-page .cmp-vehicle-compat { order: 18; }         /* 9. Compatible Vehicles */
-  .cmp-page .cmp-seo-block--faq { order: 19; }         /* 10. Frequently Asked Questions */
-  .cmp-page .cmp-panel--popular { order: 20; }         /* 11. Related Tire Comparisons */
-  .cmp-page .cmp-panel--calc-network { order: 21; }    /* 12. Other Calculators */
-  .cmp-page .cmp-panel--guides { order: 22; }          /* 13. Tire Guides */
+  .cmp-page .cmp-summary-bar { order: 4; }
+  .cmp-page .cmp-kpi-row { order: 5; }
+  .cmp-page .cmp-results-tabs,
+  .cmp-page .cmp-viz-panel { order: 6; }
+  .cmp-page .cmp-source-note { order: 7; }
+  .cmp-page .cmp-verdict { order: 8; }
+  .cmp-page .cmp-sidebar-right > .cmp-panel:not(.cmp-verdict) { order: 9; }
+  .cmp-page .cmp-feel-panel { order: 10; }
+  .cmp-page .cmp-share-panel,
+  .cmp-page .cmp-rail-report,
+  .cmp-page .cmp-rail-updated { order: 11; }
+  .cmp-page .cmp-specs-table { order: 12; }
+  .cmp-page .cmp-seo-block--what-means { order: 13; }
+  .cmp-page .cmp-fitment-verdict { order: 14; }
+  .cmp-page .cmp-upgrade-paths { order: 15; }
+  .cmp-page .tsc-popular { order: 16; }
+  .cmp-page .cmp-seo-block--faq { order: 17; }
+  .cmp-page .cmp-panel--popular { order: 18; }
+  .cmp-page .cmp-panel--calc-network { order: 19; }
 
   /* Collapse the Understanding section to ~4 lines with a Read more expander. */
   .cmp-page .cmp-seo-block--understanding:not(.is-expanded) .cmp-seo-block__clampable {
@@ -284,6 +306,25 @@
     max-height: 240px;
   }
 
+  .dia-page--wide .dia-education__visual--measure,
+  .dia-page--wide .dia-measure-visual,
+  .dia-page--wide .dia-measure-visual__canvas {
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .dia-page--wide .dia-related__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dia-page--wide .dia-trust__sep {
+    display: none;
+  }
+
+  .dia-page--wide .dia-trust__list {
+    gap: 0.4rem 0.75rem;
+  }
+
   /* ── Wheel Offset Calculator: mobile flow, reorder & overflow safety ── */
   /* Flatten the main column and the right sidebar into the single mobile column
      so reference sections can be interleaved after the results. The results and
@@ -321,7 +362,7 @@
 
   /* Top-level section order (flattened main + sidebar) */
   .wof-page:not(.grc-page) .wof-hero { order: 1; }
-  .wof-page:not(.grc-page) .wof-calc-card { order: 2; }
+  .wof-page:not(.grc-page) .wof-layout-upper__calc-zone { order: 2; }
   .wof-page:not(.grc-page) .wof-results-anchor { order: 4; }        /* summary → cards → visual */
   .wof-page:not(.grc-page) .wof-edu-converter-row { order: 8; }     /* offset diagram → converter */
   .wof-page:not(.grc-page) .wof-sidebar-panel--vehicles { order: 10; }
@@ -815,21 +856,36 @@
     border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
   }
 
-  /* 24px gap between the hero (popular examples) and calculator cards */
+  /* 24px gap between the hero trust row and calculator cards */
   .home-page .home-quick-actions {
     margin-top: 1.5rem;
   }
 
+  .home-page .home-hero-trust {
+    margin-top: 1rem;
+    padding-inline: 0;
+  }
+
+  .home-page .home-hero__cta-band {
+    padding-inline: 0;
+    margin-top: 0.875rem;
+  }
+
   .home-page .home-quick-actions__grid {
     grid-template-columns: 1fr;
-    gap: 1.5rem; /* 24px card spacing */
+    gap: 1rem;
   }
 
   /* Calculator cards: compact height, centered arrow, consistent icon */
   .home-page .home-quick-actions__card {
     min-height: 0;
+    height: 100%;
     gap: 0.5rem;
     padding: 1.25rem 2.75rem 1.25rem 1.25rem; /* 20px; right room for arrow */
+  }
+
+  .home-page .home-quick-actions__title {
+    font-size: 0.9375rem;
   }
 
   .home-page .home-quick-actions__icon-wrap {
@@ -856,63 +912,22 @@
   .home-page .home-quick-actions__desc {
     color: var(--color-body);
     line-height: 1.55;
+    font-size: 0.8125rem;
   }
 
-  /* Popular tire sizes + comparisons: trim panel padding so more pills
-     show, tighter equal-gap wrapping, consistent pill dimensions */
-  .home-page .home-popular-sizes__panel,
-  .home-page .home-popular-comparisons__panel {
-    padding: 1.25rem;
+  .home-page .home-featured__preview {
+    -webkit-overflow-scrolling: touch;
   }
 
-  .home-page .home-popular-sizes__header,
-  .home-page .home-popular-comparisons__header {
-    margin-bottom: 1rem;
+  .home-page .home-categories__card {
+    max-height: 12.5rem;
   }
 
-  .home-page .home-popular-sizes__grid,
-  .home-page .home-popular-comparisons__grid {
-    gap: 0.5rem;
-  }
-
-  .home-page .home-popular-sizes__pill,
-  .home-page .home-popular-comparisons__pill {
-    padding: 0.5rem 0.75rem;
-  }
-
-  /* Find by vehicle: lighter padding, tighter fields, 48px touch targets */
-  .home-page .home-vehicle-lookup {
-    padding: 1.125rem 1.125rem 1.25rem;
-  }
-
-  .home-page .home-vehicle-lookup__badge {
-    margin-bottom: 0.875rem;
-  }
-
-  .home-page .home-vehicle-lookup__form {
-    gap: 0.875rem;
-  }
-
-  .home-page .home-vehicle-lookup__fields {
-    gap: 0.75rem;
-  }
-
-  .home-page .home-vehicle-lookup__select,
-  .home-page .home-vehicle-lookup__submit {
-    min-height: 3rem; /* 48px accessible touch target */
+  .home-page .home-explore__card {
+    max-height: 10rem;
   }
 
   /* ── Other home grids (behavior unchanged) ── */
-  .home-popular-sizes__grid,
-  .home-popular-comparisons__inner {
-    grid-template-columns: 1fr;
-  }
-
-  .home-popular-sizes__pills,
-  .home-popular-comparisons__pills {
-    justify-content: center;
-  }
-
   .home-categories__grid {
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
@@ -920,11 +935,7 @@
 
   .home-seo-content__grid {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .home-why__grid {
-    grid-template-columns: 1fr;
+    gap: 1.25rem;
   }
 
   /* Comparison "Side by Side Table" tab: on mobile the table renders as
@@ -935,8 +946,13 @@
   .cmp-page .cmp-viz-panel__table {
     aspect-ratio: auto;
     min-height: 0;
+    max-height: none;
     display: block;
-    padding: 1rem;
+    padding: 0.75rem;
+  }
+
+  .cmp-page .cmp-results-tabs__panel--visual .cmp-viz-canvas {
+    max-height: none;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1090,27 +1106,23 @@
   .ref-275 .ref-main > .ref-section--quick-compare {
     order: 7;
   }
-  .ref-275 .ref-main > .quick-take {
-    order: 8;
-  }
   /* Detailed explanation sits below the practical information. */
   .ref-275 .ref-main > .ref-section--impact {
-    order: 9;
+    order: 8;
   }
   .ref-275 .ref-main > .ref-section--faq {
-    order: 10;
+    order: 9;
   }
   /* Trust & editorial disclosure — credibility block near the page footer. */
   .ref-275 .ref-main > .ref-section--editorial {
+    order: 10;
+  }
+  /* Supplementary block (Popular Upgrades / Insight / etc.) stays near the bottom. */
+  .ref-275 .ref-main > .hub-size-sidebar {
     order: 11;
   }
-  /* Supplementary block (Popular Upgrades / Insight / etc.) stays below Quick
-     Take, near the bottom with the related links. */
-  .ref-275 .ref-main > .hub-size-sidebar {
-    order: 12;
-  }
   .ref-275 .ref-main > .ref-section--related {
-    order: 13;
+    order: 12;
   }
 
   /* Reduce repeated text on mobile: the full "Vehicles Using This Size" and the
@@ -1225,5 +1237,19 @@
 
   html {
     scroll-behavior: auto;
+  }
+}
+
+/* Homepage calculator card density between phone and tablet */
+@media (min-width: 430px) and (max-width: 767px) {
+  .home-page .home-quick-actions__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 899px) {
+  .home-page .home-quick-actions__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

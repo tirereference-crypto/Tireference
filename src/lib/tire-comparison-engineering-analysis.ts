@@ -12,8 +12,17 @@ import {
   ENGINEERING_ANALYSIS_SECTION_ORDER,
   type EngineeringAnalysisSectionId,
 } from './tire-comparison-engineering-prompts';
-import { fmtInQuote, fmtPct, fmtSigned, nearZero } from './tire-comparison-format';
-import { upgradeHeadlineFromAnalysis } from './tire-comparison-fitment';
+import {
+  fmtInQuote,
+  fmtPct,
+  fmtSigned,
+  formatHandlingImpactValue,
+  isSidewallRideUnchanged,
+  nearZero,
+  SIDEWALL_CHANGE_PCT,
+  sidewallPctFromSpecs,
+} from './tire-comparison-format';
+import { upgradeHeadlineFromScore, computeFitmentScore } from './tire-comparison-fitment';
 import { rpmAtSpeed, speedUnitLabel } from './tire-comparison-units';
 import {
   buildCategoryBenefits,
@@ -23,6 +32,19 @@ import {
   buildCategoryWhoShouldChoose,
   buildRecommendationContext,
 } from './tire-comparison-recommendations';
+import {
+  buildEngineeringNarrative,
+  buildFuelEconomyFaqAnswer,
+  buildRideHandlingFaqAnswer,
+  buildVehicleChangeNarrative,
+  buildWhatThisChangeMeans,
+} from './tire-comparison-section-copy';
+
+export {
+  buildFuelEconomyFaqAnswer,
+  buildRideHandlingFaqAnswer,
+  buildWhatThisChangeMeans,
+} from './tire-comparison-section-copy';
 
 export interface ComparisonMeasurements {
   sizeA: string;
@@ -35,8 +57,40 @@ export interface ComparisonMeasurements {
   rpmA: number;
   rpmB: number;
   rpmDelta: number;
+  /** Signed width percent change (B − A) / A × 100. */
   widthPct: number;
+  /** Signed sidewall percent change (B − A) / A × 100. */
   sidewallPct: number;
+  /** Signed revs percent change — unit-aware (revs/mi or revs/km). */
+  revsDiffPct: number;
+  /** Signed revs delta — unit-aware. */
+  revsDiff: number;
+  /** Signed overall diameter delta in inches (B − A). */
+  diamDiffIn: number;
+  /** Signed overall diameter delta in mm (B − A). */
+  diamDiffMm: number;
+  /** Signed section width delta in inches (B − A). */
+  widthDiffIn: number;
+  /** Signed section width delta in mm (B − A). */
+  widthDiffMm: number;
+  /** Signed sidewall height delta in inches (B − A). */
+  sidewallDiffIn: number;
+  /** Signed sidewall height delta in mm (B − A). */
+  sidewallDiffMm: number;
+  /** Signed circumference delta in inches (B − A). */
+  circumferenceDiffIn: number;
+  /** Static ground clearance change at axle (half diameter delta). */
+  groundClearanceChangeIn: number;
+  /** Absolute diameter percent for fitment thresholds. */
+  absDiamPct: number;
+  /** Absolute width percent for fitment thresholds. */
+  absWidthPct: number;
+  /** Absolute speedometer error percent. */
+  absSpeedoPct: number;
+  /** Wheel diameter delta in inches (B − A). */
+  wheelDelta: number;
+  trueSpeed: number;
+  speedUnit: string;
   ratingsA: ResolvedTireRatings | null;
   ratingsB: ResolvedTireRatings | null;
   fitmentScore: number;
@@ -108,6 +162,18 @@ export function buildComparisonMeasurements(
   const indicatedSpeed = comparison.speedometer.indicatedSpeed;
   const rpmA = Math.round(rpmAtSpeed(indicatedSpeed, specsA, unitSystem));
   const rpmB = Math.round(rpmAtSpeed(indicatedSpeed, specsB, unitSystem));
+  const speedUnit = speedUnitLabel(unitSystem);
+
+  const widthPct = ((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100;
+  const sidewallPct = sidewallPctFromSpecs(specsA, specsB);
+  const revsDiff =
+    unitSystem === 'metric'
+      ? specsB.revsPerKm - specsA.revsPerKm
+      : comparison.revsPerMileDiff;
+  const revsDiffPct =
+    unitSystem === 'metric'
+      ? ((specsB.revsPerKm - specsA.revsPerKm) / specsA.revsPerKm) * 100
+      : comparison.revsPerMileDiffPercent;
 
   const entryA = getTireSizeEntry(sizeA);
   const entryB = getTireSizeEntry(sizeB);
@@ -123,8 +189,24 @@ export function buildComparisonMeasurements(
     rpmA,
     rpmB,
     rpmDelta: rpmB - rpmA,
-    widthPct: ((specsB.widthMm - specsA.widthMm) / specsA.widthMm) * 100,
-    sidewallPct: ((specsB.sidewallIn - specsA.sidewallIn) / specsA.sidewallIn) * 100,
+    widthPct,
+    sidewallPct,
+    revsDiffPct,
+    revsDiff,
+    diamDiffIn: specsB.overallDiameterIn - specsA.overallDiameterIn,
+    diamDiffMm: specsB.overallDiameterMm - specsA.overallDiameterMm,
+    widthDiffIn: specsB.sectionWidthIn - specsA.sectionWidthIn,
+    widthDiffMm: comparison.widthDiffMm,
+    sidewallDiffIn: specsB.sidewallIn - specsA.sidewallIn,
+    sidewallDiffMm: comparison.sidewallDiffMm,
+    circumferenceDiffIn: comparison.circumferenceDiffIn,
+    groundClearanceChangeIn: comparison.groundClearanceChangeIn,
+    absDiamPct: Math.abs(comparison.diameterDiffPercent),
+    absWidthPct: Math.abs(widthPct),
+    absSpeedoPct: Math.abs(comparison.speedometer.errorPercent),
+    wheelDelta: specsB.wheelDiameterIn - specsA.wheelDiameterIn,
+    trueSpeed: comparison.speedometer.trueSpeed,
+    speedUnit,
     ratingsA: entryA ? resolveTireRatings(entryA.ratings) : null,
     ratingsB: entryB ? resolveTireRatings(entryB.ratings) : null,
     fitmentScore,
@@ -139,7 +221,7 @@ function buildRideQualitySection(m: ComparisonMeasurements): EngineeringAnalysis
 
   let body: string;
 
-  if (nearZero(sidewallDiff, 0.05)) {
+  if (isSidewallRideUnchanged(m.sidewallPct)) {
     body = [
       `Sidewall height is essentially unchanged — ${fmtInQuote(specsA.sidewallIn)} on ${m.sizeA} versus ${fmtInQuote(specsB.sidewallIn)} on ${m.sizeB} (${formatDimensionDelta(sidewallDiff, sidewallDiffMm, m.sidewallPct, unitSystem)}).`,
       `With aspect ratio moving only ${fmtSigned(aspectDiff, 0)} points (${specsA.aspectRatio} → ${specsB.aspectRatio}), the air-spring volume in the sidewall stays similar, so impact absorption and road-texture transmission should remain close to the reference tire.`,
@@ -168,7 +250,7 @@ function buildHandlingSection(m: ComparisonMeasurements): EngineeringAnalysisSec
   const widthDiffMm = specsB.widthMm - specsA.widthMm;
   const wheelDiff = specsB.wheelDiameterIn - specsA.wheelDiameterIn;
 
-  const sidewallPart = nearZero(sidewallDiff, 0.05)
+  const sidewallPart = isSidewallRideUnchanged(m.sidewallPct)
     ? `Sidewall height is nearly identical (${fmtInQuote(specsA.sidewallIn)} vs ${fmtInQuote(specsB.sidewallIn)}), so sidewall flex during turn-in should remain similar.`
     : sidewallDiff < 0
       ? `The ${formatDimensionDelta(sidewallDiff, specsB.sidewallMm - specsA.sidewallMm, m.sidewallPct, unitSystem)} sidewall reduction limits tread squirm under lateral load, which generally sharpens steering response on paved roads — at the expense of transmitting more impact energy when the sidewall cannot deflect as far.`
@@ -327,7 +409,7 @@ function buildDailyDrivingSection(m: ComparisonMeasurements): EngineeringAnalysi
     ? `Speedometer error is negligible (${fmtPct(comparison.speedometer.errorPercent)}): at ${indicatedSpeed} ${speedUnit} indicated, true speed is ${trueSpeed.toFixed(1)} ${speedUnit}.`
     : `Speedometer reads ${fmtPct(comparison.speedometer.errorPercent)} versus true speed — at ${indicatedSpeed} ${speedUnit} indicated, actual road speed is ${trueSpeed.toFixed(1)} ${speedUnit}. ${Math.abs(comparison.speedometer.errorPercent) > 3 ? 'Recalibration may be needed for drivers who rely on precise indicated speed.' : 'Most daily drivers stay within a typical OEM tolerance band.'}`;
 
-  const ridePart = nearZero(sidewallDiff, 0.05)
+  const ridePart = isSidewallRideUnchanged(m.sidewallPct)
     ? `Sidewall height is similar (${fmtInQuote(specsA.sidewallIn)} vs ${fmtInQuote(specsB.sidewallIn)}), so commute ride compliance should feel familiar.`
     : sidewallDiff > 0
       ? `The ${fmtSigned(sidewallDiff, 2, '"')} taller sidewall (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}) adds impact absorption on broken urban pavement.`
@@ -435,16 +517,20 @@ export function buildEngineeringAnalysis(
   return { measurements, sections, byId };
 }
 
-import {
-  buildEngineeringNarrative,
-  buildFuelEconomyFaqAnswer,
-  buildRideHandlingFaqAnswer,
-  buildVehicleChangeNarrative,
-} from './tire-comparison-section-copy';
+/** Single entry point: fitment score + shared measurements + engineering sections. */
+export function buildComparisonAnalysis(
+  sizeA: string,
+  sizeB: string,
+  comparison: TireComparison,
+  specsA: TireSpecs,
+  specsB: TireSpecs,
+  unitSystem: UnitSystem = 'imperial',
+): EngineeringAnalysis {
+  const { score } = computeFitmentScore(comparison, specsA, specsB);
+  return buildEngineeringAnalysis(sizeA, sizeB, comparison, specsA, specsB, unitSystem, score);
+}
 
-export { buildFuelEconomyFaqAnswer, buildRideHandlingFaqAnswer } from './tire-comparison-section-copy';
-
-/** Engineering narrative: why dimensions cause downstream effects (no spec-table repetition). */
+/** @deprecated Use buildWhatThisChangeMeans — engineering half only. */
 export function synthesizeUnderstandingDifference(
   analysis: EngineeringAnalysis,
   sizeA: string,
@@ -453,7 +539,16 @@ export function synthesizeUnderstandingDifference(
   return buildEngineeringNarrative(analysis, sizeA, sizeB);
 }
 
-/** Vehicle-level fitment narrative — what to verify on the car, not repeated measurements. */
+/** Merged engineering + vehicle fitment narrative for the comparison page. */
+export function synthesizeWhatThisChangeMeans(
+  analysis: EngineeringAnalysis,
+  sizeA: string,
+  sizeB: string,
+): string {
+  return buildWhatThisChangeMeans(analysis, sizeA, sizeB);
+}
+
+/** @deprecated Merged into synthesizeWhatThisChangeMeans. */
 export function synthesizeWhatChanges(
   analysis: EngineeringAnalysis,
   sizeA: string,
@@ -467,21 +562,15 @@ export function synthesizeUpgradeRecommendation(
   analysis: EngineeringAnalysis,
 ): { headline: string; body: string } {
   const rec = analysis.byId.recommendation.body;
-  const { fitmentScore, comparison, sizeA, sizeB, widthPct } = analysis.measurements;
+  const { fitmentScore } = analysis.measurements;
 
   return {
-    headline: upgradeHeadlineFromAnalysis(
-      fitmentScore,
-      comparison.diameterDiffPercent,
-      widthPct,
-      sizeA,
-      sizeB,
-    ),
+    headline: upgradeHeadlineFromScore(fitmentScore),
     body: rec,
   };
 }
 
-/** "Who should choose" paragraph from category-aware recommendation engine. */
+/** @deprecated Removed from comparison pages — recommendation body covers sizing-specific guidance. */
 export function synthesizeWhoShouldChoose(
   analysis: EngineeringAnalysis,
   sizeA: string,
@@ -523,43 +612,42 @@ export function buildEngineeringPersonalityBullets(
   return buildCategoryPersonalityBullets(ctx);
 }
 
-/** Performance card value labels derived from measurements — no generic "Improved". */
+/** Performance card value labels derived from shared measurements — no generic "Improved". */
 export function buildHandlingCardLabels(
-  specsA: TireSpecs,
-  specsB: TireSpecs,
+  analysis: EngineeringAnalysis,
 ): { value: string; status: string; explanation: string } {
-  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
-  const widthDiffMm = specsB.widthMm - specsA.widthMm;
+  const { specsA, specsB, sidewallPct, sidewallDiffIn, widthDiffMm } = analysis.measurements;
   const aspectDiff = specsB.aspectRatio - specsA.aspectRatio;
+  const value = formatHandlingImpactValue(specsA, specsB);
 
-  if (nearZero(sidewallDiff, 0.05) && nearZero(widthDiffMm, 2)) {
+  if (isSidewallRideUnchanged(sidewallPct) && nearZero(widthDiffMm, 2)) {
     return {
-      value: 'Minimal change',
+      value,
       status: `Sidewall ${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}`,
       explanation: `Sidewall and width deltas are below measurable handling thresholds; response should remain similar to ${specsA.widthMm}/${specsA.aspectRatio}R${specsA.wheelDiameterIn}.`,
     };
   }
 
-  if (sidewallDiff < -0.05) {
+  if (sidewallPct <= -SIDEWALL_CHANGE_PCT.UNCHANGED) {
     return {
-      value: `−${Math.abs(sidewallDiff).toFixed(2)}" sidewall`,
+      value,
       status: `Aspect ${specsA.aspectRatio} → ${specsB.aspectRatio}`,
-      explanation: `The ${fmtSigned(sidewallDiff, 2, '"')} sidewall reduction (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}) limits tread squirm under lateral load, which generally sharpens steering response on paved roads. The trade-off is a firmer ride over rough surfaces.`,
+      explanation: `The ${fmtSigned(sidewallDiffIn, 2, '"')} sidewall reduction (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}, ${fmtPct(sidewallPct)}) limits tread squirm under lateral load, which generally sharpens steering response on paved roads. The trade-off is a firmer ride over rough surfaces.`,
     };
   }
 
-  if (sidewallDiff > 0.05) {
+  if (sidewallPct >= SIDEWALL_CHANGE_PCT.UNCHANGED) {
     return {
-      value: `+${sidewallDiff.toFixed(2)}" sidewall`,
+      value,
       status: `Aspect ${specsA.aspectRatio} → ${specsB.aspectRatio}`,
-      explanation: `The ${fmtSigned(sidewallDiff, 2, '"')} taller sidewall (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}) allows more tread deflection under cornering load, which can feel softer in transitions. ${widthDiffMm > 2 ? `Width also grows ${fmtSigned(widthDiffMm, 0, ' mm')}, increasing contact-patch area and steering effort.` : ''}`,
+      explanation: `The ${fmtSigned(sidewallDiffIn, 2, '"')} taller sidewall (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}, ${fmtPct(sidewallPct)}) allows more tread deflection under cornering load, which can feel softer in transitions. ${widthDiffMm > 2 ? `Width also grows ${fmtSigned(widthDiffMm, 0, ' mm')}, increasing contact-patch area and steering effort.` : ''}`,
     };
   }
 
   return {
-    value: widthDiffMm > 0 ? `+${widthDiffMm} mm width` : `−${Math.abs(widthDiffMm)} mm width`,
+    value,
     status: `Aspect Δ ${fmtSigned(aspectDiff, 0)}`,
-    explanation: `Sidewall height is similar; the primary handling variable is section width changing ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtInQuote(specsA.sectionWidthIn)} → ${fmtInQuote(specsB.sectionWidthIn)}).`,
+    explanation: `Sidewall height is unchanged (${fmtPct(sidewallPct)}); the primary handling variable is section width changing ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtInQuote(specsA.sectionWidthIn)} → ${fmtInQuote(specsB.sectionWidthIn)}).`,
   };
 }
 

@@ -11,19 +11,14 @@ function splitPathAndQuery(pathOrUrl: string): { pathname: string; search: strin
   };
 }
 
-/** Normalize pathname — preserve a single trailing slash when the input had one. */
+/** Normalize pathname — site uses trailingSlash: 'always'. */
 function normalizePathname(pathname: string): string {
-  if (pathname === '/') return '/';
+  if (pathname === '/' || pathname === '') return '/';
 
   const withLeading = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  const endsWithSlash = withLeading.endsWith('/');
   const trimmed = withLeading.replace(/\/+$/, '').replace(/\/{2,}/g, '/') || '/';
-
-  if (endsWithSlash && trimmed !== '/') {
-    return `${trimmed}/`;
-  }
-
-  return trimmed;
+  if (trimmed === '/') return '/';
+  return `${trimmed}/`;
 }
 
 /** Build an absolute canonical URL from a pathname or relative path. */
@@ -33,22 +28,19 @@ export function resolveCanonical(pathOrUrl: string): string {
   }
 
   const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-  const { pathname, search } = splitPathAndQuery(path);
+  const { pathname } = splitPathAndQuery(path);
   const normalizedPath = normalizePathname(pathname);
 
-  return `${SITE_URL}${normalizedPath}${search}`;
+  // Canonicals never include calculator query state or tracking params.
+  return `${SITE_URL}${normalizedPath}`;
 }
 
 export function normalizeCanonicalUrl(url: string): string {
   try {
     const parsed = new URL(url);
     const pathname = normalizePathname(parsed.pathname);
-    const origin = parsed.origin === SITE_URL ? SITE_URL : SITE_URL;
-    const path =
-      parsed.origin !== SITE_URL
-        ? pathname
-        : pathname;
-    return `${origin}${path}${parsed.search}`;
+    // Always publish on the production origin; drop query/hash state.
+    return `${SITE_URL}${pathname}`;
   } catch {
     return resolveCanonical(url);
   }

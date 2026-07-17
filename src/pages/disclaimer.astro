@@ -1,7 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import InfoPageHero from '../components/info/InfoPageHero.astro';
+import LegalEntityNotice from '../components/legal/LegalEntityNotice.astro';
+import LegalPlaceholderChecklist from '../components/legal/LegalPlaceholderChecklist.astro';
 import { CONTACT_EMAIL } from '../lib/info-pages';
+import { LEGAL_ENTITY, MONETIZATION_AFFILIATES_ENABLED } from '../data/legal-entity';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
 import { formatEditorialDate } from '../lib/editorial';
 import '../styles/info-pages.css';
@@ -22,10 +25,12 @@ const updated = formatEditorialDate();
         lead="Tire Reference provides technical tools and educational content to support informed decisions. Please read the following disclaimers before relying on any calculator output or guide."
       />
 
+      <LegalEntityNotice />
+
       <article class="info-legal">
         <h2>General information</h2>
         <p>
-          Content on Tire Reference — including calculators, comparison results, tire size hubs, and articles — is offered for general informational and educational purposes. It is not a substitute for professional mechanical inspection, manufacturer guidance, or certified fitment advice specific to your vehicle.
+          Content on Tire Reference — including calculators, comparison results, tire size hubs, and articles — is offered for general informational and educational purposes by <strong>{LEGAL_ENTITY.name}</strong>. It is not a substitute for professional mechanical inspection, manufacturer guidance, or certified fitment advice specific to your vehicle.
         </p>
 
         <h2>Accuracy disclaimer</h2>
@@ -50,9 +55,47 @@ const updated = formatEditorialDate();
         </p>
 
         <h2>Affiliate disclosure</h2>
+        {
+          MONETIZATION_AFFILIATES_ENABLED ? (
+            <>
+              <p>
+                Tire Reference participates in the <strong>Amazon Associates</strong> program and similar affiliate programs. We may earn a commission when you follow certain outbound links and make a qualifying purchase, at no additional cost to you.
+              </p>
+              <p>
+                Affiliate relationships do not change our commitment to transparent calculations and independent editorial standards. Affiliate links are disclosed in context where used.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                Tire Reference does not currently participate in affiliate programs. If affiliate links are introduced in the future, this disclaimer will be updated before they go live.
+              </p>
+              <p class="legal-dormant">
+                <strong>Before enabling affiliates:</strong> Set <code>MONETIZATION_AFFILIATES_ENABLED = true</code> in <code>src/data/legal-entity.ts</code>, add your Amazon Associates (or other) disclosure here, and update the <a href="/privacy-policy">Privacy Policy</a>.
+              </p>
+            </>
+          )
+        }
+
+        <!--
+          PLACEHOLDER — present-tense affiliate disclosure (enable with MONETIZATION_AFFILIATES_ENABLED):
+
+          Tire Reference participates in the Amazon Associates program. We may earn a commission
+          when you follow certain outbound links and make a qualifying purchase. Affiliate links
+          are disclosed in context and do not change our calculator methodology.
+        -->
+
+        <h2>Advertising</h2>
         <p>
-          Tire Reference may participate in affiliate programs in the future, which means we could earn a commission when you follow certain outbound links and make a purchase. Affiliate relationships do not change our commitment to transparent calculations and independent editorial standards. Where affiliate links are used, they will be disclosed in context.
+          Tire Reference does not currently display third-party advertising. If we introduce advertising (for example through Google AdSense), we will update this disclaimer and our <a href="/privacy-policy">Privacy Policy</a> before ads go live, and we will deploy a cookie-consent banner before non-essential ad cookies are set.
         </p>
+
+        <!--
+          PLACEHOLDER — present-tense advertising note (enable with MONETIZATION_ADS_ENABLED):
+
+          Tire Reference displays third-party advertising through Google AdSense. Ad content is
+          served by Google and its partners. See our Privacy Policy for cookie and opt-out details.
+        -->
 
         <h2>External links</h2>
         <p>
@@ -63,6 +106,8 @@ const updated = formatEditorialDate();
           Although every effort is made to provide accurate calculations, users remain responsible for confirming compatibility with manufacturers before purchasing tires or wheels. See also our <a href="/terms">Terms of Use</a>.
         </p>
       </article>
+
+      <LegalPlaceholderChecklist />
 
       <p class="info-updated">
         Last updated: {updated}. Questions? <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>

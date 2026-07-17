@@ -1,0 +1,1033 @@
+---
+/**
+ * Shared premium guide layout for all /tire-size/[size]/ pages.
+ * Structure matches the approved 275/70R18 reference template.
+ */
+import HubBreadcrumb from '../HubBreadcrumb.astro';
+import Premium275Hero from './Premium275Hero.astro';
+import ProductSpecComparison from './ProductSpecComparison';
+import HubAvailableTires from './HubAvailableTires';
+import HubIcon from '../HubIcon.astro';
+import type { TireSizeHubData } from '../../../lib/tire-size-hub';
+import {
+  buildTireSizeGuideData,
+  formatTireModelDisplayName,
+  GUIDE_275_SIZE,
+} from '../../../lib/tire-size-guide';
+import { canonicalProductBrand, tireProductToVerifiedModel } from '../../../lib/tire-product-display';
+import {
+  CALCULATOR_PATHS,
+  SITE_CALCULATORS,
+} from '../../../lib/calculator-links';
+import type { HubIconName } from '../../../lib/hub-icons';
+import { SITE_CONTENT_UPDATED } from '../../../lib/editorial';
+
+interface Props {
+  hub: TireSizeHubData;
+}
+
+const { hub } = Astro.props;
+const { displaySize, specs } = hub;
+const guide = buildTireSizeGuideData(hub);
+const is275 = hub.entry.size.toUpperCase() === GUIDE_275_SIZE;
+const hasProducts = guide.productTotal > 0;
+const vehiclesNote = is275
+  ? 'This size is often selected by owners moving up from smaller factory truck/SUV sizes. Vehicle clearance depends on trim, wheel offset, suspension height, and tire model. Confirm fitment before buying.'
+  : hub.entry.category === 'performance' || hub.entry.category === 'passenger'
+    ? 'Commonly associated platforms vary by year and trim. Confirm the door placard, wheel diameter, and load/speed markings before treating any vehicle as a guaranteed fit.'
+    : 'Vehicle clearance depends on trim, wheel offset, suspension height, and tire model. Confirm fitment before buying.';
+const closingTitle = is275
+  ? `Next step: compare ${displaySize} before you buy`
+  : `Next step: compare ${displaySize} before changing tire sizes`;
+const closingCopy = is275
+  ? `Compare ${displaySize} against nearby sizes like 285/70R18, 285/65R18, and 265/70R17 to check diameter change, speedometer impact, and clearance tradeoffs.`
+  : `Compare ${displaySize} against nearby sizes to check diameter change, speedometer impact, clearance, and fitment tradeoffs.`;
+
+const CALC_ICONS: Record<string, HubIconName> = {
+  [CALCULATOR_PATHS.tireSize]: 'calculator',
+  [CALCULATOR_PATHS.tireComparison]: 'split-square-vertical',
+  [CALCULATOR_PATHS.tireDiameter]: 'ruler',
+  [CALCULATOR_PATHS.wheelOffset]: 'disc',
+  [CALCULATOR_PATHS.gearRatio]: 'rotate-cw',
+};
+
+const relatedCalculators = SITE_CALCULATORS
+  .filter(
+    (calc) =>
+      calc.href !== CALCULATOR_PATHS.tireSize &&
+      calc.href !== CALCULATOR_PATHS.tireComparison,
+  )
+  .map((calc) => {
+  let href = calc.href;
+  return {
+    label: calc.label,
+    description: calc.description,
+    href,
+    icon: CALC_ICONS[calc.href] ?? 'calculator',
+  };
+  });
+
+// Re-export guide FAQ for the page schema via a data attribute pattern —
+// page reads hub.faq; we mutate a local copy for display only.
+const faq = guide.faq;
+const availableTireModels = guide.products.map(tireProductToVerifiedModel);
+const availableTiresDetailHref =
+  guide.fullSpecProducts.length > 0 ? '#spec-comparison' : null;
+const relatedSizeDestinations = new Set(guide.related.map((chip) => chip.href));
+const sidebarUpgrades = guide.upgrades.filter(
+  (chip) => !relatedSizeDestinations.has(chip.href),
+);
+
+const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+}).format(new Date(`${SITE_CONTENT_UPDATED}T00:00:00Z`));
+---
+
+<div class="ref-275 guide-275">
+  <HubBreadcrumb
+    crumbs={[
+      { label: 'Home', href: '/' },
+      { label: 'Tire Sizes', href: '/tire-sizes/' },
+      { label: displaySize },
+    ]}
+  />
+
+  <div class="guide-275__layout mt-6 lg:mt-8">
+    <div class="guide-275__main min-w-0 space-y-8">
+      <!-- Hero shares main column width with sections below -->
+      <Premium275Hero hub={hub} coverage={guide.coverage} />
+
+      <!-- At a Glance -->
+      <section class="guide-card" id="at-a-glance" aria-labelledby="glance-heading">
+        <h2 id="glance-heading" class="guide-card__title">At a Glance</h2>
+        <p class="guide-card__lead">
+          A quick technical snapshot of {displaySize} before you compare products or alternate sizes.
+        </p>
+        <div class="guide-glance">
+          {guide.glance.map((row) => (
+            <div class="guide-glance__item">
+              <p class="guide-glance__label">{row.label}</p>
+              <p class="guide-glance__value">{row.value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- Trio: Best For / Consider / Impact -->
+      <section class="guide-trio" aria-label="Size overview">
+        <article class="guide-card guide-trio__card">
+          <h2 class="guide-card__title">Best For</h2>
+          <ul class="guide-bullets">
+            {guide.bestFor.map((item) => (
+              <li class="guide-bullets__item">
+                <span class="guide-bullets__icon guide-bullets__icon--good" aria-hidden="true">
+                  <HubIcon name="check" class="h-3.5 w-3.5 shrink-0" />
+                </span>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article class="guide-card guide-trio__card">
+          <h2 class="guide-card__title">Consider Another Size If</h2>
+          <ul class="guide-bullets">
+            {guide.considerIf.map((item) => (
+              <li class="guide-bullets__item">
+                <span class="guide-bullets__icon guide-bullets__icon--warn" aria-hidden="true">
+                  <HubIcon name="x" class="h-3.5 w-3.5 shrink-0" />
+                </span>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article class="guide-card guide-trio__card">
+          <h2 class="guide-card__title">Real-World Impact</h2>
+          <ul class="guide-bullets">
+            {guide.realWorldImpact.map((item) => (
+              <li class="guide-bullets__item">
+                <span
+                  class:list={[
+                    'guide-bullets__dot',
+                    item.tone === 'good' ? 'guide-bullets__dot--good' : 'guide-bullets__dot--warn',
+                  ]}
+                  aria-hidden="true"
+                ></span>
+                <span>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
+
+      <!-- Common Vehicles -->
+      {guide.vehicles.length > 0 ? (
+        <section class="guide-card" id="vehicles-fitment" aria-labelledby="vehicles-heading">
+          <div class="guide-card__head">
+            <div>
+              <h2 id="vehicles-heading" class="guide-card__title !mb-0">Common Vehicles</h2>
+              <p class="mt-1 text-xs text-muted">
+                Commonly seen on or upgraded to by owners of these platforms — confirm clearance and trim before buying.
+              </p>
+            </div>
+          </div>
+          <ul class="guide-vehicle-chips mt-4">
+            {guide.vehicles.map((v) => (
+              <li class="guide-vehicle-chip">{v.manufacturer} {v.model}</li>
+            ))}
+          </ul>
+          <p class="guide-vehicles-note">
+            {vehiclesNote}
+          </p>
+        </section>
+      ) : (
+        <section class="guide-card" id="vehicles-fitment" aria-labelledby="vehicles-heading">
+          <h2 id="vehicles-heading" class="guide-card__title">Common Vehicles</h2>
+          <p class="text-sm text-body">
+            Exact vehicle fitment rows are limited for this size. Use the door placard, wheel diameter, and load markings — plus the size class notes above — before changing tires.
+          </p>
+        </section>
+      )}
+
+      <!-- Real Tires Available -->
+      <section class="guide-card" id="available-tires" aria-labelledby="tires-heading">
+        <div class="guide-card__head">
+          <div>
+            <h2 id="tires-heading" class="guide-card__title !mb-0">Real Tires Available in This Size</h2>
+            <p class="mt-1 text-xs text-muted">
+              {hasProducts
+                ? `Indexed tire models available in ${displaySize}`
+                : 'Real tire products indexed in this size'}
+            </p>
+          </div>
+          {hasProducts && guide.fullSpecProducts.length > 0 && (
+            <a href="#spec-comparison" class="guide-link">View all indexed tires →</a>
+          )}
+        </div>
+        <p class="guide-source-line">
+          Sources: official manufacturer product/spec data from Michelin, Goodyear, BFGoodrich, Toyo, and Falken where available.
+        </p>
+        {hasProducts ? (
+          <div class="mt-4">
+            <HubAvailableTires
+              client:load
+              displaySize={displaySize}
+              models={availableTireModels}
+              detailHref={availableTiresDetailHref}
+            />
+          </div>
+        ) : (
+          <p class="mt-4 text-sm text-body">
+            We do not have indexed manufacturer product data for this size yet.
+          </p>
+        )}
+      </section>
+
+      <!-- Best Options by Use Case -->
+      {guide.useCases.length > 0 && (
+        <section class="guide-card" id="best-by-use" aria-labelledby="usecase-heading">
+          <h2 id="usecase-heading" class="guide-card__title">Best Options by Use Case</h2>
+          <div class="guide-usecases">
+            {guide.useCases.slice(0, 4).map((bucket) => (
+              <div class="guide-usecase">
+                <h3 class="guide-usecase__title">{bucket.label}</h3>
+                <p class="guide-usecase__desc">{bucket.description}</p>
+                <ul class="guide-usecase__list">
+                  {bucket.products.slice(0, 3).map((p) => (
+                    <li>
+                      <span class="font-semibold text-heading">{canonicalProductBrand(p)}</span>
+                      {' '}{formatTireModelDisplayName(p.model)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- Equivalent sizes -->
+      {guide.equivalents.length > 0 && (
+        <section class="guide-card" id="equivalent-sizes" aria-labelledby="equiv-heading">
+          <div class="guide-card__head">
+            <div>
+              <h2 id="equiv-heading" class="guide-card__title !mb-0">Equivalent Tire Sizes</h2>
+              <p class="mt-1 text-xs text-muted">Nearby sizes that keep diameter close.</p>
+            </div>
+            <a href="/tire-sizes/" class="guide-link">View all →</a>
+          </div>
+          <div class="guide-chips mt-4">
+            {guide.equivalents.map((chip) => {
+              const pos = chip.diameterDiffPercent >= 0;
+              return (
+                <a href={chip.href} class="guide-chip">
+                  <span class="guide-chip__size">{chip.size}</span>
+                  <span class:list={['guide-chip__pct', pos ? 'is-pos' : 'is-neg']}>
+                    {pos ? '+' : ''}{chip.diameterDiffPercent.toFixed(2)}%
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <!-- Popular upgrades -->
+      {guide.upgrades.length > 0 && (
+        <section class="guide-card" id="popular-upgrades" aria-labelledby="upgrades-heading">
+          <div class="guide-card__head">
+            <div>
+              <h2 id="upgrades-heading" class="guide-card__title !mb-0">Popular Upgrades</h2>
+              <p class="mt-1 text-xs text-muted">Larger sizes with realistic fitment/diameter changes.</p>
+            </div>
+          </div>
+          <div class="guide-chips mt-4">
+            {guide.upgrades.map((chip) => (
+              <a href={chip.href} class="guide-chip guide-chip--upgrade">
+                <span class="guide-chip__size">{chip.size}</span>
+                <span class="guide-chip__pct is-pos">
+                  +{chip.diameterDiffPercent.toFixed(2)}%
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- Compact table (lower, collapsed) -->
+      <ProductSpecComparison
+        client:load
+        products={guide.fullSpecProducts}
+        initialVisible={6}
+        startCollapsed={true}
+        description={`Compare tread depth, weight, max load, pressure, and revs per mile for full-spec ${displaySize} products.`}
+      />
+
+      <!-- FAQ -->
+      <section class="guide-card" id="faq" aria-labelledby="faq-heading">
+        <h2 id="faq-heading" class="guide-card__title">FAQ</h2>
+        <div class="guide-faq">
+          {faq.map((item) => (
+            <details class="guide-faq__item">
+              <summary>
+                <span>{item.question}</span>
+                <HubIcon name="chevron-right" class="guide-faq__chevron h-4 w-4 shrink-0" />
+              </summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <!-- Closing CTA -->
+      <section class="guide-closing" aria-labelledby="closing-heading">
+        <h2 id="closing-heading" class="guide-closing__title">
+          {closingTitle}
+        </h2>
+        <p class="guide-closing__copy">
+          {closingCopy}
+        </p>
+        <div class="guide-closing__actions">
+          <a href={guide.compareHref} class="guide-btn guide-btn--accent">Compare this size</a>
+          <a href="#available-tires" class="guide-btn guide-btn--outline">See {displaySize} product data</a>
+        </div>
+      </section>
+
+      <p class="guide-disclaimer">
+        Product specs are compiled from official manufacturer data where available.
+      </p>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="guide-275__sidebar">
+      <div class="guide-sidebar-rail">
+        <div class="guide-card">
+          <h3 class="guide-card__title">Quick Facts</h3>
+          <dl class="guide-facts">
+            <div><dt>Overall diameter</dt><dd>{specs.overallDiameterIn.toFixed(2)}"</dd></div>
+            <div><dt>Section width</dt><dd>{specs.sectionWidthIn.toFixed(2)}" ({specs.widthMm} mm)</dd></div>
+            <div><dt>Sidewall height</dt><dd>{specs.sidewallIn.toFixed(2)}"</dd></div>
+            <div><dt>Circumference</dt><dd>{specs.circumferenceIn.toFixed(2)}"</dd></div>
+            <div><dt>Revs per mile</dt><dd>{Math.round(specs.revsPerMile)}</dd></div>
+            <div><dt>Rim diameter</dt><dd>{specs.wheelDiameterIn}"</dd></div>
+            <div><dt>Aspect ratio</dt><dd>{specs.aspectRatio}%</dd></div>
+            <div><dt>Load range</dt><dd>{guide.loadRanges.slice(0, 4).join(' / ') || '—'}</dd></div>
+            <div><dt>Speed rating</dt><dd>{guide.speedRatings.slice(0, 5).join(' / ') || '—'}</dd></div>
+            <div><dt>Construction</dt><dd>Radial</dd></div>
+          </dl>
+        </div>
+
+        <div class="guide-card guide-card--dark">
+          <h3 class="guide-card__title guide-card__title--light">Compare This Size</h3>
+          <p class="guide-card__copy guide-card__copy--light">
+            See diameter, speedometer, and clearance change vs another size.
+          </p>
+          <a href={guide.compareHref} class="guide-btn guide-btn--accent">Start Comparison</a>
+        </div>
+
+        {guide.related.length > 0 && (
+          <div class="guide-card">
+            <h3 class="guide-card__title">Related Tire Sizes</h3>
+            <ul class="guide-side-links">
+              {guide.related.map((chip) => (
+                <li>
+                  <a href={chip.href}>
+                    <span>{chip.size}</span>
+                    <HubIcon name="chevron-right" class="h-3.5 w-3.5 shrink-0 text-primary" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {sidebarUpgrades.length > 0 && (
+          <div class="guide-card">
+            <h3 class="guide-card__title">Popular Upgrades</h3>
+            <ul class="guide-side-links">
+              {sidebarUpgrades.map((chip) => (
+                <li>
+                  <a href={chip.href}>
+                    <span>{chip.size}</span>
+                    <span class="guide-side-links__pct">+{chip.diameterDiffPercent.toFixed(1)}%</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div class="guide-card">
+          <h3 class="guide-card__title">Brand Availability</h3>
+          {guide.brands.length > 0 ? (
+            <ul class="guide-brands">
+              {guide.brands.map((brand) => (
+                <li>
+                  <span class="guide-brands__check" aria-hidden="true">
+                    <HubIcon name="check" class="h-3 w-3 shrink-0" />
+                  </span>
+                  {brand}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="text-sm text-muted">No indexed manufacturer brands for this size yet.</p>
+          )}
+        </div>
+
+        <div class="guide-card">
+          <h3 class="guide-card__title">Data Coverage</h3>
+          <dl class="guide-coverage">
+            <div><dt>Unique tire models</dt><dd>{guide.coverage.uniqueModelCount}</dd></div>
+            <div><dt>Service variants</dt><dd>{guide.coverage.serviceVariantCount}</dd></div>
+            <div><dt>Full-spec products</dt><dd>{guide.coverage.fullSpecProducts}</dd></div>
+            <div><dt>Brands indexed</dt><dd>{guide.coverage.brands.length}</dd></div>
+            <div><dt>Source type</dt><dd>Manufacturer data</dd></div>
+            <div><dt>Last reviewed</dt><dd>{lastReviewedLabel}</dd></div>
+          </dl>
+        </div>
+
+        <div class="guide-card">
+          <h3 class="guide-card__title">Tire Size Calculator</h3>
+          <p class="guide-card__copy">Convert {displaySize} into diameter, width, and revs/mile.</p>
+          <a href={guide.calculatorHref} class="guide-btn guide-btn--outline">Calculate Now</a>
+        </div>
+
+        <div class="guide-card guide-related-calcs" aria-label="Related calculators">
+          <h2 class="guide-card__title guide-related-calcs__title">
+            <HubIcon name="tools" class="h-3.5 w-3.5 shrink-0 text-primary" />
+            Related Calculators
+          </h2>
+          <ul class="guide-related-calcs__list">
+            {relatedCalculators.map((calc) => (
+              <li>
+                <a href={calc.href} class="guide-calc-link group">
+                  <span class="guide-calc-link__icon">
+                    <HubIcon name={calc.icon} class="h-3.5 w-3.5 shrink-0" />
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="guide-calc-link__label">{calc.label}</span>
+                    <span class="guide-calc-link__desc">{calc.description}</span>
+                  </span>
+                  <HubIcon
+                    name="chevron-right"
+                    class="guide-calc-link__chevron h-3.5 w-3.5 shrink-0"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<style>
+  .guide-275__layout {
+    display: grid;
+    gap: 2rem;
+  }
+  @media (min-width: 1024px) {
+    .guide-275__layout {
+      grid-template-columns: minmax(0, 1fr) 18.5rem;
+      gap: 2rem;
+      align-items: start;
+    }
+  }
+  @media (min-width: 1280px) {
+    .guide-275__layout {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      gap: 2.5rem;
+    }
+  }
+
+  .guide-sidebar-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 1024px) {
+    .guide-sidebar-rail {
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+
+  .guide-card {
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 1.125rem 1.25rem;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.04);
+  }
+  .guide-card--dark {
+    background: #0f172a;
+    border-color: #0f172a;
+  }
+  .guide-card__title {
+    margin-bottom: 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-heading);
+  }
+
+  .guide-card__lead {
+    margin: -0.35rem 0 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+
+  .guide-vehicles-note {
+    margin-top: 0.875rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+
+  .guide-source-line {
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+
+  .guide-coverage {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .guide-coverage > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+  }
+  .guide-coverage dt {
+    color: var(--color-muted);
+  }
+  .guide-coverage dd {
+    font-weight: 700;
+    color: var(--color-heading);
+    text-align: right;
+  }
+
+  .guide-related-calcs__title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .guide-related-calcs__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .guide-calc-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    border: 1px solid transparent;
+    padding: 0.4rem 0.35rem;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .guide-calc-link:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary-light) 40%, var(--color-surface));
+  }
+  .guide-calc-link__icon {
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+  .guide-calc-link__icon :global(svg) {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+    max-width: 0.875rem !important;
+    max-height: 0.875rem !important;
+  }
+  .guide-calc-link__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-heading);
+  }
+  .guide-calc-link:hover .guide-calc-link__label {
+    color: var(--color-primary);
+  }
+  .guide-calc-link__desc {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.625rem;
+    line-height: 1.3;
+    color: var(--color-muted);
+  }
+  .guide-calc-link__chevron {
+    color: var(--color-muted);
+  }
+  .guide-calc-link:hover .guide-calc-link__chevron {
+    color: var(--color-primary);
+  }
+  .guide-card__title--light {
+    color: #fff;
+  }
+  .guide-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .guide-card__copy {
+    margin-top: -0.35rem;
+    margin-bottom: 0.875rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+  .guide-card__copy--light {
+    color: rgb(226 232 240);
+  }
+
+  .guide-link {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+  .guide-link:hover {
+    text-decoration: underline;
+  }
+
+  .guide-glance {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+  }
+  @media (min-width: 640px) {
+    .guide-glance {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 900px) {
+    .guide-glance {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  .guide-glance__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+  }
+  .guide-glance__value {
+    margin-top: 0.25rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+
+  .guide-trio {
+    display: grid;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .guide-trio {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .guide-bullets {
+    display: grid;
+    gap: 0.625rem;
+  }
+  .guide-bullets__item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-body);
+  }
+  .guide-bullets__icon {
+    display: inline-flex;
+    height: 1.125rem;
+    width: 1.125rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.1rem;
+    border-radius: 9999px;
+  }
+  .guide-bullets__icon :global(svg) {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    max-width: 0.75rem !important;
+    max-height: 0.75rem !important;
+  }
+  .guide-bullets__icon--good {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+  }
+  .guide-bullets__icon--warn {
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+    color: var(--color-danger);
+  }
+  .guide-bullets__dot {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-top: 0.4rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+  }
+  .guide-bullets__dot--good {
+    background: var(--color-success);
+  }
+  .guide-bullets__dot--warn {
+    background: var(--color-danger);
+  }
+
+  .guide-vehicle-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .guide-vehicle-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-heading);
+  }
+
+  .guide-available-tires-media {
+    margin: 0;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .guide-available-tires-media .tsc-section-carousel {
+    margin-top: 0;
+  }
+
+  .guide-available-tires-media .tsc-popular__card {
+    min-width: min(100%, 11.5rem);
+  }
+
+  .guide-usecases {
+    display: grid;
+    gap: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .guide-usecases {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 900px) {
+    .guide-usecases {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .guide-usecase {
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-primary-light) 55%, var(--color-surface));
+    padding: 0.875rem;
+  }
+  .guide-usecase__title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .guide-usecase__desc {
+    margin-top: 0.35rem;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+  .guide-usecase__list {
+    margin-top: 0.625rem;
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--color-body);
+  }
+
+  .guide-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .guide-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .guide-chip:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+    background: var(--color-primary-light);
+  }
+  .guide-chip__size {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .guide-chip__pct {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .guide-chip__pct.is-pos {
+    color: var(--color-success);
+  }
+  .guide-chip__pct.is-neg {
+    color: var(--color-danger);
+  }
+
+  .guide-faq {
+    display: grid;
+    gap: 0.5rem;
+  }
+  @media (min-width: 768px) {
+    .guide-faq {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .guide-faq__item {
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    padding: 0;
+  }
+  .guide-faq__item summary {
+    display: flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+  .guide-faq__item summary::-webkit-details-marker {
+    display: none;
+  }
+  .guide-faq__chevron {
+    color: var(--color-muted);
+    transition: transform 0.15s ease;
+  }
+  .guide-faq__item[open] .guide-faq__chevron {
+    transform: rotate(90deg);
+  }
+  .guide-faq__item p {
+    padding: 0 0.875rem 0.875rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+
+  .guide-closing {
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary-light) 40%, var(--color-surface));
+    padding: 1.125rem 1.25rem;
+  }
+  .guide-closing__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-heading);
+  }
+  .guide-closing__copy {
+    margin-top: 0.5rem;
+    max-width: 40rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-body);
+  }
+  .guide-closing__actions {
+    margin-top: 0.875rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .guide-disclaimer {
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+    text-align: center;
+  }
+
+  .guide-facts {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .guide-facts > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+  }
+  .guide-facts dt {
+    color: var(--color-muted);
+  }
+  .guide-facts dd {
+    font-weight: 700;
+    text-align: right;
+    color: var(--color-heading);
+  }
+
+  .guide-btn {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.625rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    transition: opacity 0.15s ease;
+  }
+  .guide-btn:hover {
+    opacity: 0.92;
+  }
+  .guide-btn--accent {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .guide-btn--outline {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-heading);
+  }
+  .guide-btn--outline:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+    background: var(--color-primary-light);
+  }
+
+  .guide-side-links {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .guide-side-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+  .guide-side-links a:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-primary);
+  }
+  .guide-side-links__pct {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-success);
+  }
+
+  .guide-brands {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .guide-brands li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+  .guide-brands__check {
+    display: inline-flex;
+    height: 1rem;
+    width: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
+  }
+  .guide-brands__check :global(svg) {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+    max-width: 0.625rem !important;
+    max-height: 0.625rem !important;
+  }
+</style>

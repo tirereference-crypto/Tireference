@@ -7,6 +7,7 @@ import {
   truncateDescription,
   TWITTER_SITE,
 } from '../lib/seo';
+import { OG_IMAGE_DIMENSIONS } from '../lib/og/og-image-url';
 import { resolveCanonical, resolveCanonicalFromPathname } from '../lib/seo/urls';
 
 export type OgType = 'website' | 'article';
@@ -43,6 +44,7 @@ const canonicalUrl = canonical
 const pageTitle = formatPageTitle(title);
 const metaDescription = truncateDescription(description);
 const ogImage = image ?? DEFAULT_OG_IMAGE;
+const usesDynamicOg = Boolean(image && image !== DEFAULT_OG_IMAGE);
 
 const jsonLd = schema
   ? Array.isArray(schema)
@@ -69,12 +71,20 @@ const heroBannerSrcset = `${heroBannerMobileSrc} 800w, ${heroBannerTabletSrc} 12
 <meta property="og:type" content={type} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:image" content={ogImage} />
+{usesDynamicOg ? (
+  <>
+    <meta property="og:image:width" content={String(OG_IMAGE_DIMENSIONS.width)} />
+    <meta property="og:image:height" content={String(OG_IMAGE_DIMENSIONS.height)} />
+    <meta property="og:image:alt" content={pageTitle} />
+  </>
+) : null}
 <meta property="og:site_name" content="Tire Reference" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={pageTitle} />
 <meta name="twitter:description" content={metaDescription} />
 <meta name="twitter:image" content={ogImage} />
+{usesDynamicOg ? <meta name="twitter:image:alt" content={pageTitle} /> : null}
 {TWITTER_SITE ? <meta name="twitter:site" content={TWITTER_SITE} /> : null}
 
 <link rel="icon" href="/favicon.ico" sizes="any" />

@@ -44,7 +44,7 @@ export function comparisonBreadcrumbs(current: string, next: string, slug: strin
 export function hubBreadcrumbs(displaySize: string, pagePath: string): BreadcrumbItem[] {
   return [
     { name: 'Home', item: '/' },
-    { name: 'Tire Sizes', item: '/tire-sizes' },
+    { name: 'Tire Sizes', item: '/tire-sizes/' },
     { name: displaySize, item: pagePath },
   ];
 }

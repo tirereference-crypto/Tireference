@@ -5,6 +5,7 @@ export const CALCULATOR_NAMES = {
   tireDiameter: 'tire_diameter',
   tireComparison: 'tire_comparison',
   wheelOffset: 'wheel_offset',
+  speedometerError: 'speedometer_error',
   gearRatio: 'gear_ratio',
 } as const;
 
@@ -15,7 +16,21 @@ export type AnalyticsEventName =
   | 'calculator_completed'
   | 'tire_comparison_completed'
   | 'tire_size_selected'
-  | 'related_calculator_clicked';
+  | 'related_calculator_clicked'
+  | 'calculator_compare_clicked'
+  | 'calculator_guide_clicked'
+  | 'calculator_related_size_clicked'
+  | 'calculator_tire_model_clicked'
+  | 'calculator_view_all_tires_clicked'
+  | 'calculator_brand_fallback_clicked'
+  | 'calculator_popular_tires_shown'
+  | 'calculator_issue_clicked'
+  | 'calculator_faq_expanded'
+  | 'calculator_display_unit_changed'
+  | 'calculator_size_format_changed'
+  | 'share_link_copied';
+
+export type PopularTiresFallbackLevel = 'models' | 'brands' | 'categories' | 'none';
 
 export interface AnalyticsEventParameters {
   calculator_name?: CalculatorName;
@@ -24,6 +39,8 @@ export interface AnalyticsEventParameters {
   diameter_difference_percent?: number;
   source_page?: string;
   destination_calculator?: CalculatorName;
+  /** Popular tires section availability tier. */
+  fallback_level?: PopularTiresFallbackLevel;
 }
 
 const TIRE_SIZE_PATTERN =
@@ -81,6 +98,15 @@ function sanitizeParameters(
     sanitized.diameter_difference_percent = diameterDiff;
   }
 
+  if (
+    parameters.fallback_level === 'models' ||
+    parameters.fallback_level === 'brands' ||
+    parameters.fallback_level === 'categories' ||
+    parameters.fallback_level === 'none'
+  ) {
+    sanitized.fallback_level = parameters.fallback_level;
+  }
+
   return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
@@ -96,6 +122,7 @@ export function calculatorNameFromHref(href: string): CalculatorName | undefined
   if (href.includes('tire-comparison-calculator')) return CALCULATOR_NAMES.tireComparison;
   if (href.includes('tire-diameter-calculator')) return CALCULATOR_NAMES.tireDiameter;
   if (href.includes('wheel-offset-calculator')) return CALCULATOR_NAMES.wheelOffset;
+  if (href.includes('speedometer-error-calculator')) return CALCULATOR_NAMES.speedometerError;
   if (href.includes('gear-ratio-calculator')) return CALCULATOR_NAMES.gearRatio;
   return undefined;
 }

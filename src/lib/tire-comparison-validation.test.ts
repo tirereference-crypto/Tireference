@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COMPARISON_DIMENSIONAL_RULES,
   COMPARISON_VALIDATION_RULES,
   INCOMPATIBLE_CATEGORY_PAIRS,
   isValidComparison,
+  isValidComparisonPair,
 } from './tire-comparison-validation';
 
 describe('isValidComparison', () => {
@@ -76,6 +78,26 @@ describe('isValidComparison', () => {
     expect(COMPARISON_VALIDATION_RULES.maxOverallDiameterDiffPct).toBe(8);
     expect(COMPARISON_VALIDATION_RULES.maxWidthDiffMm).toBe(50);
     expect(COMPARISON_VALIDATION_RULES.maxAspectRatioDiff).toBe(20);
+    expect(COMPARISON_DIMENSIONAL_RULES.maxWheelDiameterDiffIn).toBe(1);
+    expect(COMPARISON_DIMENSIONAL_RULES.maxOverallDiameterDiffPct).toBe(15);
+    expect(COMPARISON_DIMENSIONAL_RULES.maxSectionWidthDiffPct).toBe(25);
     expect(INCOMPATIBLE_CATEGORY_PAIRS.length).toBeGreaterThan(0);
+  });
+
+  it('rejects nonsensical cross-class diameter pairs with dimensional rules', () => {
+    const result = isValidComparison('225/45R17', '305/70R18');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects pairs with rim diameter gap above 1 in even when legacy allows 2 in', () => {
+    const legacy = isValidComparison('275/65R18', '285/55R20', { skipDimensional: true });
+    const full = isValidComparison('275/65R18', '285/55R20');
+    expect(legacy.valid).toBe(true);
+    expect(full.valid).toBe(false);
+    expect(full.reason).toContain('Rim diameter');
+  });
+
+  it('rejects identical sizes via isValidComparisonPair', () => {
+    expect(isValidComparisonPair('275/70R18', '275/70R18')).toBe(false);
   });
 });

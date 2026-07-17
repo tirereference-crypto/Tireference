@@ -42,7 +42,7 @@ export const POPULAR_TIRE_MODELS_BY_SIZE: Record<string, PopularTireModel[]> = {
   '265/65R18': [
     { name: 'Falken Wildpeak A/T Trail', category: 'All-Terrain' },
     { name: 'Toyo Open Country A/T III', category: 'All-Terrain' },
-    { name: 'Cooper Discoverer AT3 4S', category: 'All-Terrain' },
+    { name: 'Goodyear Discoverer AT3 4S', category: 'All-Terrain' },
   ],
   '265/70R17': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
@@ -57,7 +57,7 @@ export const POPULAR_TIRE_MODELS_BY_SIZE: Record<string, PopularTireModel[]> = {
   '275/60R20': [
     { name: 'Falken Wildpeak A/T4W', category: 'All-Terrain' },
     { name: 'Toyo Open Country A/T III', category: 'All-Terrain' },
-    { name: 'Cooper Discoverer AT3 XLT', category: 'All-Terrain' },
+    { name: 'Goodyear Discoverer AT3 XLT', category: 'All-Terrain' },
   ],
   '275/65R18': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
@@ -82,12 +82,12 @@ export const POPULAR_TIRE_MODELS_BY_SIZE: Record<string, PopularTireModel[]> = {
   '285/70R17': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
     { name: 'Nitto Ridge Grappler', category: 'Hybrid Terrain' },
-    { name: 'Cooper Discoverer AT3 XLT', category: 'All-Terrain' },
+    { name: 'Goodyear Discoverer AT3 XLT', category: 'All-Terrain' },
   ],
   '285/75R16': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
     { name: 'Falken Wildpeak A/T4W', category: 'All-Terrain' },
-    { name: 'Cooper Discoverer STT Pro', category: 'Mud-Terrain' },
+    { name: 'Goodyear Discoverer STT Pro', category: 'Mud-Terrain' },
   ],
   '295/35R21': [
     { name: 'Michelin Pilot Sport 4S', category: 'Performance' },
@@ -112,7 +112,7 @@ export const POPULAR_TIRE_MODELS_BY_SIZE: Record<string, PopularTireModel[]> = {
   'LT265/75R16': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
     { name: 'Falken Wildpeak A/T4W', category: 'All-Terrain' },
-    { name: 'Cooper Discoverer AT3 XLT', category: 'All-Terrain' },
+    { name: 'Goodyear Discoverer AT3 XLT', category: 'All-Terrain' },
   ],
 };
 
@@ -135,7 +135,7 @@ const CATEGORY_FALLBACK_MODELS: Record<TireCategory, PopularTireModel[]> = {
   'light-truck': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },
     { name: 'Falken Wildpeak A/T4W', category: 'All-Terrain' },
-    { name: 'Cooper Discoverer AT3 XLT', category: 'All-Terrain' },
+    { name: 'Goodyear Discoverer AT3 XLT', category: 'All-Terrain' },
   ],
   'off-road': [
     { name: 'BFGoodrich All-Terrain T/A KO3', category: 'All-Terrain' },

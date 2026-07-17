@@ -29,7 +29,7 @@ export const SEO_DESCRIPTIONS = {
   diameterCalculator:
     'Find tire sizes by target overall diameter. Enter a diameter and wheel size to see every matching tire with sidewall, width and revs-per-mile specs.',
   gearRatioCalculator:
-    'See how a tire size change affects your effective gear ratio, RPM at speed and acceleration, and find the axle ratio needed to restore your gearing.',
+    'Compare tire diameter changes with axle ratio to see effective gearing, stock-like targets, and how engine RPM and low-speed multiplication shift.',
   wheelOffsetCalculator:
     'Calculate wheel offset and backspacing, convert between them, and see how offset changes affect fitment, clearance and stance for your vehicle.',
   comparison:

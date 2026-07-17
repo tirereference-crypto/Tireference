@@ -29,7 +29,7 @@ describe('searchTiresByDiameter', () => {
 
     const match = result.matches.find((m) => m.size === '275/70R18')!;
     expect(match.diameterIn).toBeCloseTo(33.16, 1);
-    expect(match.hubHref).toBe('/tire-size/275-70r18');
+    expect(match.hubHref).toBe('/tire-size/275-70r18/');
   });
 
   it('35" + 18" wheel returns valid dataset sizes', () => {
@@ -81,7 +81,7 @@ describe('searchTiresByDiameter', () => {
 describe('comparisonPagePathCurrent', () => {
   it('prefills current tire size only', () => {
     expect(comparisonPagePathCurrent('275/70R18')).toBe(
-      '/calculators/tire-comparison-calculator/?current=275%2F70R18',
+      '/calculators/tire-comparison-calculator/?from=275%2F70R18',
     );
   });
 });

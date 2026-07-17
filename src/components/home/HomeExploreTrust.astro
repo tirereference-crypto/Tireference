@@ -1,0 +1,68 @@
+---
+import HomeTrustIcon from './HomeTrustIcon.astro';
+import { HOME_USE_CASES } from '../../lib/home-landing';
+import { HOME_TRUST_PANEL } from '../../lib/home-sections';
+---
+
+<section class="home-section home-reveal home-explore" aria-labelledby="home-explore-title">
+  <div class="home-explore__panel">
+    <div class="home-explore__grid">
+      <div class="home-explore__use-cases">
+        <header class="home-explore__header">
+          <h2 id="home-explore-title" class="home-explore__title">Explore by Use Case</h2>
+          <p class="home-explore__desc">
+            Start with the decision you&apos;re making, then open the right calculator.
+          </p>
+        </header>
+
+        <div class="home-explore__cards">
+          {
+            HOME_USE_CASES.map((item) => (
+              <a
+                href={item.href}
+                class={`home-explore__card hub-link-card home-explore__card--${item.tone}`}
+              >
+                <img
+                  class="home-explore__card-image"
+                  src={item.imageSrc}
+                  alt={item.imageAlt}
+                  width={item.imageWidth}
+                  height={item.imageHeight}
+                  sizes="(max-width: 519px) 100vw, (max-width: 959px) 50vw, 30vw"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span class="home-explore__card-scrim" aria-hidden="true" />
+                <span class="home-explore__card-copy">
+                  <span class="home-explore__card-title">{item.title}</span>
+                  <span class="home-explore__card-desc">{item.description}</span>
+                </span>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+
+      <aside class="home-explore__trust" aria-labelledby="home-explore-trust-title">
+        <h2 id="home-explore-trust-title" class="home-explore__title">
+          Why Drivers Trust Tire Reference
+        </h2>
+        <ul class="home-explore__trust-list">
+          {
+            HOME_TRUST_PANEL.map((item) => (
+              <li class="home-explore__trust-item">
+                <span class="home-explore__trust-icon" aria-hidden="true">
+                  <HomeTrustIcon name={item.icon} />
+                </span>
+                <span class="home-explore__trust-copy">
+                  <span class="home-explore__trust-item-title">{item.title}</span>
+                  <span class="home-explore__trust-item-desc">{item.description}</span>
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>

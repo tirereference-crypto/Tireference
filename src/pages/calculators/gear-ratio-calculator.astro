@@ -1,10 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PremiumGearRatioCalculator from '../../components/calculators/PremiumGearRatioCalculator';
+import { parseGearRatioFromSearch } from '../../lib/calculator-url-state';
 import { GEAR_FAQS } from '../../lib/gear-ratio-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
-import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
+
+const initialFields = parseGearRatioFromSearch(Astro.url.searchParams);
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Gear Ratio Calculator'),
@@ -18,11 +20,5 @@ const schema = buildPageSchema({
   canonical="/calculators/gear-ratio-calculator/"
   schema={schema}
 >
-  <PremiumGearRatioCalculator client:load />
-  <div class="tl-container pb-10 lg:pb-14">
-    <TrustDisclosure
-      title="How our calculators work"
-      subtitle="RPM and effective gearing use rolling circumference from parsed tire specs — methodology, data sources, and validation steps below."
-    />
-  </div>
+  <PremiumGearRatioCalculator client:load initialFields={initialFields} />
 </Layout>

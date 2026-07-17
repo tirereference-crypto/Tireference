@@ -7,7 +7,7 @@ import {
   type WheelDiameterOption,
 } from './tire-diameter-search';
 import {
-  comparisonSlugPath,
+  publishedComparisonSlugPath,
   buildCuratedPopularComparisons,
   filterValidComparisonLabels,
   isValidComparisonPair,
@@ -79,58 +79,31 @@ export interface DiameterSeoContent {
 }
 
 export const DIAMETER_PRESETS: DiameterPreset[] = [
-  { diameterIn: 31, label: '31"', description: 'Stock Truck' },
-  { diameterIn: 33, label: '33"', description: 'Popular Upgrade' },
-  { diameterIn: 35, label: '35"', description: 'Off-Road Favorite' },
-  { diameterIn: 37, label: '37"', description: 'Serious Build' },
-  { diameterIn: 40, label: '40"', description: 'Extreme Setup' },
+  { diameterIn: 31, label: '31"', description: 'Common truck-size range' },
+  { diameterIn: 33, label: '33"', description: 'Frequently searched diameter' },
+  { diameterIn: 35, label: '35"', description: 'Larger off-road diameter' },
 ];
 
 export const POPULAR_DIAMETER_SEARCHES: PopularDiameterSearch[] = [
-  { label: '31" Tires', description: 'Stock-friendly truck upgrade', diameterIn: 31 },
-  { label: '33" Tires', description: 'Most popular off-road upgrade', diameterIn: 33 },
-  { label: '35" Tires', description: 'Lifted truck favorite', diameterIn: 35 },
-  { label: '37" Tires', description: 'Serious trail build', diameterIn: 37 },
-  { label: '40" Tires', description: 'Extreme off-road setup', diameterIn: 40 },
+  { label: '31" Tires', description: 'Common truck-size range', diameterIn: 31 },
+  { label: '33" Tires', description: 'Frequently searched diameter', diameterIn: 33 },
+  { label: '35" Tires', description: 'Larger off-road diameter', diameterIn: 35 },
 ];
 
 export const POPULAR_TIRE_DIAMETERS: PopularTireDiameterItem[] = [
-  {
-    diameterIn: 31,
-    label: '31" Tires',
-    description: 'Mid-size SUVs, Jeep Cherokee, stock Tacoma',
-  },
-  {
-    diameterIn: 33,
-    label: '33" Tires',
-    description: 'Tacoma, 4Runner, Wrangler, Bronco',
-  },
-  {
-    diameterIn: 35,
-    label: '35" Tires',
-    description: 'Lifted F-150, Silverado, Gladiator',
-  },
-  {
-    diameterIn: 37,
-    label: '37" Tires',
-    description: 'Heavy-duty off-road builds, Ram 2500, Super Duty',
-  },
-  {
-    diameterIn: 40,
-    label: '40" Tires',
-    description: 'Extreme rock crawlers and custom builds',
-  },
+  { diameterIn: 31, label: '31-inch tires', description: '' },
+  { diameterIn: 33, label: '33-inch tires', description: '' },
+  { diameterIn: 35, label: '35-inch tires', description: '' },
 ];
 
 export function diameterLandingHref(
   diameterIn: number,
   wheelIn: WheelDiameterOption = 18,
 ): string {
-  const params = new URLSearchParams({
-    diameter: String(diameterIn),
-    wheel: String(wheelIn),
+  return calculatorPathWithQuery(CALCULATOR_PATHS.tireDiameter, {
+    d: String(diameterIn),
+    rim: String(wheelIn),
   });
-  return calculatorPathWithQuery(CALCULATOR_PATHS.tireDiameter, params);
 }
 
 export const POPULAR_COMPARISONS: PopularComparisonItem[] = filterValidComparisonLabels(
@@ -165,7 +138,9 @@ function buildMatchDerivedComparisons(
       const sizeB = qualifying[j].size;
       if (!isValidComparisonPair(sizeA, sizeB)) continue;
 
-      const href = comparisonSlugPath(sizeA, sizeB);
+      const href = publishedComparisonSlugPath(sizeA, sizeB);
+      if (!href) continue;
+
       if (seen.has(href)) continue;
       seen.add(href);
 
@@ -207,13 +182,14 @@ export function buildPopularComparisonsForDiameterSearch(
       return a.index - b.index;
     });
 
-  const curated = ranked.slice(0, limit).map(({ sizeA, sizeB }) => {
-    const href = comparisonSlugPath(sizeA, sizeB);
+  const curated = ranked.slice(0, limit).flatMap(({ sizeA, sizeB }) => {
+    const href = publishedComparisonSlugPath(sizeA, sizeB);
+    if (!href) return [];
     seen.add(href);
-    return {
+    return [{
       label: `${sizeA} vs ${sizeB}`,
       href,
-    };
+    }];
   });
 
   if (curated.length >= limit) return filterValidComparisonLabels(curated);
@@ -250,38 +226,159 @@ export function buildPopularSizesNearDiameter(
 
 export const RELATED_CALCULATOR_LINKS = getRelatedCalculators(CALCULATOR_PATHS.tireDiameter);
 
-export const DIAMETER_FAQS: DiameterFaq[] = [
-  {
-    question: 'What tire size is 33 inches tall?',
-    answer:
-      'There is no single metric code for “33 inches” — owners use that number to describe overall mounted height, while tire labels still use width, aspect ratio, and wheel diameter (for example 275/70R18). Several verified sizes land near 33" depending on wheel diameter and construction. On 18" wheels, 275/70R18 calculates to about 33.16" overall; on 17" wheels, 285/70R17 is roughly 32.71" and 315/70R17 pushes past 34". Flotation sizes such as 33x12.50R15 or 33x12.50R17 are named for their approximate outside diameter but still vary by brand and tread depth. Two tires marketed as “33s” can differ by more than an inch in real mounted height because section width, aspect ratio, and tread block height all shift the final number. That is why reverse diameter search matters: you pick the height you want first, then filter by wheel size and tolerance to see which codes actually hit your target. Always confirm fitment separately — diameter alone does not guarantee clearance at full lock or under compression.',
-  },
-  {
-    question: 'How is tire diameter calculated?',
-    answer:
-      'Overall diameter is calculated from the metric size printed on the sidewall, not measured from the wheel alone. Start with section width in millimeters and aspect ratio (sidewall height as a percent of width). Sidewall height in inches = (width × aspect ratio ÷ 100) ÷ 25.4. Overall diameter = wheel diameter + (2 × sidewall height). Example: 275/70R18 → sidewall = (275 × 0.70) ÷ 25.4 ≈ 7.58" per side → overall ≈ 18 + 15.16 ≈ 33.16". Tire Reference uses this same ISO/ETRTO-based math as our Tire Size Calculator, then derives circumference (π × diameter) and revolutions per mile (63,360 ÷ circumference in inches) for speedometer and gearing estimates. Published diameter specs are nominal values for a new tire at recommended pressure; they are the correct baseline for comparing sizes before purchase, but they are not identical to a tape-measure reading on your driveway. Use calculated diameter to shortlist metric codes, then validate with a comparison or fitment check before buying.',
-  },
-  {
-    question: 'Does wheel diameter equal tire diameter?',
-    answer:
-      'No — and confusing the two is one of the most common fitment mistakes. The number after the R in a size such as 275/70R18 is rim diameter only: the bead seat where the tire mounts, measured in inches. Overall tire diameter includes both sidewalls, the tread crown, and any tread block height above the carcass — typically 8–15 inches taller than the wheel alone on light trucks and SUVs. An 18" wheel on a 33" tall tire means roughly 7.5" of sidewall contributes above and below the rim lip (plus tread). That extra height drives speedometer error, effective gearing, ground clearance, and fender clearance — none of which change if you only look at the R-number. Two different metric sizes can share the same wheel diameter but differ substantially in overall height (compare 275/55R20 vs 275/65R18). When shopping, think in two layers: wheel diameter for bolt-on compatibility, overall diameter for how the vehicle drives and fits. Our diameter search bridges that gap by finding metric codes that match your target outside height on your chosen wheel size.',
-  },
-  {
-    question: 'Why do my measured and calculated diameters differ?',
-    answer:
-      'A tape-measure reading on a mounted tire often disagrees with the calculated nominal diameter by 1–3%, and sometimes more — that does not necessarily mean the math is wrong. Calculated specs assume a new tire at recommended inflation on a standardized measuring rim; your vehicle adds real-world variables. Tread depth changes outside diameter over the life of the tire — a worn tire can measure noticeably shorter than the same model new. Under-inflation lets the sidewall squat and reduces mounted height; over-inflation can round the profile and read taller. Load (vehicle weight, cargo, trailer tongue weight) compresses the contact patch and can shift height slightly. Manufacturer construction tolerances, extra-deep tread blocks on aggressive all-terrains, and even temperature all play a role. Measure on level ground, at recommended cold pressure, with a vertical line from ground to tread crown (not the rim) for the most consistent result. Use calculated diameter to compare sizes and predict speedometer/gearing impact; use physical measurement to validate fitment on your specific wheel, offset, and suspension. If the gap exceeds ~3%, double-check size labeling, wear, and pressure before assuming a catalog error.',
-  },
-  {
-    question: 'How does overall tire diameter affect speedometer accuracy and gearing?',
-    answer:
-      'Your speedometer and odometer assume a fixed rolling circumference from the factory tire. When overall diameter grows, each revolution travels farther, so the vehicle moves faster than the cluster indicates at the same wheel speed — and the engine turns fewer RPM for a given road speed. A tire roughly 3% taller typically produces about 3% speedometer error (often within OEM tolerance) but a meaningful shift in highway cruising RPM and effective axle ratio. Exceed ~3–5% without recalibration and you may notice cruise control drift, navigation ETA errors, and accumulated odometer discrepancy. Gearing feels taller: less torque at the wheels off-road, slower acceleration, but lower RPM on the highway. The opposite happens when you downsize diameter. Re-gearing (ring and pinion) is common on dedicated off-road builds that jump multiple diameter classes; mild upgrades often live with the error or use programmer/speedometer correction where supported. Search by target diameter first, then compare candidate sizes to see exact circumference and revolutions-per-mile deltas before committing.',
-  },
-  {
-    question: 'What wheel size do I need for a target tire diameter?',
-    answer:
-      'Wheel diameter sets the anchor point — overall height is wheel diameter plus twice the sidewall. You cannot hit a 33" overall target on a 15" wheel with the same metric codes that work on 18" wheels; aspect ratio and section width must change to compensate. Larger wheels (18", 20") typically need lower aspect ratios to stay near a given outside diameter, which firms up ride and reduces sidewall flex. Smaller wheels (16", 17") allow taller sidewall percentages for the same overall height, which many overlanders prefer for air-down performance and impact absorption. When you change wheel diameter in the search above, the result set re-filters to sizes that actually mount on that rim and land near your target overall height. Match wheel width to section width (rough rule: tire width in mm ÷ 10 ≈ minimum wheel width in inches, with brand-specific ranges). Correct offset and backspacing still matter as much as diameter — a tire that calculates correctly can rub if the wheel pushes the footprint outward into the fender.',
-  },
-];
+export const DIAMETER_FAQ_PRIMARY_COUNT = 6;
+
+export interface BuildDiameterFaqsInput {
+  targetDiameterIn: number;
+  wheelDiameterIn: number | 'any';
+  closestSize?: string | null;
+  closestDiameterIn?: number | null;
+  toleranceIn?: number;
+}
+
+function fmtIn(value: number, digits = 2): string {
+  return `${value.toFixed(digits)}"`;
+}
+
+/**
+ * Dynamic Expert FAQ for the Tire Diameter Calculator.
+ * Primary (6) are always rendered; remaining sit behind “Show more”.
+ * FAQPage JSON-LD should include only the currently rendered set.
+ */
+export function buildDiameterFaqs(input: BuildDiameterFaqsInput): DiameterFaq[] {
+  const target = input.targetDiameterIn;
+  const targetLabel = target.toFixed(1);
+  const wheelLabel =
+    input.wheelDiameterIn === 'any' ? 'any wheel diameter' : `${input.wheelDiameterIn}" wheels`;
+  const closestSize = input.closestSize?.trim() || null;
+  const closestDia = input.closestDiameterIn;
+  const tol = input.toleranceIn ?? 1;
+
+  const closestSentence = closestSize
+    ? closestDia != null
+      ? `For your ${targetLabel}" target on ${wheelLabel}, the closest indexed size is ${closestSize} at about ${fmtIn(closestDia)} overall.`
+      : `For your ${targetLabel}" target on ${wheelLabel}, the closest indexed size currently shown is ${closestSize}.`
+    : `Run a search for ${targetLabel}" on ${wheelLabel} to surface the closest indexed production sizes in our database.`;
+
+  const primary: DiameterFaq[] = [
+    {
+      question: `What tire size is closest to ${targetLabel} inches tall?`,
+      answer: [
+        closestSize
+          ? `${closestSize} is the closest indexed production size to ${targetLabel}" on ${wheelLabel} in the current reverse search.`
+          : `There is no single metric code for “${targetLabel} inches” — the closest size depends on wheel diameter, aspect ratio, and the sizes indexed in TireReference’s database.`,
+        closestSentence,
+        `Overall height is calculated from the size code (section width, aspect ratio, and wheel diameter), then ranked by absolute difference from your target. Published model catalogs can still list a slightly different diameter for a specific product.`,
+        `Diameter matching is not a fitment confirmation — confirm clearance, load rating, and vehicle requirements separately before purchase.`,
+      ].join(' '),
+    },
+    {
+      question: 'How is tire diameter calculated?',
+      answer: [
+        `Nominal overall diameter is calculated from the tire-size geometry: sidewall height = (section width × aspect ratio ÷ 100), then overall diameter = wheel diameter + 2 × sidewall height (with millimetres converted at 25.4 mm per inch).`,
+        `Example path for a metric size such as 275/70R18: sidewall ≈ 7.58", overall ≈ 33.16". Circumference is π × overall diameter, and revolutions per mile equal 63,360 ÷ circumference in inches.`,
+        `TireReference uses these nominal calculations for reverse-search ranking. They are not the same as a tape measurement on a loaded vehicle, and they are not substituted with individual product-model published diameters for generic size ranking.`,
+      ].join(' '),
+    },
+    {
+      question: 'Does wheel diameter equal tire diameter?',
+      answer: [
+        `No. Wheel diameter (the R-number) is only the rim bead-seat diameter; overall tire diameter includes both sidewalls and the tread height.`,
+        `An ${input.wheelDiameterIn === 'any' ? '18' : String(input.wheelDiameterIn)}-inch wheel does not mean an ${input.wheelDiameterIn === 'any' ? '18' : String(input.wheelDiameterIn)}-inch tire.`,
+        closestSize && closestDia != null
+          ? `Your current closest match ${closestSize} calculates to about ${fmtIn(closestDia)} overall — taller than the wheel alone by two sidewalls.`
+          : `Two sizes can share the same wheel diameter yet differ by several inches overall when aspect ratio or width changes.`,
+        `Use wheel diameter for mount compatibility and overall diameter for height, speedometer, gearing, and clearance estimates.`,
+      ].join(' '),
+    },
+    {
+      question: 'Why do measured and calculated diameters differ?',
+      answer: [
+        `Calculated diameter is a nominal size-code value for reverse-search comparison; a driveway tape measure reflects construction, inflation, load, remaining tread depth, and measuring-rim width.`,
+        `Those real-world factors can make a mounted reading higher or lower than the nominal figure without meaning the size code is wrong.`,
+        `Compare measured height to the calculator result as a screening check, not as proof of catalog error. Confirm critical fitment with your specific wheel, pressure, and vehicle setup.`,
+      ].join(' '),
+    },
+    {
+      question: 'How does overall tire diameter affect speedometer accuracy?',
+      answer: [
+        `Speedometers assume a fixed rolling circumference. When overall diameter increases, each revolution covers more ground, so true speed is typically higher than indicated at the same wheel RPM; the reverse happens when diameter decreases.`,
+        closestSize && closestDia != null
+          ? `Against your ${targetLabel}" target, ${closestSize} at ~${fmtIn(closestDia)} changes circumference (and therefore indicated-vs-true speed) in proportion to that diameter difference.`
+          : `The percentage change in overall diameter is the geometric first-order estimate for circumference and theoretical speedometer error before any cluster recalibration.`,
+        `Wear, load, temperature, and OEM calibration can still shift real cluster behaviour. This tool does not recalibrate your instrument cluster.`,
+      ].join(' '),
+    },
+    {
+      question: 'What wheel size do I need for a target tire diameter?',
+      answer: [
+        `Choose the wheel diameter you will actually mount, then search for metric (or flotation) sizes whose calculated overall diameter lands near your ${targetLabel}" target.`,
+        `Overall height equals wheel diameter plus two sidewalls, so the same overall target requires different aspect ratios and widths on different rim diameters.`,
+        input.wheelDiameterIn === 'any'
+          ? `With “Any” wheel selected, results can span supported rim diameters; pick a specific wheel (for example 17" or 18") when you already know the rim you will run.`
+          : `Your search is currently filtered to ${input.wheelDiameterIn}" wheels — change the wheel selector if the rim size is still undecided.`,
+        `Wheel width, offset, bolt pattern, and brake clearance remain separate from overall diameter.`,
+      ].join(' '),
+    },
+  ];
+
+  const secondary: DiameterFaq[] = [
+    {
+      question: 'How does tire diameter affect effective gearing?',
+      answer: [
+        `Larger overall diameter raises effective gearing: for a given transmission and axle ratio, engine RPM at a road speed tends to fall, and torque at the ground is reduced for the same engine torque.`,
+        `Smaller diameter does the opposite. Re-gearing is a separate mechanical choice; this calculator only estimates diameter-driven RPM and circumference effects from nominal size math.`,
+      ].join(' '),
+    },
+    {
+      question: 'Why can two tires with the same size have different published diameters?',
+      answer: [
+        `The size code defines nominal geometry; brand catalogs can publish molded or measured diameters that differ slightly because of tread pattern, carcass design, and approved measuring conditions.`,
+        `TireReference reverse search ranks using consistent nominal size-to-size calculations so sizes remain comparable. Use product pages for brand-specific published specifications when available.`,
+      ].join(' '),
+    },
+    {
+      question: 'What does revolutions per mile mean?',
+      answer: [
+        `Revolutions per mile (or per kilometre) is how many times the tire rotates to cover that distance, derived from rolling circumference (π × overall diameter).`,
+        `Higher revs/mile means a shorter rolling circumference. Speedometer and gearing estimates track the change in revs when diameter changes.`,
+      ].join(' '),
+    },
+    {
+      question: 'Does this calculator confirm vehicle fitment?',
+      answer: [
+        `No. It reverse-searches indexed production sizes near a target overall diameter and wheel diameter; it does not verify your VIN, lift, fenders, brakes, or load requirements.`,
+        `Treat results as a size shortlist. Confirm fitment with your vehicle maker, tire maker, or a professional installer before buying.`,
+      ].join(' '),
+    },
+    {
+      question: 'How much diameter difference is acceptable?',
+      answer: [
+        `A percentage such as ±3% is a common screening guideline, not a guarantee of vehicle compatibility.`,
+        `Your current maximum diameter difference setting (±${tol.toFixed(1)}") only controls which indexed sizes appear in results — it is not a fitment approval for any specific vehicle.`,
+        `Acceptable change still depends on OEM tolerance, speedometer policy, ABS/ESC assumptions, clearance, and intended use.`,
+      ].join(' '),
+    },
+    {
+      question: 'Are flotation-size diameters exact?',
+      answer: [
+        `Flotation labels such as 33×12.50R15 state approximate overall diameter and section width, but brand construction and tread can still change the mounted height.`,
+        `Treat flotation numbers as naming conventions, then confirm calculated or published specifications for the exact product you will buy.`,
+      ].join(' '),
+    },
+  ];
+
+  return [...primary, ...secondary];
+}
+
+/** Default FAQs for SSR / schema when no live search context is available. */
+export const DIAMETER_FAQS: DiameterFaq[] = buildDiameterFaqs({
+  targetDiameterIn: 33,
+  wheelDiameterIn: 18,
+  closestSize: '275/70R18',
+  closestDiameterIn: 33.16,
+  toleranceIn: 1,
+});
 
 export const ABOUT_DIAMETER_AFFECTS = [
   'Speedometer accuracy',
@@ -333,8 +430,9 @@ export const DIAMETER_IMPACT_CARDS: DiameterImpactCard[] = [
 
 export interface DiameterVsWheelExample {
   exampleSize: string;
-  wheelIn: WheelDiameterOption;
+  wheelIn: number;
   overallDiameterIn: number;
+  sidewallIn: number;
 }
 
 export interface BuildDiameterVsWheelExampleOptions {
@@ -347,18 +445,20 @@ export function buildDiameterVsWheelExample(
   options: BuildDiameterVsWheelExampleOptions = {},
 ): DiameterVsWheelExample {
   const catalog = getTireDiameterCatalog();
-  const onWheel = catalog.filter((entry) => Math.round(entry.specs.wheelDiameterIn) === wheelIn);
 
   if (options.preferredSize) {
-    const preferred = onWheel.find((entry) => entry.size === options.preferredSize);
+    const preferred = catalog.find((entry) => entry.size === options.preferredSize);
     if (preferred) {
       return {
         exampleSize: preferred.size,
-        wheelIn,
+        wheelIn: preferred.specs.wheelDiameterIn,
         overallDiameterIn: preferred.specs.overallDiameterIn,
+        sidewallIn: preferred.specs.sidewallIn,
       };
     }
   }
+
+  const onWheel = catalog.filter((entry) => Math.round(entry.specs.wheelDiameterIn) === wheelIn);
 
   if (options.targetDiameterIn && onWheel.length > 0) {
     const closest = [...onWheel].sort(
@@ -368,8 +468,9 @@ export function buildDiameterVsWheelExample(
     )[0];
     return {
       exampleSize: closest.size,
-      wheelIn,
+      wheelIn: closest.specs.wheelDiameterIn,
       overallDiameterIn: closest.specs.overallDiameterIn,
+      sidewallIn: closest.specs.sidewallIn,
     };
   }
 
@@ -377,8 +478,9 @@ export function buildDiameterVsWheelExample(
   if (popular) {
     return {
       exampleSize: popular.size,
-      wheelIn,
+      wheelIn: popular.specs.wheelDiameterIn,
       overallDiameterIn: popular.specs.overallDiameterIn,
+      sidewallIn: popular.specs.sidewallIn,
     };
   }
 
@@ -386,9 +488,77 @@ export function buildDiameterVsWheelExample(
   const fallbackSpecs = getTireSpecs(fallbackSize);
   return {
     exampleSize: fallbackSize,
-    wheelIn,
+    wheelIn: fallbackSpecs.wheelDiameterIn,
     overallDiameterIn: fallbackSpecs.overallDiameterIn,
+    sidewallIn: fallbackSpecs.sidewallIn,
   };
+}
+
+/**
+ * Shared diameter-group membership for hero chips, Popular Tire Diameters,
+ * and diameter landing pages.
+ *
+ * A “33-inch size” means the catalog size’s **nominal overall diameter**
+ * (formula-calculated, inches) rounds to 33 with `Math.round` —
+ * for positive values this is the nearest-inch bucket ≈ [32.5, 33.5).
+ *
+ * Counts catalog tire-size codes across **all wheel diameters** — not models
+ * or product SKUs. Callers that need a wheel-filtered count must apply that
+ * filter explicitly and label it (e.g. “indexed 18-inch sizes”).
+ *
+ * The optional `bandIn` parameter is ignored (retained for call-site compat).
+ */
+export function isCatalogSizeInDiameterGroup(
+  overallDiameterIn: number,
+  diameterGroupIn: number,
+): boolean {
+  return Math.round(overallDiameterIn) === Math.round(diameterGroupIn);
+}
+
+/** Count indexed catalog sizes in a popular inch-diameter group (all wheels). */
+export function countIndexedSizesNearDiameter(diameterIn: number, _bandIn = 1): number {
+  return getTireDiameterCatalog().filter((entry) =>
+    isCatalogSizeInDiameterGroup(entry.specs.overallDiameterIn, diameterIn),
+  ).length;
+}
+
+/**
+ * Count indexed sizes in a diameter group, optionally filtered to a wheel diameter.
+ * Does not change reverse-search matching — presentation counts only.
+ */
+export function countIndexedSizesInDiameterGroup(
+  diameterGroupIn: number,
+  wheelIn?: number | 'any' | null,
+): number {
+  return getTireDiameterCatalog().filter((entry) => {
+    if (!isCatalogSizeInDiameterGroup(entry.specs.overallDiameterIn, diameterGroupIn)) {
+      return false;
+    }
+    if (wheelIn == null || wheelIn === 'any') return true;
+    return Math.round(entry.specs.wheelDiameterIn) === wheelIn;
+  }).length;
+}
+
+export function formatDiameterGroupSizeCountLabel(count: number): string {
+  if (count <= 0) return 'No indexed sizes across all wheels';
+  return `${count} indexed size${count === 1 ? '' : 's'} across all wheels`;
+}
+
+/** Compact hero-chip metadata — short enough to keep pills on one row. */
+export function formatDiameterTargetChipMeta(
+  count: number,
+  wheelIn: number | 'any' | null | undefined,
+): string {
+  if (count <= 0) {
+    if (wheelIn != null && wheelIn !== 'any') {
+      return `None on ${wheelIn}"`;
+    }
+    return 'None';
+  }
+  if (wheelIn != null && wheelIn !== 'any') {
+    return `${count} on ${wheelIn}"`;
+  }
+  return `${count} size${count === 1 ? '' : 's'}`;
 }
 
 export function buildWhatIsTireDiameterLead(example: DiameterVsWheelExample): string {
@@ -483,10 +653,9 @@ When you shop for upgrades, owners often think in round numbers such as 33 or 35
 Use overall diameter alongside width and wheel size when comparing options. A tire that matches your target height on the wrong rim may not bolt on, and a correct rim with the wrong sidewall may rub at full compression. Searching by diameter helps you discover realistic metric codes before you open individual size guides or run a full comparison.`,
 
   howToMeasureSteps: [
-    'Park on level ground with tires inflated to recommended pressure.',
-    'Measure vertically from the ground to the top of the tread (not the rim).',
-    'Alternatively, measure circumference at the tread centerline and divide by π.',
-    'Compare your measurement to calculated values — expect 1–3% real-world variance.',
+    'Park on level ground',
+    'Measure from the ground to the top of the tire through its centreline',
+    'Record and compare with the calculated result',
   ],
 
   affectsIntro:

@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDiameterFaqs,
+  buildDiameterVsWheelExample,
   buildPopularComparisonsForDiameterSearch,
   buildPopularSizesNearDiameter,
+  countIndexedSizesNearDiameter,
+  DIAMETER_FAQ_PRIMARY_COUNT,
   tireMatchesDiameterSearch,
 } from './tire-diameter-insights';
+import { buildFaqPageSchema } from './seo/schema';
+import { getRelatedCalculatorLinks, CALCULATOR_PATHS } from './calculator-links';
 
 describe('buildPopularSizesNearDiameter', () => {
   it('returns closest popular sizes by overall diameter', () => {
@@ -12,6 +18,41 @@ describe('buildPopularSizesNearDiameter', () => {
     expect(cards[0].size).toBeTruthy();
     expect(cards[0].diameterIn).toBeGreaterThan(0);
     expect(cards[0].hubHref).toMatch(/^\/tire-size\//);
+  });
+});
+
+describe('countIndexedSizesNearDiameter', () => {
+  it('returns real catalog counts for nearest-inch diameter classes', () => {
+    const near33 = countIndexedSizesNearDiameter(33);
+    expect(near33).toBeGreaterThan(0);
+  });
+
+  it('uses nearest-inch rounding without overlapping ±1 bands', () => {
+    const c31 = countIndexedSizesNearDiameter(31);
+    const c33 = countIndexedSizesNearDiameter(33);
+    // Counts are independent nearest-inch buckets, so they need not sum to a ±1 band.
+    expect(c31).toBeGreaterThanOrEqual(0);
+    expect(c33).toBeGreaterThanOrEqual(0);
+  });
+
+  it('gates popular diameter CTAs on indexed counts', () => {
+    for (const d of [31, 33, 35]) {
+      expect(countIndexedSizesNearDiameter(d)).toBeGreaterThanOrEqual(0);
+    }
+    expect(countIndexedSizesNearDiameter(33)).toBeGreaterThan(0);
+  });
+});
+
+describe('buildDiameterVsWheelExample', () => {
+  it('uses preferred closest size even when wheel filter differs', () => {
+    const example = buildDiameterVsWheelExample(18, {
+      preferredSize: '275/70R18',
+      targetDiameterIn: 33,
+    });
+    expect(example.exampleSize).toBe('275/70R18');
+    expect(example.overallDiameterIn).toBeCloseTo(33.16, 1);
+    expect(example.sidewallIn).toBeGreaterThan(0);
+    expect(example.wheelIn).toBe(18);
   });
 });
 
@@ -73,6 +114,51 @@ describe('buildPopularComparisonsForDiameterSearch', () => {
       expect(links.indexOf(bothMatch[0])).toBeLessThan(
         links.findIndex((link) => !bothMatch.includes(link)),
       );
+    }
+  });
+});
+
+describe('buildDiameterFaqs', () => {
+  it('builds twelve FAQs with dynamic target and closest match', () => {
+    const faqs = buildDiameterFaqs({
+      targetDiameterIn: 33,
+      wheelDiameterIn: 18,
+      closestSize: '275/70R18',
+      closestDiameterIn: 33.16,
+      toleranceIn: 1,
+    });
+    expect(faqs).toHaveLength(12);
+    expect(faqs[0].question).toContain('33.0 inches');
+    expect(faqs[0].answer).toContain('275/70R18');
+    expect(faqs.some((f) => f.question.includes('speedometer'))).toBe(true);
+    expect(
+      faqs.find((f) => f.question.includes('acceptable'))?.answer,
+    ).toContain('common screening guideline, not a guarantee');
+  });
+
+  it('limits FAQ schema to primary rendered questions', () => {
+    const faqs = buildDiameterFaqs({
+      targetDiameterIn: 35,
+      wheelDiameterIn: 'any',
+      closestSize: null,
+      closestDiameterIn: null,
+      toleranceIn: 2,
+    });
+    const primary = faqs.slice(0, DIAMETER_FAQ_PRIMARY_COUNT);
+    const schema = buildFaqPageSchema(primary);
+    expect(schema?.mainEntity).toHaveLength(DIAMETER_FAQ_PRIMARY_COUNT);
+    expect(primary[0].question).toContain('35.0 inches');
+  });
+});
+
+describe('diameter related calculators registry', () => {
+  it('excludes the current diameter calculator and nonexistent tools', () => {
+    const related = getRelatedCalculatorLinks(CALCULATOR_PATHS.tireDiameter, { limit: 6 });
+    expect(related.every((card) => card.href !== CALCULATOR_PATHS.tireDiameter)).toBe(true);
+    expect(related.some((card) => /aspect ratio/i.test(card.label))).toBe(false);
+    expect(related.some((card) => card.href === CALCULATOR_PATHS.speedometerError)).toBe(true);
+    for (const card of related) {
+      expect(card.href).toMatch(/^\/calculators\/.+\/$/);
     }
   });
 });

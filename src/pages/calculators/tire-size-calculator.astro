@@ -1,21 +1,36 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PremiumTireSizeCalculator from '../../components/calculators/PremiumTireSizeCalculator';
-import {
-  SEO_DESCRIPTIONS,
-} from '../../lib/seo/constants';
+import HubBreadcrumb from '../../components/hub/HubBreadcrumb.astro';
+import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import {
   buildPageSchema,
   calculatorBreadcrumbs,
 } from '../../lib/seo/page-schemas';
-import { TIRE_SIZE_CALCULATOR_FAQS } from '../../lib/tire-size-calculator-faqs';
-import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
+import {
+  buildOrganizationSchema,
+  buildWebApplicationSchema,
+  buildWebSiteSchema,
+} from '../../lib/seo/schema';
+import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
+import { getVisibleTireSizeCalculatorFaqs } from '../../lib/tire-size-calculator-faqs';
 
 const size = Astro.url.searchParams.get('size') ?? undefined;
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Tire Size Calculator'),
-  faqs: [...TIRE_SIZE_CALCULATOR_FAQS],
+  faqs: [...getVisibleTireSizeCalculatorFaqs()],
+  extra: [
+    buildOrganizationSchema(),
+    buildWebSiteSchema(),
+    buildWebApplicationSchema({
+      name: 'Tire Size Calculator',
+      description: SEO_DESCRIPTIONS.tireSizeCalculator,
+      url: '/calculators/tire-size-calculator/',
+      dateModified: CALCULATION_LOGIC_UPDATED,
+      id: 'tire-size-calculator',
+    }),
+  ],
 });
 ---
 
@@ -25,13 +40,13 @@ const schema = buildPageSchema({
   canonical="/calculators/tire-size-calculator/"
   schema={schema}
 >
-  <div class="tl-container py-8 lg:py-10">
-    <PremiumTireSizeCalculator client:load initialSize={size} />
-  </div>
-  <div class="tl-container pb-10 lg:pb-14">
-    <TrustDisclosure
-      title="How our calculators work"
-      subtitle="Sidewall, diameter, circumference, and revs/mile are derived from the parsed size label in our tire-math module — methodology, data sources, and validation steps below."
+  <div class="tl-container py-5 lg:py-6">
+    <HubBreadcrumb
+      crumbs={[
+        { label: 'Home', href: '/' },
+        { label: 'Tire Size Calculator' },
+      ]}
     />
+    <PremiumTireSizeCalculator client:load initialSize={size} />
   </div>
 </Layout>

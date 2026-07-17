@@ -9,18 +9,27 @@ import {
 export function formatPageTitle(title: string, siteName = SITE_NAME): string {
   const suffix = ` | ${siteName}`;
   if (title.includes(siteName)) {
-    return title;
+    return cleanDanglingConjunctions(title);
   }
 
   const combined = `${title}${suffix}`;
-  if (combined.length <= SEO_TITLE_MAX_LENGTH) return combined;
+  if (combined.length <= SEO_TITLE_MAX_LENGTH) return cleanDanglingConjunctions(combined);
 
   const budget = SEO_TITLE_MAX_LENGTH - suffix.length - 1;
   if (budget < 12) {
-    return stripTrailingSeparators(truncateAtWord(combined, SEO_TITLE_MAX_LENGTH));
+    return cleanDanglingConjunctions(
+      `${stripTrailingSeparators(truncateAtWord(combined, SEO_TITLE_MAX_LENGTH))}${suffix}`,
+    );
   }
 
-  return `${stripTrailingSeparators(truncateAtWord(title, budget))}${suffix}`;
+  return cleanDanglingConjunctions(
+    `${stripTrailingSeparators(truncateAtWord(title, budget))}${suffix}`,
+  );
+}
+
+/** Document title for individual tire-size hub pages — includes brand so it is not truncated mid-phrase. */
+export function buildTireSizeHubPageTitle(displaySize: string, siteName = SITE_NAME): string {
+  return `${displaySize} Tire Size — Diameter, Specs & Fitment | ${siteName}`;
 }
 
 /** Trim meta descriptions to ~150–160 characters. */
@@ -49,6 +58,14 @@ function truncateAtWord(text: string, maxLength: number): string {
  */
 function stripTrailingSeparators(text: string): string {
   return text.replace(/[\s]*[|&,·/–—-]+\s*$/u, '').trim();
+}
+
+/** Remove dangling conjunctions/separators immediately before the brand pipe. */
+function cleanDanglingConjunctions(title: string): string {
+  return title
+    .replace(/\s+&\s*\|/gu, ' |')
+    .replace(/\s+[,–—-]\s*\|/gu, ' |')
+    .trim();
 }
 
 /** Strip brand suffix for pages that pass a pre-formatted document title. */

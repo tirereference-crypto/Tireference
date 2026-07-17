@@ -7,7 +7,7 @@ import {
   SEO_TITLES,
   SITE_URL,
 } from './constants';
-import { formatPageTitle, truncateDescription } from './format';
+import { formatPageTitle, truncateDescription, buildTireSizeHubPageTitle } from './format';
 import { resolveCanonical } from './urls';
 import {
   buildBreadcrumbSchema,
@@ -34,6 +34,21 @@ describe('formatPageTitle', () => {
     );
     expect(formatPageTitle(SEO_TITLES.homepage)).toBe(SEO_TITLES.homepage);
   });
+
+  it('builds tire-size hub titles with fitment and brand suffix', () => {
+    expect(buildTireSizeHubPageTitle('275/70R18')).toBe(
+      '275/70R18 Tire Size — Diameter, Specs & Fitment | Tire Reference',
+    );
+    expect(formatPageTitle(buildTireSizeHubPageTitle('275/70R18'))).toBe(
+      buildTireSizeHubPageTitle('275/70R18'),
+    );
+  });
+
+  it('never leaves a dangling ampersand before the brand pipe when truncating', () => {
+    const truncated = formatPageTitle('275/70R18 Tire Size — Diameter, Specs & Fitment');
+    expect(truncated).not.toMatch(/&\s*\|/);
+    expect(truncated.endsWith('| Tire Reference')).toBe(true);
+  });
 });
 
 describe('truncateDescription', () => {
@@ -58,20 +73,29 @@ describe('resolveCanonical', () => {
   it('preserves trailing slashes when present in the input', () => {
     expect(resolveCanonical('/tire-sizes/')).toBe('https://tirereference.com/tire-sizes/');
     expect(resolveCanonical('/calculators/tire-size-calculator/?size=275-45r17')).toBe(
-      'https://tirereference.com/calculators/tire-size-calculator/?size=275-45r17',
+      'https://tirereference.com/calculators/tire-size-calculator/',
     );
   });
 
-  it('does not add trailing slashes when absent from the input', () => {
+  it('strips calculator query parameters from canonical URLs', () => {
+    expect(
+      resolveCanonical('/calculators/tire-comparison-calculator/?from=275/70R18&to=285/70R17'),
+    ).toBe('https://tirereference.com/calculators/tire-comparison-calculator/');
+    expect(
+      resolveCanonical('https://tirereference.com/calculators/gear-ratio-calculator/?stock=31&new=35'),
+    ).toBe('https://tirereference.com/calculators/gear-ratio-calculator/');
+  });
+
+  it('normalizes paths to trailing-slash form to match site config', () => {
     expect(resolveCanonical('/calculators/tire-size-calculator')).toBe(
-      'https://tirereference.com/calculators/tire-size-calculator',
+      'https://tirereference.com/calculators/tire-size-calculator/',
     );
-    expect(resolveCanonical('/tire-sizes')).toBe('https://tirereference.com/tire-sizes');
+    expect(resolveCanonical('/tire-sizes')).toBe('https://tirereference.com/tire-sizes/');
   });
 });
 
 describe('buildHomePageSchema', () => {
-  it('includes WebSite SearchAction and Organization', () => {
+  it('includes WebSite and Organization without unsupported SearchAction', () => {
     const data = buildHomePageSchema();
     const graph = (data as { '@graph': Record<string, unknown>[] })['@graph'];
 
@@ -84,20 +108,12 @@ describe('buildHomePageSchema', () => {
       description: SEO_DESCRIPTIONS.homepage,
     });
 
-    expect(website?.potentialAction).toMatchObject({
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
-    });
+    expect(website?.potentialAction).toBeUndefined();
 
     expect(organization).toMatchObject({
       name: SITE_NAME,
       url: `${SITE_URL}/`,
       logo: ORGANIZATION_LOGO_URL,
-      sameAs: [],
     });
   });
 });
@@ -113,7 +129,7 @@ describe('buildBreadcrumbSchema', () => {
   it('outputs ordered breadcrumb items', () => {
     const schema = buildBreadcrumbSchema([
       { name: 'Home', item: '/' },
-      { name: 'Tire Sizes', item: '/tire-sizes' },
+      { name: 'Tire Sizes', item: '/tire-sizes/' },
     ]);
 
     const items = (schema.itemListElement as { position: number; name: string }[]);

@@ -2,6 +2,8 @@ import type { TireCategory } from '../data/tire-sizes';
 import { getTireSpecs, type TireSpecs } from './tire-math';
 import type { HubFaqItem } from './tire-size-hub';
 import { getExpertFaqForSize } from './tire-size-faq-expert';
+import { getExpertIntroForTireSize } from './tire-size-expert-intro';
+import { getTireSizeDataCoverage } from './tire-size-products';
 
 export interface HeroHighlight {
   label: string;
@@ -26,8 +28,14 @@ function fmt(size: string): string {
   return size.replace(/^lt/i, 'LT').replace(/^p/i, 'P');
 }
 
-/** Editorial intro for 275/70R18 — context and interpretation, not hero spec repetition. */
-const INTRO_275_70R18 = `The 275/70R18 has earned its reputation as the go-to upsizing sweet spot for serious truck and SUV builds — not because it's the biggest you can run, but because it's the most you can run without paying the tax. That tax comes in three forms: rubbing at full lock, destroyed fuel economy, and a recalibration bill. At 33.1 inches, the 275/70R18 clears factory wheel wells on the F-250, Ram 2500, Land Cruiser, and LX570 without touching fenders at full steering lock — something the 285/70R18 can't always claim on the same platforms without a spacer or trim. The 7.58-inch sidewall is tall enough to air down to 18–20 PSI on loose terrain and actually get sidewall bulge working for you, but not so tall that you're fighting vague steering on tarmac the way you do on a 35-inch build. Overlanders running long-distance expedition routes — think Pan-American, Silk Road style multi-week trips — consistently pick this size over the flashier 35s precisely because it doesn't punish you on the highway miles between the good stuff. The 10.83-inch section width threads a needle too: wide enough for a stable footprint in sand and mud, narrow enough that you're not fighting tramlining on grooved highway surfaces. If you're on a half-ton platform — F-150, Tundra, Ram 1500 — this size will fit with a quality 2-inch level, and that's still a cheaper total investment than going to a 285 with a full 3-inch lift. The 1.7% speedometer deviation is essentially noise — most GPS apps won't even show the difference.`;
+/** Cap hub intros to a short paragraph for the size page. */
+export function shortenHubIntro(intro: string, maxSentences = 3): string {
+  const trimmed = intro.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return trimmed;
+  const parts = trimmed.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [trimmed];
+  if (parts.length <= maxSentences) return trimmed;
+  return parts.slice(0, maxSentences).join(' ').trim();
+}
 
 interface IntroTraits {
   sizeLabel: string;
@@ -126,9 +134,11 @@ export function buildCategoryIntro(
   _flotation: string,
 ): string {
   const sizeKey = fmt(size);
-  if (sizeKey === '275/70R18') {
-    return INTRO_275_70R18;
-  }
+  const expertIntro = getExpertIntroForTireSize(
+    { size: sizeKey, specs, category },
+    sizeKey.toUpperCase() === '275/70R18' ? getTireSizeDataCoverage(sizeKey) : null,
+  );
+  if (expertIntro) return expertIntro;
 
   const traits = deriveIntroTraits(size, specs);
 
@@ -449,12 +459,16 @@ export function buildBuyingGuideSummary(
   category: TireCategory,
 ): string {
   const s = fmt(size);
+  if (s.toUpperCase() === '275/70R18') {
+    const diameterRounded = (Math.round(specs.overallDiameterIn * 10) / 10).toFixed(1);
+    return `${s} is a near-${diameterRounded}" truck/SUV size often selected for extra sidewall, load capacity, and trail capability without committing to a true 35-inch build.`;
+  }
   const inchClass = Math.round(specs.overallDiameterIn);
 
   switch (category) {
     case 'light-truck':
     case 'off-road':
-      return `${s} is a popular ${inchClass}-inch truck tire offering additional ground clearance while maintaining reasonable on-road comfort.`;
+      return `${s} is a ${inchClass}-inch truck tire offering additional ground clearance while maintaining reasonable on-road comfort.`;
     case 'performance':
       return `${s} prioritizes handling response and steering precision over ride softness.`;
     case 'SUV':

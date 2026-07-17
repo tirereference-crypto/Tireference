@@ -1,481 +1,526 @@
+import { useEffect, useState } from 'react';
 import type { GearRatioResult } from '../../lib/gear-ratio-math';
-import { formatRatio } from '../../lib/gear-ratio-math';
+import { formatAxleRatio, formatRpm } from '../../lib/gear-ratio-math';
 import {
-  BEFORE_INSTALL_EXPECTATIONS,
-  buildGearComparisonMatrix,
-  buildGearComparisonTable,
-  type GearComparisonSetup,
-  type GearComparisonTableCell,
-  type GearStarRating,
+  buildFactualComparisonRows,
+  buildTireChangeInterpretation,
+  type FactualComparisonRow,
 } from '../../lib/gear-ratio-insights';
 
-const STAR_FILL: Record<GearStarRating['tone'], string> = {
-  red: '#ef4444',
-  orange: '#f97316',
-  green: '#22c55e',
-};
+function useIsNarrow(maxWidthPx = 699): boolean {
+  const [narrow, setNarrow] = useState(true);
 
-const STAR_EMPTY = '#e2e8f0';
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${maxWidthPx}px)`);
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [maxWidthPx]);
 
-function GearingStars({ rating }: { rating: GearStarRating }) {
-  return (
-    <div className="grc-gear-compare__stars" aria-label={`${rating.filled} out of 5 stars`}>
-      {Array.from({ length: 5 }, (_, i) => {
-        const filled = i < rating.filled;
-        return (
-          <svg
-            key={i}
-            viewBox="0 0 20 20"
-            className="grc-gear-compare__star"
-            aria-hidden="true"
-          >
-            <path
-              d="M10 1.5l2.47 5.01 5.53.8-4 3.9.94 5.5L10 14.77l-4.94 2.94.94-5.5-4-3.9 5.53-.8L10 1.5z"
-              fill={filled ? STAR_FILL[rating.tone] : STAR_EMPTY}
-              stroke={filled ? STAR_FILL[rating.tone] : '#cbd5e1'}
-              strokeWidth="0.75"
-            />
-          </svg>
-        );
-      })}
-    </div>
-  );
+  return narrow;
 }
 
-function GearingBarRow({
-  setup,
-  barMin,
-  barMax,
-}: {
-  setup: GearComparisonSetup;
-  barMin: number;
-  barMax: number;
-}) {
-  const span = barMax - barMin || 1;
-  const widthPct = ((setup.effective - barMin) / span) * 100;
-
-  return (
-    <div className="grc-gear-compare__bar-row">
-      <div className="grc-gear-compare__bar-label">
-        <span className="grc-gear-compare__bar-name">
-          {setup.name} ({formatRatio(setup.gear)})
-        </span>
-        <span className="grc-gear-compare__bar-effective">
-          Effective: {formatRatio(setup.effective)}
-        </span>
-      </div>
-      <div className="grc-gear-compare__bar-track">
-        <div
-          className={`grc-gear-compare__bar grc-gear-compare__bar--${setup.barTone}`}
-          style={{ width: `${Math.max(8, widthPct)}%` }}
-        >
-          <span className="grc-gear-compare__bar-value">{formatRatio(setup.effective)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Bar chart + star table comparing keep-current, ideal, and performance gearing. */
-export function GearRatioGearingComparison({ result }: { result: GearRatioResult }) {
-  const matrix = buildGearComparisonMatrix(result);
-
-  return (
-    <div className="grc-gear-compare">
-      <h2 className="grc-gear-compare__title">
-        Gearing Comparison (With {matrix.tireDiameterIn}&quot; Tires)
-      </h2>
-
-      <div className="grc-gear-compare__bars">
-        {matrix.setups.map((setup) => (
-          <GearingBarRow
-            key={setup.key}
-            setup={setup}
-            barMin={matrix.barMin}
-            barMax={matrix.barMax}
-          />
-        ))}
-        <div className="grc-gear-compare__axis">
-          <span>Lower</span>
-          <span className="grc-gear-compare__axis-label">Overall Gearing (Effective Ratio)</span>
-          <span>Higher</span>
-        </div>
-      </div>
-
-      <div className="grc-gear-compare__table-wrap">
-        <table className="grc-gear-compare__table">
-          <thead>
-            <tr>
-              <th scope="col">Setup</th>
-              <th scope="col">Acceleration</th>
-              <th scope="col">Towing</th>
-              <th scope="col">Fuel Economy</th>
-              <th scope="col">Highway RPM</th>
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.setups.map((setup) => (
-              <tr key={setup.key}>
-                <th scope="row">
-                  {setup.name} ({formatRatio(setup.gear)})
-                </th>
-                <td>
-                  <GearingStars rating={setup.ratings.acceleration} />
-                </td>
-                <td>
-                  <GearingStars rating={setup.ratings.towing} />
-                </td>
-                <td>
-                  <GearingStars rating={setup.ratings.fuelEconomy} />
-                </td>
-                <td>
-                  <GearingStars rating={setup.ratings.highwayRpm} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="grc-gear-compare__legend" aria-label="Star rating legend">
-        <span className="grc-gear-compare__legend-item">
-          <GearingStars rating={{ filled: 1, tone: 'red' }} />
-          <span>Poor</span>
-        </span>
-        <span className="grc-gear-compare__legend-item">
-          <GearingStars rating={{ filled: 2, tone: 'orange' }} />
-          <span>Fair</span>
-        </span>
-        <span className="grc-gear-compare__legend-item">
-          <GearingStars rating={{ filled: 3, tone: 'orange' }} />
-          <span>Good</span>
-        </span>
-        <span className="grc-gear-compare__legend-item">
-          <GearingStars rating={{ filled: 4, tone: 'green' }} />
-          <span>Very Good</span>
-        </span>
-        <span className="grc-gear-compare__legend-item">
-          <GearingStars rating={{ filled: 5, tone: 'green' }} />
-          <span>Excellent</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ExpectIcon({ name }: { name: string }) {
+function MetricIcon({ kind }: { kind: 'gear' | 'tach' | 'torque' }) {
   const common = {
-    viewBox: '0 0 20 20',
+    viewBox: '0 0 24 24',
+    width: 18,
+    height: 18,
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: 1.6,
+    strokeWidth: 1.75,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
+    'aria-hidden': true as const,
   };
-  switch (name) {
-    case 'launch':
-      return (
-        <svg {...common}>
-          <circle cx="10" cy="10" r="7" />
-          <path d="M10 10l3-3" />
-          <circle cx="10" cy="10" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case 'towing':
-      return (
-        <svg {...common}>
-          <path d="M3 14l4-6 4 4 6-8" />
-        </svg>
-      );
-    case 'rpm':
-      return (
-        <svg {...common}>
-          <path d="M4 14a6 6 0 1112 0" />
-          <path d="M10 14l3-4" />
-        </svg>
-      );
-    case 'downshift':
-      return (
-        <svg {...common}>
-          <rect x="4" y="3" width="12" height="14" rx="2" />
-          <path d="M8 7h4M8 10h4M8 13h2" />
-        </svg>
-      );
-    default:
-      return (
-        <svg {...common}>
-          <circle cx="10" cy="10" r="7" />
-        </svg>
-      );
+
+  if (kind === 'tach') {
+    return (
+      <svg {...common}>
+        <path d="M12 19a7 7 0 1 1 6.3-4" />
+        <path d="M12 12l4-2.5" />
+        <path d="M12 19v-2" />
+      </svg>
+    );
   }
-}
-
-/** Single "Before Installing Bigger Tires" panel — summary, expect list, stock vs effective visual. */
-export function BeforeInstallingBiggerTires({ result }: { result: GearRatioResult }) {
-  const { input } = result;
-  const currentD = Math.round(input.currentDiameterIn);
-  const newD = Math.round(input.newDiameterIn);
-  const stockGear = formatRatio(input.stockGearRatio);
-  const effectiveGear = formatRatio(result.effectiveRatio);
-
+  if (kind === 'torque') {
+    return (
+      <svg {...common}>
+        <circle cx="8" cy="12" r="3" />
+        <circle cx="16" cy="12" r="3" />
+        <path d="M11 12h2" />
+      </svg>
+    );
+  }
   return (
-    <section className="grc-before-install" aria-label="Before installing bigger tires">
-      <h2 className="grc-before-install__title">Before Installing Bigger Tires</h2>
-
-      <p className="grc-before-install__summary">
-        Switching from <strong>{currentD}&quot;</strong> to <strong>{newD}&quot;</strong> tires with{' '}
-        <strong>{stockGear}</strong> gears will make your vehicle behave approximately like changing from{' '}
-        <strong>{stockGear}</strong> gears to <strong>{effectiveGear}</strong> gears.
-      </p>
-
-      <div className="grc-before-install__body">
-        <div className="grc-before-install__expect">
-          <h3 className="grc-before-install__expect-title">Expect:</h3>
-          <ul className="grc-before-install__expect-list">
-            {BEFORE_INSTALL_EXPECTATIONS.map((item) => (
-              <li key={item.icon} className="grc-before-install__expect-item">
-                <span className="grc-before-install__expect-icon" aria-hidden="true">
-                  <ExpectIcon name={item.icon} />
-                </span>
-                <span>{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="grc-before-install__visual">
-          <div className="grc-before-install__flow">
-            <div className="grc-before-install__setup">
-              <span className="grc-before-install__setup-label">Stock Setup</span>
-              <div className="grc-before-install__setup-box grc-before-install__setup-box--stock">
-                <span className="grc-before-install__setup-tire">{currentD}&quot; Tires</span>
-                <span className="grc-before-install__setup-gear">{stockGear} Gears</span>
-              </div>
-            </div>
-
-            <span className="grc-before-install__arrow" aria-hidden="true">
-              →
-            </span>
-
-            <div className="grc-before-install__setup">
-              <span className="grc-before-install__setup-label">
-                After {newD}&quot; Tires (Stock {stockGear} Gears)
-              </span>
-              <div className="grc-before-install__setup-box grc-before-install__setup-box--after">
-                <span className="grc-before-install__setup-effective-label">Effective Like</span>
-                <span className="grc-before-install__setup-effective-value">{effectiveGear} Gears</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <svg {...common}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M4.5 6.5l1.6 1.6M17.9 15.9l1.6 1.6M3 12h2.2M18.8 12H21M4.5 17.5l1.6-1.6M17.9 8.1l1.6-1.6" />
+    </svg>
   );
 }
 
-/** Effective gear ratio formula card — matches reference layout and copy. */
-export function EffectiveGearRatioExplained({ result }: { result: GearRatioResult }) {
-  const { input } = result;
-  const stockGear = formatRatio(input.stockGearRatio);
-  const originalDiameter =
-    Math.abs(result.effectiveCurrentDiameterIn - Math.round(result.effectiveCurrentDiameterIn)) < 0.05
-      ? String(Math.round(result.effectiveCurrentDiameterIn))
-      : result.effectiveCurrentDiameterIn.toFixed(2);
-  const newDiameter = result.effectiveNewDiameterIn.toFixed(2);
-  const effectiveRatio = formatRatio(result.effectiveRatio);
-
+function DirectionArrow({ direction }: { direction: 'taller' | 'deeper' | 'unchanged' }) {
+  if (direction === 'unchanged') return null;
   return (
-    <section className="grc-effective-explained" aria-label="Effective gear ratio explained">
-      <h2 className="grc-effective-explained__title">Effective Gear Ratio Explained</h2>
-      <p className="grc-effective-explained__lead">
-        When you increase tire size without changing gears, your effective (overall) ratio gets taller.
-      </p>
-
-      <div className="grc-effective-explained__math">
-        <div className="grc-effective-explained__result-label">
-          <span>Effective Ratio</span>
-          <span>(Overall)</span>
-        </div>
-
-        <span className="grc-effective-explained__equals grc-effective-explained__equals--formula" aria-hidden="true">
-          =
-        </span>
-
-        <div className="grc-effective-explained__equation-col">
-          <div className="grc-effective-explained__formula-box">
-            <div className="grc-effective-explained__equation-grid">
-              <span className="grc-effective-explained__term">
-                <span className="grc-effective-explained__term-main grc-effective-explained__term-main--line">
-                  Original Gear Ratio
-                </span>
-                <span className="grc-effective-explained__term-sub">(Axle Ratio)</span>
-              </span>
-              <span className="grc-effective-explained__operator" aria-hidden="true">
-                ×
-              </span>
-              <span className="grc-effective-explained__term">
-                <span className="grc-effective-explained__term-main">Original Tire Diameter</span>
-                <span className="grc-effective-explained__term-sub">(Loaded)</span>
-              </span>
-              <span className="grc-effective-explained__operator" aria-hidden="true">
-                ÷
-              </span>
-              <span className="grc-effective-explained__term">
-                <span className="grc-effective-explained__term-main">New Tire Diameter</span>
-                <span className="grc-effective-explained__term-sub">(Effective)</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="grc-effective-explained__equation-grid grc-effective-explained__equation-grid--values">
-            <span className="grc-effective-explained__value">{stockGear}</span>
-            <span className="grc-effective-explained__operator" aria-hidden="true">
-              ×
-            </span>
-            <span className="grc-effective-explained__value">{originalDiameter}</span>
-            <span className="grc-effective-explained__operator" aria-hidden="true">
-              ÷
-            </span>
-            <span className="grc-effective-explained__value">{newDiameter}</span>
-          </div>
-        </div>
-
-        <span className="grc-effective-explained__equals grc-effective-explained__equals--values" aria-hidden="true">
-          =
-        </span>
-
-        <span className="grc-effective-explained__equals grc-effective-explained__equals--answer" aria-hidden="true">
-          =
-        </span>
-
-        <span className="grc-effective-explained__answer">{effectiveRatio}</span>
-      </div>
-    </section>
-  );
-}
-
-function ComparisonTableCell({ cell }: { cell: GearComparisonTableCell }) {
-  const tone = cell.tone ?? 'default';
-  return (
-    <span
-      className={[
-        'grc-compare-table__cell-text',
-        cell.bold ? 'grc-compare-table__cell-text--bold' : '',
-        tone !== 'default' ? `grc-compare-table__cell-text--${tone}` : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {cell.text}
+    <span className="grc-metric-card__arrow" aria-hidden="true">
+      {direction === 'taller' ? '↓' : '↑'}
     </span>
   );
 }
 
-/** Full gearing comparison table — stock, new tires, ideal, and performance rows. */
-export function GearRatioComparisonTable({ result }: { result: GearRatioResult }) {
-  const rows = buildGearComparisonTable(result);
+/** Compact interpretation of the tire-diameter change — not a second results summary. */
+export function WhatChangesWithNewTires({ result }: { result: GearRatioResult }) {
+  const copy = buildTireChangeInterpretation(result);
+  const tone = copy.direction === 'unchanged' ? 'slate' : copy.direction === 'taller' ? 'amber' : 'violet';
 
   return (
-    <section className="grc-compare-table-section" aria-label="Gearing comparison table">
-      <h2 className="grc-compare-table__title">Gearing Comparison Table</h2>
-      <div className="grc-compare-table__wrap grc-compare-table__wrap--desktop">
-        <table className="grc-compare-table">
-          <thead>
-            <tr>
-              <th scope="col">Setup</th>
-              <th scope="col">Tire Diameter (Effective)</th>
-              <th scope="col">Axle Gear Ratio</th>
-              <th scope="col">Effective Gear Ratio (Overall)</th>
-              <th scope="col">Change from Stock</th>
-              <th scope="col">Acceleration</th>
-              <th scope="col">Towing</th>
-              <th scope="col">Cruising RPM</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.setup}>
-                <th scope="row">{row.setup}</th>
-                <td>{row.tireDiameter}</td>
-                <td>{row.axleGear}</td>
-                <td>
-                  <ComparisonTableCell cell={row.effectiveRatio} />
-                </td>
-                <td>
-                  <ComparisonTableCell cell={row.changeFromStock} />
-                </td>
-                <td>
-                  <ComparisonTableCell cell={row.acceleration} />
-                </td>
-                <td>
-                  <ComparisonTableCell cell={row.towing} />
-                </td>
-                <td>{row.cruisingRpm}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <section id="grc-what-changes" className="grc-change" aria-label="What changes with the new tires">
+      <h2 className="grc-change__title">{copy.heading}</h2>
+      <p className="grc-change__summary">{copy.summary}</p>
+
+      <div className="grc-change__metrics">
+        <article className={`grc-metric-card grc-metric-card--${tone === 'slate' ? 'slate' : 'amber'}`}>
+          <div className="grc-metric-card__top">
+            <span className="grc-metric-card__icon" aria-hidden="true">
+              <MetricIcon kind="gear" />
+            </span>
+            <span className="grc-metric-card__label">Effective gearing</span>
+            <DirectionArrow direction={copy.direction} />
+          </div>
+          <p className="grc-metric-card__value">{copy.effectivePrimary}</p>
+          <p className="grc-metric-card__helper">{copy.effectiveHelper}</p>
+        </article>
+
+        <article className={`grc-metric-card grc-metric-card--${tone === 'slate' ? 'slate' : 'blue'}`}>
+          <div className="grc-metric-card__top">
+            <span className="grc-metric-card__icon" aria-hidden="true">
+              <MetricIcon kind="tach" />
+            </span>
+            <span className="grc-metric-card__label">Engine RPM</span>
+            <DirectionArrow direction={copy.direction} />
+          </div>
+          <p className="grc-metric-card__value">{copy.rpmPrimary}</p>
+          <p className="grc-metric-card__helper">{copy.rpmHelper}</p>
+        </article>
+
+        <article className={`grc-metric-card grc-metric-card--${tone === 'slate' ? 'slate' : 'violet'}`}>
+          <div className="grc-metric-card__top">
+            <span className="grc-metric-card__icon" aria-hidden="true">
+              <MetricIcon kind="torque" />
+            </span>
+            <span className="grc-metric-card__label">Low-speed multiplication</span>
+            <DirectionArrow direction={copy.direction} />
+          </div>
+          <p className="grc-metric-card__value">{copy.multiplicationPrimary}</p>
+          <p className="grc-metric-card__helper">{copy.multiplicationHelper}</p>
+        </article>
       </div>
 
-      <div className="grc-compare-cards" aria-label="Gearing comparison cards">
-        {rows.map((row) => (
-          <article key={row.setup} className="grc-compare-card">
-            <h3 className="grc-compare-card__title">{row.setup}</h3>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Tire Diameter</span>
-              <span className="grc-compare-card__value">{row.tireDiameter}</span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Axle Gear</span>
-              <span className="grc-compare-card__value">{row.axleGear}</span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Effective Ratio</span>
-              <span className="grc-compare-card__value">
-                <ComparisonTableCell cell={row.effectiveRatio} />
+      <div
+        className={`grc-relationship grc-relationship--${copy.direction}`}
+        aria-label={copy.relationship.join(' → ')}
+      >
+        {copy.relationship.map((step, index) => (
+          <div key={step} className="grc-relationship__item">
+            {index > 0 ? (
+              <span className="grc-relationship__arrow" aria-hidden="true">
+                →
               </span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Change from Stock</span>
-              <span className="grc-compare-card__value">
-                <ComparisonTableCell cell={row.changeFromStock} />
-              </span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Acceleration</span>
-              <span className="grc-compare-card__value">
-                <ComparisonTableCell cell={row.acceleration} />
-              </span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Towing</span>
-              <span className="grc-compare-card__value">
-                <ComparisonTableCell cell={row.towing} />
-              </span>
-            </div>
-            <div className="grc-compare-card__row">
-              <span className="grc-compare-card__label">Cruising RPM</span>
-              <span className="grc-compare-card__value">{row.cruisingRpm}</span>
-            </div>
-          </article>
+            ) : null}
+            <span className="grc-relationship__step">
+              <span className="grc-relationship__dot" aria-hidden="true" />
+              <span>{step}</span>
+            </span>
+          </div>
         ))}
       </div>
+
+      <p className="grc-change__interpretation">{copy.interpretation}</p>
+
+      <p className="grc-change__notice">
+        <span className="grc-change__notice-icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+            <circle cx="10" cy="10" r="7.25" stroke="currentColor" strokeWidth="1.5" />
+            <path
+              d="M10 9v4.5M10 6.75h.01"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+        <span>{copy.notice}</span>
+      </p>
     </section>
   );
 }
 
-/** Gearing comparison (left) + before-install panel (right), equal height at 50% width each. */
-export function GearCompareInstallRow({ result }: { result: GearRatioResult }) {
+/** Dual-formula explanation — collapsed by default. */
+export function HowGearRatioCalculationWorks({ result }: { result: GearRatioResult }) {
+  const [open, setOpen] = useState(false);
+  const stock = formatAxleRatio(result.input.stockGearRatio);
+  const current = Number.isInteger(result.currentDiameterIn)
+    ? String(result.currentDiameterIn)
+    : result.currentDiameterIn.toFixed(1);
+  const next = Number.isInteger(result.newDiameterIn)
+    ? String(result.newDiameterIn)
+    : result.newDiameterIn.toFixed(1);
+  const effective = formatAxleRatio(result.effectiveRatio);
+  const target = formatAxleRatio(result.stockLikeTarget);
+  const bodyId = 'grc-how-it-works-body';
+
   return (
-    <div className="grc-compare-install-row">
-      <div className="grc-compare-install-row__col">
-        <section className="wof-viz-card grc-viz-card grc-gear-compare-card" aria-label="Gearing comparison chart">
-          <GearRatioGearingComparison result={result} />
-        </section>
+    <details
+      id="grc-how-it-works"
+      className="grc-formula-accordion"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary
+        className="grc-formula-accordion__summary"
+        aria-expanded={open}
+        aria-controls={bodyId}
+      >
+        <span className="grc-formula-accordion__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <rect x="4" y="3" width="16" height="18" rx="2" />
+            <path d="M8 7h8M8 11h5M8 15h3" strokeLinecap="round" />
+          </svg>
+        </span>
+        <span className="grc-formula-accordion__text">
+          <span className="grc-formula-accordion__title">How the calculation works</span>
+          <span className="grc-formula-accordion__hint">
+            View the effective-ratio and stock-like-target formulas
+          </span>
+        </span>
+        <span className="grc-accordion-chevron" aria-hidden="true" />
+      </summary>
+      <div id={bodyId} className="grc-formula-accordion__body">
+        <div className="grc-formula__grid">
+          <article className="grc-formula__card grc-formula__card--effective">
+            <h3 className="grc-formula__heading">Effective ratio with new tires</h3>
+            <p className="grc-formula__role">How the current gears behave with the new tires</p>
+            <div className="grc-formula__display" aria-hidden="true">
+              <span className="grc-formula__live">{stock}</span>
+              <span className="grc-formula__op">×</span>
+              <span className="grc-formula__live">{current}</span>
+              <span className="grc-formula__op">÷</span>
+              <span className="grc-formula__live">{next}</span>
+              <span className="grc-formula__op">=</span>
+              <span className="grc-formula__live grc-formula__live--result">{effective}</span>
+            </div>
+            <p className="grc-formula__sr">
+              {stock} times {current} divided by {next} equals {effective}.
+            </p>
+            <p className="grc-formula__explain">
+              Current axle ratio × current tire diameter ÷ new tire diameter.
+            </p>
+          </article>
+
+          <article className="grc-formula__card grc-formula__card--target">
+            <h3 className="grc-formula__heading">Stock-like target ratio</h3>
+            <p className="grc-formula__role">Ratio that restores the original geometric relationship</p>
+            <div className="grc-formula__display" aria-hidden="true">
+              <span className="grc-formula__live">{stock}</span>
+              <span className="grc-formula__op">×</span>
+              <span className="grc-formula__live">{next}</span>
+              <span className="grc-formula__op">÷</span>
+              <span className="grc-formula__live">{current}</span>
+              <span className="grc-formula__op">=</span>
+              <span className="grc-formula__live grc-formula__live--result">{target}</span>
+            </div>
+            <p className="grc-formula__sr">
+              {stock} times {next} divided by {current} equals {target}.
+            </p>
+            <p className="grc-formula__explain">
+              Current axle ratio × new tire diameter ÷ current tire diameter.
+            </p>
+          </article>
+        </div>
+
+        <p className="grc-formula__note">
+          Use actual mounted tire diameters for the most accurate comparison. Calculations use geometric
+          tire-diameter and axle-ratio relationships only.
+        </p>
       </div>
-      <div className="grc-compare-install-row__col">
-        <BeforeInstallingBiggerTires result={result} />
+    </details>
+  );
+}
+
+function DifferenceBar({
+  percent,
+  label,
+  maxAbs,
+  tone,
+}: {
+  percent: number;
+  label: string;
+  maxAbs: number;
+  tone: FactualComparisonRow['tone'];
+}) {
+  const scale = Math.max(maxAbs, 5);
+  const width = Math.min(50, (Math.abs(percent) / scale) * 50);
+  const isZero = Math.abs(percent) < 0.05;
+  const taller = percent < -0.05;
+  const deeper = percent > 0.05;
+  const aria = isZero
+    ? 'Zero percent difference from the original setup'
+    : `Difference from original: ${label}`;
+
+  return (
+    <div className="grc-diff">
+      <span className="grc-diff__text">{label}</span>
+      <div className="grc-diff__bar" role="img" aria-label={aria}>
+        <div className="grc-diff__track">
+          <span className="grc-diff__center" aria-hidden="true" />
+          {taller ? (
+            <span
+              className={`grc-diff__fill grc-diff__fill--taller grc-diff__fill--${tone}`}
+              style={{ width: `${width}%` }}
+              aria-hidden="true"
+            />
+          ) : null}
+          {deeper ? (
+            <span
+              className={`grc-diff__fill grc-diff__fill--deeper grc-diff__fill--${tone}`}
+              style={{ width: `${width}%` }}
+              aria-hidden="true"
+            />
+          ) : null}
+          {isZero ? (
+            <span
+              className={`grc-diff__marker grc-diff__marker--zero${
+                tone === 'exact' ? ' grc-diff__marker--exact' : ''
+              }`}
+              aria-hidden="true"
+            />
+          ) : null}
+        </div>
+        <div className="grc-diff__legend" aria-hidden="true">
+          <span>Taller</span>
+          <span>0%</span>
+          <span>Deeper</span>
+        </div>
       </div>
     </div>
+  );
+}
+
+function FactualTableDesktop({
+  rows,
+  maxAbs,
+}: {
+  rows: FactualComparisonRow[];
+  maxAbs: number;
+}) {
+  return (
+    <div className="grc-factual-table__wrap">
+      <table className="grc-factual-table">
+        <thead>
+          <tr>
+            <th scope="col">Setup</th>
+            <th scope="col">Axle ratio</th>
+            <th scope="col">Effective ratio</th>
+            <th scope="col">Difference</th>
+            <th scope="col">Interpretation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.id}
+              className={`grc-factual-table__row grc-factual-table__row--${row.tone}${
+                row.emphasis === 'primary' ? ' grc-factual-table__row--primary' : ''
+              }`}
+            >
+              <th scope="row">
+                <span className="grc-factual-table__setup">
+                  {row.setup}
+                  {row.emphasis === 'primary' ? (
+                    <span className="grc-factual-exact-badge">Exact target</span>
+                  ) : null}
+                </span>
+              </th>
+              <td>
+                <span className={`grc-ratio-badge grc-ratio-badge--${row.tone}`}>{row.axleRatio}</span>
+              </td>
+              <td>
+                <strong>{row.effectiveRatio}</strong>
+              </td>
+              <td>
+                <DifferenceBar
+                  percent={row.differencePercent}
+                  label={row.differenceFromOriginal}
+                  maxAbs={maxAbs}
+                  tone={row.tone}
+                />
+              </td>
+              <td>
+                <span className="grc-factual-chip">{row.interpretation}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FactualTableMobile({
+  rows,
+  maxAbs,
+}: {
+  rows: FactualComparisonRow[];
+  maxAbs: number;
+}) {
+  return (
+    <ul className="grc-factual-cards">
+      {rows.map((row) => (
+        <li
+          key={row.id}
+          className={`grc-factual-card grc-factual-card--${row.tone}${
+            row.emphasis === 'primary' ? ' grc-factual-card--primary' : ''
+          }`}
+        >
+          <h3 className="grc-factual-card__title">
+            {row.setup}
+            {row.emphasis === 'primary' ? (
+              <span className="grc-factual-exact-badge">Exact target</span>
+            ) : null}
+          </h3>
+          <dl className="grc-factual-card__grid">
+            <div>
+              <dt>Axle ratio</dt>
+              <dd>
+                <span className={`grc-ratio-badge grc-ratio-badge--${row.tone}`}>{row.axleRatio}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Effective ratio</dt>
+              <dd>{row.effectiveRatio}</dd>
+            </div>
+            <div className="grc-factual-card__diff">
+              <dt>Difference</dt>
+              <dd>
+                <DifferenceBar
+                  percent={row.differencePercent}
+                  label={row.differenceFromOriginal}
+                  maxAbs={maxAbs}
+                  tone={row.tone}
+                />
+              </dd>
+            </div>
+          </dl>
+          <p className="grc-factual-card__interpretation">
+            <span className="grc-factual-chip">{row.interpretation}</span>
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function GearRatioFactualComparisonTable({
+  result,
+  extraAxleRatios = [],
+}: {
+  result: GearRatioResult;
+  extraAxleRatios?: number[];
+}) {
+  const rows = buildFactualComparisonRows(result, extraAxleRatios);
+  const narrow = useIsNarrow(699);
+  const maxAbs = Math.max(...rows.map((row) => Math.abs(row.differencePercent)), 5);
+
+  return (
+    <section id="grc-compare-setups" className="grc-factual-compare" aria-label="Setup comparison">
+      <h2 className="grc-factual-compare__title">Setup Comparison</h2>
+      <p className="grc-factual-compare__intro">
+        Geometric comparison of axle and effective ratios. Nearby examples are common reference
+        values, not availability claims.
+      </p>
+      {narrow ? (
+        <FactualTableMobile rows={rows} maxAbs={maxAbs} />
+      ) : (
+        <FactualTableDesktop rows={rows} maxAbs={maxAbs} />
+      )}
+    </section>
+  );
+}
+
+export function GearRpmCrawlComparison({ result }: { result: GearRatioResult }) {
+  if (!result.rpmReady && !result.crawlReady) return null;
+
+  const speedLabel =
+    result.input.speedMph != null
+      ? result.input.speedUnit === 'kmh'
+        ? `${(result.input.speedMph / 0.621371).toFixed(0)} km/h`
+        : `${result.input.speedMph.toFixed(0)} mph`
+      : null;
+
+  return (
+    <section
+      id="grc-advanced-analysis"
+      className="grc-advanced-results"
+      aria-label="RPM and crawl comparison"
+    >
+      <h2 className="grc-advanced-results__title">RPM and Crawl Comparison</h2>
+
+      {result.rpmReady && result.estimatedRpm && speedLabel ? (
+        <div className="grc-advanced-results__block">
+          <h3 className="grc-advanced-results__heading">Estimated engine RPM</h3>
+          <p className="grc-advanced-results__note">
+            Theoretical values only. Excludes torque-converter slip, tire growth and drivetrain
+            losses.
+          </p>
+          <ul className="grc-advanced-results__list">
+            <li>
+              Selected cruising speed: <strong>{speedLabel}</strong>
+            </li>
+            <li>
+              Original estimated RPM:{' '}
+              <strong>{formatRpm(result.estimatedRpm.originalSetup)}</strong>
+            </li>
+            <li>
+              New tires with current gears:{' '}
+              <strong>{formatRpm(result.estimatedRpm.newTiresCurrentGears)}</strong>
+            </li>
+            <li>
+              Exact stock-like target:{' '}
+              <strong>{formatRpm(result.estimatedRpm.newTiresStockLike)}</strong>
+            </li>
+            <li>
+              Nearby ratio example:{' '}
+              <strong>{formatRpm(result.estimatedRpm.nearbyStockLike)}</strong>
+            </li>
+            <li>
+              Deeper-use target: <strong>{formatRpm(result.estimatedRpm.newTiresDeeper)}</strong>
+            </li>
+          </ul>
+        </div>
+      ) : null}
+
+      {result.crawlReady && result.crawlRatios ? (
+        <div className="grc-advanced-results__block">
+          <h3 className="grc-advanced-results__heading">Theoretical overall crawl ratio</h3>
+          <p className="grc-advanced-results__note">
+            Crawl ratio is a drivetrain multiplication figure, not a direct performance score.
+          </p>
+          <ul className="grc-advanced-results__list">
+            <li>
+              Current crawl ratio: <strong>{formatAxleRatio(result.crawlRatios.currentAxle)}</strong>
+            </li>
+            <li>
+              Stock-like target crawl ratio:{' '}
+              <strong>{formatAxleRatio(result.crawlRatios.stockLike)}</strong>
+            </li>
+            <li>
+              Deeper-use target crawl ratio:{' '}
+              <strong>{formatAxleRatio(result.crawlRatios.deeper)}</strong>
+            </li>
+          </ul>
+        </div>
+      ) : null}
+    </section>
   );
 }

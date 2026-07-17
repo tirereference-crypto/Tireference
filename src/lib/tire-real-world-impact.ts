@@ -5,7 +5,11 @@
  */
 import type { UnitSystem } from './calculator-types';
 import type { TireComparison, TireSpecs } from './tire-math';
-import { fmtInQuote, fmtPct, fmtSigned, nearZero } from './tire-comparison-format';
+import {
+  buildHandlingCardLabels,
+  type EngineeringAnalysis,
+} from './tire-comparison-engineering-analysis';
+import { fmtInQuote, fmtPct, fmtSigned, isSidewallRideUnchanged, nearZero, SIDEWALL_CHANGE_PCT, sidewallPctFromSpecs } from './tire-comparison-format';
 import {
   formatDimensionDiff,
   formatRevsDiff,
@@ -141,9 +145,10 @@ export function buildRideComfortImpactCopy(
 ): ImpactCopyParts {
   const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
   const sidewallDiffMm = specsB.sidewallMm - specsA.sidewallMm;
+  const sidewallPct = sidewallPctFromSpecs(specsA, specsB);
   const aspectDiff = specsB.aspectRatio - specsA.aspectRatio;
 
-  if (nearZero(sidewallDiff, 0.05)) {
+  if (isSidewallRideUnchanged(sidewallPct)) {
     return {
       measurement: `Sidewall height stays ${fmtInQuote(specsA.sidewallIn)} (${specsA.aspectRatio}% aspect) on both sizes — a ${Math.abs(sidewallDiffMm).toFixed(0)} mm difference.`,
       engineering: `Air-spring volume in the sidewall is essentially unchanged, so vertical deflection before the tread contacts the rim remains similar.`,
@@ -172,11 +177,12 @@ export function buildHandlingImpactCopy(
 ): ImpactCopyParts {
   const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
   const sidewallDiffMm = specsB.sidewallMm - specsA.sidewallMm;
+  const sidewallPct = sidewallPctFromSpecs(specsA, specsB);
   const widthDiffMm = specsB.widthMm - specsA.widthMm;
   const widthPct = ((widthDiffMm) / specsA.widthMm) * 100;
   const aspectDiff = specsB.aspectRatio - specsA.aspectRatio;
 
-  if (nearZero(sidewallDiff, 0.05) && nearZero(widthDiffMm, 2)) {
+  if (isSidewallRideUnchanged(sidewallPct) && nearZero(widthDiffMm, 2)) {
     return {
       measurement: `Section width stays ${fmtInQuote(specsA.sectionWidthIn)} (${specsA.widthMm} mm) and sidewall stays ${fmtInQuote(specsA.sidewallIn)} between ${sizeA} and ${sizeB}.`,
       engineering: `Contact-patch width and sidewall flex under lateral load remain near the reference size.`,
@@ -190,16 +196,16 @@ export function buildHandlingImpactCopy(
       `section width ${widthDiffMm > 0 ? 'grows' : 'narrows'} ${Math.abs(widthDiffMm).toFixed(0)} mm (${fmtPct(widthPct)}; ${fmtInQuote(specsA.sectionWidthIn)} → ${fmtInQuote(specsB.sectionWidthIn)})`,
     );
   }
-  if (!nearZero(sidewallDiff, 0.05)) {
+  if (!isSidewallRideUnchanged(sidewallPct)) {
     parts.push(
       `sidewall ${sidewallDiff > 0 ? 'lengthens' : 'shortens'} ${Math.abs(sidewallDiffMm).toFixed(0)} mm (${fmtSigned(sidewallDiff, 2, '"')}; aspect ${specsA.aspectRatio} → ${specsB.aspectRatio})`,
     );
   }
 
   const engineering =
-    sidewallDiff < -0.05
+    sidewallPct <= -SIDEWALL_CHANGE_PCT.UNCHANGED
       ? `A shorter sidewall limits tread squirm under lateral load, which generally sharpens steering response on paved roads.`
-      : sidewallDiff > 0.05
+      : sidewallPct >= SIDEWALL_CHANGE_PCT.UNCHANGED
         ? `A taller sidewall allows more tread deflection under cornering load, which can feel softer in transitions.`
         : `The primary handling variable is contact-patch width changing with section width.`;
 
@@ -208,7 +214,7 @@ export function buildHandlingImpactCopy(
       ? `Expect slightly higher steering effort at parking speeds and a wider contact patch under braking.`
       : widthDiffMm < -5
         ? `Steering effort typically lightens and the contact patch narrows — useful for winter sizing but with less dry grip.`
-        : sidewallDiff < -0.05
+        : sidewallPct <= -SIDEWALL_CHANGE_PCT.UNCHANGED
           ? `Turn-in feels sharper on pavement; rough surfaces feel firmer.`
           : `Handling balance shifts modestly — confirm on your wheel offset and alignment settings.`;
 
@@ -299,23 +305,29 @@ export interface RealWorldImpactCard {
   gaugeNeedle?: number;
 }
 
-/** Comparison page performance cards — UI shape unchanged. */
+/** Comparison page performance cards — derived from shared engineering analysis. */
 export function buildComparisonPerformanceImpactCards(
-  sizeA: string,
-  sizeB: string,
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
-  unitSystem: UnitSystem = 'imperial',
+  analysis: EngineeringAnalysis,
 ): RealWorldImpactCard[] {
-  const indicatedSpeed = comparison.speedometer.indicatedSpeed;
-  const speedUnit = speedUnitLabel(unitSystem);
-  const trueSpeed = comparison.speedometer.trueSpeed;
-  const rpmA = Math.round(rpmAtSpeed(indicatedSpeed, specsA, unitSystem));
-  const rpmB = Math.round(rpmAtSpeed(indicatedSpeed, specsB, unitSystem));
-  const rpmDelta = rpmB - rpmA;
-  const signedDiamDiffIn = specsB.overallDiameterIn - specsA.overallDiameterIn;
-  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
+  const m = analysis.measurements;
+  const {
+    sizeA,
+    sizeB,
+    comparison,
+    specsA,
+    specsB,
+    unitSystem,
+    indicatedSpeed,
+    rpmA,
+    rpmB,
+    rpmDelta,
+    speedUnit,
+    trueSpeed,
+    sidewallDiffIn,
+    groundClearanceChangeIn,
+    widthDiffMm,
+    revsDiff,
+  } = m;
 
   const speedoCopy = buildSpeedometerImpactCopy(sizeA, sizeB, comparison, specsA, specsB, unitSystem);
   const rpmCopy = buildRpmImpactCopy(
@@ -335,14 +347,7 @@ export function buildComparisonPerformanceImpactCards(
   const handlingCopy = buildHandlingImpactCopy(sizeA, sizeB, comparison, specsA, specsB);
   const accelCopy = buildAccelerationImpactCopy(sizeA, sizeB, comparison, specsA, specsB, unitSystem);
 
-  const handlingValue =
-    nearZero(sidewallDiff, 0.05) && nearZero(comparison.widthDiffMm, 2)
-      ? 'Minimal change'
-      : sidewallDiff < -0.05
-        ? `${fmtSigned(sidewallDiff, 2, '"')} sidewall`
-        : comparison.widthDiffMm > 2
-          ? `+${comparison.widthDiffMm.toFixed(0)} mm width`
-          : `${comparison.widthDiffMm.toFixed(0)} mm width`;
+  const handlingLabels = buildHandlingCardLabels(analysis);
 
   return [
     {
@@ -353,7 +358,7 @@ export function buildComparisonPerformanceImpactCards(
       status: `True speed: ${trueSpeed.toFixed(1)} ${speedUnit} at ${indicatedSpeed} indicated`,
       explanation: formatImpactCopy(speedoCopy),
       icon: 'speedo',
-      tone: Math.abs(comparison.speedometer.errorPercent) <= 3 ? 'positive' : 'warning',
+      tone: m.absSpeedoPct <= 3 ? 'positive' : 'warning',
       gaugeNeedle: Math.min(100, Math.max(0, 50 + (comparison.speedometer.errorPercent / 5) * 50)),
     },
     {
@@ -361,35 +366,35 @@ export function buildComparisonPerformanceImpactCards(
       title: 'RPM Change',
       value: fmtSigned(rpmDelta, 0, ' RPM'),
       subtitle: `At ${indicatedSpeed} ${speedUnit}`,
-      status: `${rpmB.toLocaleString()} RPM on ${sizeB} (${formatRevsDiff(comparison.revsPerMileDiff, unitSystem, specsA, specsB)} ${unitSystem === 'metric' ? 'revs/km' : 'revs/mi'})`,
+      status: `${rpmB.toLocaleString()} RPM on ${sizeB} (${formatRevsDiff(revsDiff, unitSystem, specsA, specsB)} ${unitSystem === 'metric' ? 'revs/km' : 'revs/mi'})`,
       explanation: formatImpactCopy(rpmCopy),
       icon: 'rpm',
-      tone: comparison.revsPerMileDiff > 0 ? 'negative' : comparison.revsPerMileDiff < 0 ? 'positive' : 'neutral',
+      tone: revsDiff > 0 ? 'negative' : revsDiff < 0 ? 'positive' : 'neutral',
       gaugeNeedle: Math.min(100, Math.max(0, 50 + (rpmDelta / 250) * 50)),
     },
     {
       id: 'clearance',
       title: 'Ground Clearance',
-      value: formatDimensionDiff(comparison.groundClearanceChangeIn, unitSystem),
-      status: clearanceStatus(comparison.groundClearanceChangeIn, unitSystem),
+      value: formatDimensionDiff(groundClearanceChangeIn, unitSystem),
+      status: clearanceStatus(groundClearanceChangeIn, unitSystem),
       explanation: formatImpactCopy(clearanceCopy),
       icon: 'clearance',
-      tone: comparison.groundClearanceChangeIn > 0 ? 'positive' : comparison.groundClearanceChangeIn < 0 ? 'negative' : 'neutral',
+      tone: groundClearanceChangeIn > 0 ? 'positive' : groundClearanceChangeIn < 0 ? 'negative' : 'neutral',
     },
     {
       id: 'height',
       title: 'Ride Height Change',
-      value: formatDimensionDiff(comparison.groundClearanceChangeIn, unitSystem),
-      status: `Sidewall ${fmtSigned(sidewallDiff, 2, '"')} (${specsA.aspectRatio} → ${specsB.aspectRatio} aspect)`,
+      value: formatDimensionDiff(groundClearanceChangeIn, unitSystem),
+      status: `Sidewall ${fmtSigned(sidewallDiffIn, 2, '"')} (${specsA.aspectRatio} → ${specsB.aspectRatio} aspect)`,
       explanation: formatImpactCopy(comfortCopy),
       icon: 'height',
-      tone: comparison.groundClearanceChangeIn > 0 ? 'positive' : comparison.groundClearanceChangeIn < 0 ? 'negative' : 'neutral',
+      tone: groundClearanceChangeIn > 0 ? 'positive' : groundClearanceChangeIn < 0 ? 'negative' : 'neutral',
     },
     {
       id: 'handling',
       title: 'Handling Impact',
-      value: handlingValue,
-      status: `Aspect ${specsA.aspectRatio} → ${specsB.aspectRatio}${comparison.widthDiffMm !== 0 ? ` · ${fmtSigned(comparison.widthDiffMm, 0, ' mm')} width` : ''}`,
+      value: handlingLabels.value,
+      status: `${handlingLabels.status}${widthDiffMm !== 0 ? ` · ${fmtSigned(widthDiffMm, 0, ' mm')} width` : ''}`,
       explanation: formatImpactCopy(handlingCopy),
       icon: 'handling',
       tone: specsB.aspectRatio < specsA.aspectRatio - 2 ? 'positive' : 'neutral',

@@ -1,0 +1,77 @@
+---
+/**
+ * Speedometer-focused entry into the tire comparison calculator.
+ * Reuses existing compareTires math via PremiumTireSizeComparison — no new formulas.
+ */
+import Layout from '../../layouts/Layout.astro';
+import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
+import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
+import { compareOgImageUrl } from '../../lib/og/og-image-url';
+import { parseTireComparisonFromSearch } from '../../lib/calculator-url-state';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
+import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+import { buildEditorialArticleSchema } from '../../lib/seo/editorial-schema';
+import { buildWebApplicationSchema } from '../../lib/seo/schema';
+import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
+import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
+import { compareTires, getTireSpecs } from '../../lib/tire-math';
+
+const { from: current, to: newSize, third } = parseTireComparisonFromSearch(Astro.url.searchParams, {
+  from: '265/70R17',
+  to: '275/70R18',
+});
+
+const title = 'Speedometer Error Calculator';
+const description =
+  'See how tire-size changes affect indicated speed and odometer accuracy when overall diameter changes.';
+let faqs: { question: string; answer: string }[] = [];
+
+try {
+  const specsA = getTireSpecs(current);
+  const specsB = getTireSpecs(newSize);
+  const comparison = compareTires(current, newSize, 60);
+  const insights = buildComparisonInsights(current, newSize, comparison, specsA, specsB);
+  faqs = insights.seo.faqs.filter((faq) => /speedometer|speed|odometer/i.test(faq.question));
+  if (faqs.length < 2) faqs = insights.seo.faqs.slice(0, 3);
+} catch {
+  /* keep defaults for invalid query params */
+}
+
+const ogImage = compareOgImageUrl(current, newSize);
+const canonical = CALCULATOR_PATHS.speedometerError;
+
+const schema = buildPageSchema({
+  breadcrumbs: calculatorBreadcrumbs('Speedometer Error'),
+  faqs,
+  extra: [
+    buildWebApplicationSchema({
+      name: title,
+      description,
+      url: canonical,
+      dateModified: CALCULATION_LOGIC_UPDATED,
+      id: 'speedometer-error-calculator',
+    }),
+    buildEditorialArticleSchema({
+      headline: title,
+      description,
+      url: canonical,
+      dateModified: SITE_CONTENT_UPDATED,
+    }),
+  ],
+});
+---
+
+<Layout
+  title={title}
+  description={description}
+  canonical={canonical}
+  image={ogImage}
+  schema={schema}
+>
+  <PremiumTireSizeComparison
+    client:load
+    initialCurrent={current}
+    initialNew={newSize}
+    initialThird={third}
+  />
+</Layout>

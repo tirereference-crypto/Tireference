@@ -1,25 +1,32 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import '../../styles/calculator-comparison.css';
+import '../../styles/tire-size-calculator-page.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
-import { CALCULATOR_PATHS, getRelatedCalculatorLinks } from '../../lib/calculator-links';
+import { CALCULATOR_PATHS } from '../../lib/calculator-links';
+import { COMPARISON_PAGE_INTRO_FALLBACK } from '../../lib/tire-comparison-insights';
 import {
-  buildComparisonPageIntro,
-  COMPARISON_PAGE_INTRO_FALLBACK,
-  type PersonalityCard,
-  type QuickComparisonVerdict,
-  type UpgradePathCard,
-  type WillThisFitRow,
-} from '../../lib/tire-comparison-insights';
-import { ComparisonVisualPanel } from './ComparisonVisualPanel';
+  ComparisonDecisionRail,
+  ComparisonFeelPanel,
+  ComparisonKpiRow,
+} from './ComparisonDashboardSections';
+import { ComparisonResultsTabs } from './ComparisonResultsTabs';
+import { ComparisonBelowDashboard } from './ComparisonBelowDashboard';
+import {
+  ComparisonFaqSection,
+  ComparisonPopularPairs,
+  ComparisonRelatedCalculators,
+  ComparisonTrustStrip,
+} from './ComparisonLowerPage';
+import { PopularTiresBySize } from './tire-size-calculator/PopularTiresBySize';
+import { resolveComparisonDataSources } from '../../lib/comparison-data-sources';
+import { buildDimensionalDecisionSupport } from '../../lib/comparison-decision-support';
+import { getDatabaseProductionLabel } from '../../lib/size-production-status';
 import { TireSizeValidationBanner } from './TireSizeValidationBanner';
+import type { TireSizeInputFields } from '../../lib/calculator-types';
+import type { TireSizeValidationResult } from '../../lib/tire-size-validation';
 import {
-  FuelEconomyGauges,
-  PerformanceDrivingCard,
-  RpmVsSpeedChart,
-  TireSpecsSummaryTable,
-} from './ComparisonReferenceWidgets';
-import { useTireSizeComparison,
+  useTireSizeComparison,
   type UseTireSizeComparisonOptions,
 } from './useTireSizeComparison';
 import { StickyAnalyzeButton } from './StickyAnalyzeButton';
@@ -30,141 +37,147 @@ import {
   useCalculatorStarted,
   useUserInteractionFlag,
 } from '../../hooks/useCalculatorAnalytics';
-import { trackRelatedCalculatorClick, trackTireSizeSelected } from '../../lib/analytics';
+import { trackTireSizeSelected } from '../../lib/analytics';
 
-const CALCULATOR_LINKS = getRelatedCalculatorLinks(CALCULATOR_PATHS.tireComparison);
-
-function UpgradePathCardView({ card }: { card: UpgradePathCard }) {
-  const content = (
-    <>
-      <span className="cmp-upgrade-paths__size">{card.size}</span>
-      <span className="cmp-upgrade-paths__tier">{card.tierLabel}</span>
-      <span className="cmp-upgrade-paths__diff">{card.diameterDiff}</span>
-      {card.fitmentDifficulty && (
-        <span className={`cmp-upgrade-paths__difficulty cmp-upgrade-paths__difficulty--${card.fitmentDifficulty === 'Easy Fit' ? 'easy' : card.fitmentDifficulty === 'Minor Checks Needed' ? 'check' : 'verify'}`}>
-          {card.fitmentDifficulty}
-        </span>
-      )}
-    </>
-  );
-
-  if (card.href) {
-    return (
-      <a className="cmp-upgrade-paths__card cmp-upgrade-paths__card--link" href={card.href}>
-        {content}
-      </a>
-    );
-  }
+function TireSegmentInputs({
+  prefix,
+  fields,
+  paste,
+  pastePlaceholder,
+  accent,
+  label,
+  canonical,
+  validation,
+  onFieldChange,
+  onPaste,
+  onSelectSuggestion,
+  onRemove,
+}: {
+  prefix: string;
+  fields: TireSizeInputFields;
+  paste: string;
+  pastePlaceholder: string;
+  accent: 'a' | 'b' | 'third';
+  label: string;
+  canonical: string | null;
+  validation: TireSizeValidationResult | null;
+  onFieldChange: (key: keyof TireSizeInputFields, value: string) => void;
+  onPaste: (value: string) => void;
+  onSelectSuggestion: (size: string) => void;
+  onRemove?: () => void;
+}) {
+  const construction = 'R';
+  const productionLabel = canonical ? getDatabaseProductionLabel(canonical) : null;
+  const showProductionUnavailable = Boolean(canonical) && !productionLabel;
+  const hideStatusBadge =
+    Boolean(productionLabel || showProductionUnavailable) &&
+    Boolean(validation) &&
+    (validation!.status === 'common' || validation!.status === 'uncommon');
+  const invalid =
+    Boolean(validation) &&
+    (validation!.status === 'invalid' || validation!.status === 'custom');
 
   return (
-    <div className="cmp-upgrade-paths__card cmp-upgrade-paths__card--current">
-      {content}
-    </div>
-  );
-}
-
-function UpgradePathsSection({ cards }: { cards: UpgradePathCard[] }) {
-  return (
-    <section className="cmp-card cmp-card--half cmp-upgrade-paths" aria-label="Upgrade paths">
-      <h2 className="cmp-card__title">Upgrade Paths</h2>
-      <div className="cmp-upgrade-paths__flow">
-        {cards.map((card, index) => (
-          <div key={card.id} className="cmp-upgrade-paths__segment">
-            {index > 0 && <span className="cmp-upgrade-paths__arrow" aria-hidden="true">→</span>}
-            <UpgradePathCardView card={card} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function WillThisFitList({ rows }: { rows: WillThisFitRow[] }) {
-  return (
-    <ul className="cmp-will-fit">
-      {rows.map((row) => (
-        <li key={row.id} className="cmp-will-fit__row">
-          <span className="cmp-will-fit__name">{row.label}</span>
-          <span className={`cmp-will-fit__badge cmp-will-fit__badge--${row.status}`}>
-            <span className="cmp-will-fit__icon" aria-hidden="true">
-              {row.status === 'pass' ? '✓' : row.status === 'warning' ? '⚠' : '✕'}
-            </span>
-            {row.statusLabel}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function QuickVerdictCard({ verdict }: { verdict: QuickComparisonVerdict }) {
-  return (
-    <section
-      className={`cmp-panel cmp-verdict cmp-verdict--${verdict.tone}`}
-      aria-label="Quick comparison verdict"
-    >
-      <p className="cmp-verdict__heading">Quick Comparison Verdict</p>
-
-      <div className={`cmp-verdict__badge cmp-verdict__badge--${verdict.tone}`}>
-        <span className="cmp-verdict__indicator" aria-hidden="true">{verdict.indicator}</span>
-        <p className="cmp-verdict__title">{verdict.label}</p>
+    <section className={`cmp-tire-input-block cmp-tire-input-block--${accent}`}>
+      <div className="cmp-tire-input-block__head">
+        <span className={`cmp-tire-input-block__label cmp-tire-input-block__label--${accent}`}>{label}</span>
+        {onRemove ? (
+          <button
+            type="button"
+            className="cmp-tire-input-block__remove"
+            onClick={onRemove}
+            aria-label={`Remove ${label}`}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
 
-      <p className="cmp-verdict__score">
-        Fitment Score: <strong>{verdict.score.toFixed(1)}</strong> / 10
-      </p>
-
-      {verdict.benefits.length > 0 && (
-        <ul className="cmp-verdict__list cmp-verdict__list--benefits">
-          {verdict.benefits.map((benefit) => (
-            <li key={benefit}>
-              <span className="cmp-verdict__icon cmp-verdict__icon--benefit" aria-hidden="true">✓</span>
-              <span>{benefit}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {verdict.considerations.length > 0 && (
-        <ul className="cmp-verdict__list cmp-verdict__list--considerations">
-          {verdict.considerations.map((item) => (
-            <li key={item}>
-              <span className="cmp-verdict__icon cmp-verdict__icon--consideration" aria-hidden="true">⚠</span>
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {verdict.bestFor.length > 0 && (
-        <div className="cmp-verdict__best-for">
-          <p className="cmp-verdict__best-for-label">Best For</p>
-          <p className="cmp-verdict__best-for-value">{verdict.bestFor.join(', ')}</p>
+      <div
+        className="cmp-tire-input-block__grid"
+        role="group"
+        aria-label={`${label} dimensions`}
+        aria-invalid={invalid || undefined}
+      >
+        <div className="cmp-tire-input-block__field">
+          <label htmlFor={`${prefix}-width`}>Width</label>
+          <input
+            id={`${prefix}-width`}
+            inputMode="decimal"
+            value={fields.width}
+            onChange={(e) => onFieldChange('width', e.target.value)}
+            autoComplete="off"
+            aria-invalid={invalid || undefined}
+          />
         </div>
-      )}
+        <div className="cmp-tire-input-block__field">
+          <label htmlFor={`${prefix}-aspect`}>Aspect ratio</label>
+          <input
+            id={`${prefix}-aspect`}
+            inputMode="decimal"
+            value={fields.aspectRatio}
+            onChange={(e) => onFieldChange('aspectRatio', e.target.value)}
+            autoComplete="off"
+            aria-invalid={invalid || undefined}
+          />
+        </div>
+        <div className="cmp-tire-input-block__field">
+          <label htmlFor={`${prefix}-construction`}>Construction</label>
+          <input
+            id={`${prefix}-construction`}
+            value={construction}
+            readOnly
+            tabIndex={-1}
+            aria-readonly="true"
+          />
+        </div>
+        <div className="cmp-tire-input-block__field">
+          <label htmlFor={`${prefix}-wheel`}>
+            Wheel diameter <span className="cmp-tire-input-block__unit">in</span>
+          </label>
+          <input
+            id={`${prefix}-wheel`}
+            inputMode="decimal"
+            value={fields.wheelDiameter}
+            onChange={(e) => onFieldChange('wheelDiameter', e.target.value)}
+            autoComplete="off"
+            aria-invalid={invalid || undefined}
+          />
+        </div>
+      </div>
+
+      <details className="cmp-paste-disclosure">
+        <summary>Paste a complete tire size</summary>
+        <input
+          className="cmp-tire-input-block__paste"
+          value={paste}
+          onChange={(e) => onPaste(e.target.value)}
+          placeholder={pastePlaceholder}
+          aria-label={`${label} complete size`}
+        />
+      </details>
+
+      {canonical ? (
+        <div className={`cmp-tire-input-block__meta cmp-tire-input-block__meta--${accent}`}>
+          <p className="cmp-tire-input-block__canonical">{canonical}</p>
+          {productionLabel ? (
+            <p className="cmp-prod-status">{productionLabel}</p>
+          ) : (
+            <p className="cmp-prod-status cmp-prod-status--unknown">Production status unavailable</p>
+          )}
+        </div>
+      ) : null}
+
+      {validation ? (
+        <TireSizeValidationBanner
+          validation={validation}
+          onSelectSuggestion={onSelectSuggestion}
+          compact
+          hideStatusBadge={hideStatusBadge}
+          hideNormalized={Boolean(canonical)}
+        />
+      ) : null}
     </section>
-  );
-}
-
-function PersonalityCards({ cards }: { cards: PersonalityCard[] }) {
-  const ordered = [...cards].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
-
-  return (
-    <div className="cmp-personality-cards">
-      {ordered.map((card) => (
-        <div
-          key={card.id}
-          className={`cmp-personality-card ${card.isPrimary ? 'cmp-personality-card--primary' : ''}`}
-        >
-          <p className="cmp-personality-card__title">{card.title}</p>
-          <ul className="cmp-personality-card__list">
-            {card.bullets.map((bullet) => (
-              <li key={bullet}>{bullet}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -181,25 +194,28 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     insights,
     specsA,
     specsB,
+    specsC,
     currentSizeLabel,
     newSizeLabel,
+    thirdSizeLabel,
+    hasThirdTire,
+    specRows,
     updateCurrentField,
     updateNewField,
     handleCurrentPaste,
     handleNewPaste,
     selectCurrentTireSize,
     selectNewTireSize,
+    swapTires,
     currentValidation,
     newValidation,
     setVehicleSpeed,
     setUnitSystem,
   } = useTireSizeComparison(props);
 
-  const [activeTab, setActiveTab] = useState<'visual' | 'specs'>('visual');
-  const [understandingExpanded, setUnderstandingExpanded] = useState(false);
   const formRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const faqRef = useRef<HTMLElement>(null);
+  const faqRef = useRef<HTMLDivElement>(null);
   const metric = unitSystem === 'metric';
   const speedUnit = metric ? 'km/h' : 'mph';
 
@@ -261,17 +277,41 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [markInteracted, trackComparisonIfReady]);
 
-  const displaySizeA = currentSizeLabel ?? (currentPaste.trim() || null);
-  const displaySizeB = newSizeLabel ?? (newPaste.trim() || null);
-  const pageIntro =
-    displaySizeA && displaySizeB
-      ? buildComparisonPageIntro(displaySizeA, displaySizeB)
-      : COMPARISON_PAGE_INTRO_FALLBACK;
+  const handleSelectAlternativeSize = useCallback(
+    (size: string) => {
+      handleSelectNewTireSize(size);
+      // Keep the enter-sizes card in view so the filled New Tire value is obvious.
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    [handleSelectNewTireSize],
+  );
+
+  const pageIntro = COMPARISON_PAGE_INTRO_FALLBACK;
 
   const ready = message.status === 'ready' && specsA && specsB && currentSizeLabel && newSizeLabel && insights;
-  const breadcrumbLabel = ready ? `${currentSizeLabel} vs ${newSizeLabel}` : 'Compare';
+  const dataSources = useMemo(
+    () =>
+      currentSizeLabel && newSizeLabel
+        ? resolveComparisonDataSources({ sizeA: currentSizeLabel, sizeB: newSizeLabel })
+        : null,
+    [currentSizeLabel, newSizeLabel],
+  );
+  const decisionSupport = useMemo(() => {
+    if (!comparison || !specsA || !specsB || !dataSources) return null;
+    return buildDimensionalDecisionSupport({
+      comparison,
+      specsA,
+      specsB,
+      dataSources,
+    });
+  }, [comparison, specsA, specsB, dataSources]);
+  const breadcrumbLabel = ready
+    ? hasThirdTire
+      ? `${currentSizeLabel} vs ${newSizeLabel} vs ${thirdSizeLabel}`
+      : `${currentSizeLabel} vs ${newSizeLabel}`
+    : 'Compare';
   const stickyVisible = useStickyAnalyzeButton(formRef, resultsRef, { resultsReady: Boolean(ready) });
-  useSingleOpenDetails(faqRef);
+  useSingleOpenDetails(faqRef, [ready, insights?.seo.faqs.length ?? 0]);
 
   return (
     <div className="cmp-page tl-has-sticky-analyze">
@@ -286,90 +326,158 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
           </nav>
         </div>
 
-        <div className="cmp-layout">
-          <aside ref={formRef} className="cmp-sidebar-left" aria-label="Comparison inputs">
-            <div className="cmp-panel cmp-enter-card">
-              <h2 className="cmp-enter-card__title">Enter Tire Sizes</h2>
+        <header className="cmp-page-header cmp-page-header--compact cmp-page-header--full">
+          <h1 className="cmp-page-header__title">Tire Size Comparison Calculator</h1>
+          <p className="cmp-page-header__intro">{pageIntro.sentence}</p>
+        </header>
 
-              <div className="cmp-tire-input-block">
-                <div className="cmp-tire-input-block__head">
-                  <span className="cmp-tire-input-block__label">Current Tire</span>
-                  <span className="cmp-tire-input-block__badge cmp-tire-input-block__badge--original">Original</span>
-                </div>
-                <div className="cmp-tire-input-block__row">
-                  {(['width', 'aspectRatio', 'wheelDiameter'] as const).map((key) => (
-                    <div key={key} className="cmp-tire-input-block__field">
-                      <label htmlFor={`current-${key}`}>{key === 'width' ? 'Width' : key === 'aspectRatio' ? 'Aspect' : 'Rim'}</label>
-                      <input id={`current-${key}`} value={currentFields[key]} onChange={(e) => { markInteracted(); updateCurrentField(key, e.target.value); }} />
-                    </div>
-                  ))}
-                </div>
-                <input className="cmp-tire-input-block__paste" value={currentPaste} onChange={(e) => { markInteracted(); handleCurrentPaste(e.target.value); }} placeholder="225/45R17" aria-label="Current tire size paste" />
-                <TireSizeValidationBanner
-                  validation={currentValidation}
-                  onSelectSuggestion={handleSelectCurrentTireSize}
-                />
+        <div className="cmp-layout cmp-dashboard">
+          <aside ref={formRef} className="cmp-sidebar-left" aria-label="Comparison inputs">
+            <div className="cmp-panel cmp-enter-card cmp-card-level-primary">
+              <div className="cmp-enter-card__heading">
+                <h2 className="cmp-enter-card__title">Enter Tire Sizes</h2>
+                <button
+                  type="button"
+                  className="cmp-swap-btn"
+                  onClick={() => {
+                    markInteracted();
+                    swapTires();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M7 7h11l-3-3M17 17H6l3 3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Swap Tires
+                </button>
               </div>
 
-              <div className="cmp-tire-input-block">
-                <div className="cmp-tire-input-block__head">
-                  <span className="cmp-tire-input-block__label">New Tire</span>
-                  <span className="cmp-tire-input-block__badge cmp-tire-input-block__badge--new">New</span>
-                </div>
-                <div className="cmp-tire-input-block__row">
-                  {(['width', 'aspectRatio', 'wheelDiameter'] as const).map((key) => (
-                    <div key={key} className="cmp-tire-input-block__field">
-                      <label htmlFor={`new-${key}`}>{key === 'width' ? 'Width' : key === 'aspectRatio' ? 'Aspect' : 'Rim'}</label>
-                      <input id={`new-${key}`} value={newFields[key]} onChange={(e) => { markInteracted(); updateNewField(key, e.target.value); }} />
-                    </div>
-                  ))}
-                </div>
-                <input className="cmp-tire-input-block__paste" value={newPaste} onChange={(e) => { markInteracted(); handleNewPaste(e.target.value); }} placeholder="235/40R18" aria-label="New tire size paste" />
-                <TireSizeValidationBanner
+              <div className="cmp-enter-card__tires">
+                <TireSegmentInputs
+                  prefix="current"
+                  fields={currentFields}
+                  paste={currentPaste}
+                  pastePlaceholder="225/45R17"
+                  accent="a"
+                  label="Original Tire"
+                  canonical={currentSizeLabel}
+                  validation={currentValidation}
+                  onFieldChange={(key, value) => {
+                    markInteracted();
+                    updateCurrentField(key, value);
+                  }}
+                  onPaste={(value) => {
+                    markInteracted();
+                    handleCurrentPaste(value);
+                  }}
+                  onSelectSuggestion={handleSelectCurrentTireSize}
+                />
+
+                <TireSegmentInputs
+                  prefix="new"
+                  fields={newFields}
+                  paste={newPaste}
+                  pastePlaceholder="235/40R18"
+                  accent="b"
+                  label="New Tire"
+                  canonical={newSizeLabel}
                   validation={newValidation}
+                  onFieldChange={(key, value) => {
+                    markInteracted();
+                    updateNewField(key, value);
+                  }}
+                  onPaste={(value) => {
+                    markInteracted();
+                    handleNewPaste(value);
+                  }}
                   onSelectSuggestion={handleSelectNewTireSize}
                 />
               </div>
 
-              <button type="button" className="cmp-compare-btn" onClick={scrollToResults}>Compare Now</button>
+              <div className="cmp-enter-card__actions">
+                <button type="button" className="cmp-compare-btn" onClick={scrollToResults}>
+                  Compare Tires
+                </button>
 
-              <div className="cmp-enter-card__settings">
-                <div className="cmp-segment" role="group" aria-label="Unit system">
-                  <button type="button" className={`cmp-segment__btn ${unitSystem === 'metric' ? 'cmp-segment__btn--active' : ''}`} onClick={() => setUnitSystem('metric')}>Metric</button>
-                  <button type="button" className={`cmp-segment__btn ${unitSystem === 'imperial' ? 'cmp-segment__btn--active' : ''}`} onClick={() => setUnitSystem('imperial')}>Inches</button>
-                </div>
-                <div className="cmp-field">
-                  <label htmlFor="cmp-speed">Vehicle Speed ({speedUnit})</label>
-                  <input id="cmp-speed" type="number" min={1} value={vehicleSpeed} onChange={(e) => setVehicleSpeed(e.target.value)} />
+                <div className="cmp-enter-card__settings" role="group" aria-label="Comparison settings">
+                  <div className="cmp-enter-card__units">
+                    <span className="cmp-enter-card__settings-label" id="cmp-units-label">
+                      Units
+                    </span>
+                    <div className="cmp-segment" role="group" aria-labelledby="cmp-units-label">
+                      <button
+                        type="button"
+                        className={`cmp-segment__btn ${unitSystem === 'imperial' ? 'cmp-segment__btn--active' : ''}`}
+                        onClick={() => setUnitSystem('imperial')}
+                      >
+                        Inches
+                      </button>
+                      <button
+                        type="button"
+                        className={`cmp-segment__btn ${unitSystem === 'metric' ? 'cmp-segment__btn--active' : ''}`}
+                        onClick={() => setUnitSystem('metric')}
+                      >
+                        Metric
+                      </button>
+                    </div>
+                  </div>
+                  <div className="cmp-field cmp-field--speed">
+                    <label htmlFor="cmp-speed">Vehicle speed ({speedUnit})</label>
+                    <input
+                      id="cmp-speed"
+                      type="number"
+                      min={1}
+                      value={vehicleSpeed}
+                      onChange={(e) => {
+                        markInteracted();
+                        setVehicleSpeed(e.target.value);
+                      }}
+                    />
+                    <p className="cmp-enter-card__hint">Used for the speedometer example.</p>
+                  </div>
                 </div>
               </div>
             </div>
-
           </aside>
 
-          <div className="cmp-main">
-            <header className="cmp-page-header">
-              <div className="cmp-page-header__top">
-                <h1 className="cmp-page-header__title">Tire Size Comparison Calculator</h1>
-                <span className="cmp-verified-badge">Fitment Analysis</span>
-              </div>
-              <p className="cmp-page-header__intro">{pageIntro.sentence}</p>
-            </header>
-
+          <div className="cmp-comparison-workspace">
             {!ready ? (
-              <div className="cmp-empty">{message.text}</div>
+              <div className="cmp-empty" role="status" aria-live="polite">
+                {message.text}
+              </div>
             ) : (
               <>
-                <div ref={resultsRef} className="cmp-results-anchor" aria-hidden="true" />
-                <div className="cmp-summary-bar" aria-label="Comparison summary">
-                  <div className="cmp-summary-bar__tire cmp-summary-bar__tire--current">
-                    <span className="cmp-summary-bar__size">{currentSizeLabel}</span>
-                    <span className="cmp-summary-bar__role">Current Tire</span>
-                  </div>
-                  <span className="cmp-summary-bar__arrow" aria-hidden="true">→</span>
-                  <div className="cmp-summary-bar__tire cmp-summary-bar__tire--new">
-                    <span className="cmp-summary-bar__size">{newSizeLabel}</span>
-                    <span className="cmp-summary-bar__role">New Tire</span>
+                <div
+                  ref={resultsRef}
+                  className={`cmp-summary-bar cmp-card-level-secondary${hasThirdTire ? ' cmp-summary-bar--triple' : ''}`}
+                  aria-label="Comparison identity"
+                >
+                  <div className="cmp-summary-bar__pair">
+                    <div className="cmp-summary-bar__tire cmp-summary-bar__tire--current">
+                      <span className="cmp-summary-bar__role">Original</span>
+                      <span className="cmp-summary-bar__size cmp-summary-bar__size--a">
+                        {currentSizeLabel}
+                      </span>
+                    </div>
+                    <span className="cmp-summary-bar__vs" aria-hidden="true">
+                      →
+                    </span>
+                    <div className="cmp-summary-bar__tire cmp-summary-bar__tire--new">
+                      <span className="cmp-summary-bar__role">New</span>
+                      <span className="cmp-summary-bar__size cmp-summary-bar__size--b">
+                        {newSizeLabel}
+                      </span>
+                    </div>
+                    {hasThirdTire && thirdSizeLabel ? (
+                      <>
+                        <span className="cmp-summary-bar__vs" aria-hidden="true">
+                          ·
+                        </span>
+                        <div className="cmp-summary-bar__tire cmp-summary-bar__tire--third">
+                          <span className="cmp-summary-bar__role">Third</span>
+                          <span className="cmp-summary-bar__size">{thirdSizeLabel}</span>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                   <div className="cmp-summary-bar__chips">
                     {insights.summaryChips.map((chip) => (
@@ -377,217 +485,92 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                         key={chip.id}
                         className={`cmp-summary-chip cmp-summary-chip--${chip.tone}`}
                       >
-                        {chip.label}: {chip.value}
+                        <span className="cmp-summary-chip__label">{chip.label}</span>
+                        <span className="cmp-summary-chip__value">{chip.value}</span>
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="cmp-kpi-row" aria-label="At a glance">
-                  {insights.kpiCards.map((card) => (
-                    <div key={card.id} className="cmp-kpi">
-                      <p className="cmp-kpi__label">{card.label}</p>
-                      <p className={`cmp-kpi__amount cmp-kpi__amount--${card.tone}`}>{card.diffAmount}</p>
-                      <p className={`cmp-kpi__pct cmp-kpi__pct--${card.tone}`}>{card.diffPercent}</p>
-                    </div>
-                  ))}
-                </div>
+                <ComparisonKpiRow cards={insights.kpiCards} />
 
-                <ComparisonVisualPanel
-                  specsA={specsA}
-                  specsB={specsB}
-                  sizeA={currentSizeLabel}
-                  sizeB={newSizeLabel}
-                  specRows={insights.specRows}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  unitSystem={unitSystem}
-                />
-
-                <article
-                  className={`cmp-seo-block cmp-seo-block--understanding${
-                    understandingExpanded ? ' is-expanded' : ''
-                  }`}
-                >
-                  <h2>Understanding This Tire Size Difference</h2>
-                  <p className="cmp-seo-block__clampable">{insights.understandingDifference}</p>
-                  <button
-                    type="button"
-                    className="cmp-read-more-toggle"
-                    aria-expanded={understandingExpanded}
-                    onClick={() => setUnderstandingExpanded((v) => !v)}
-                  >
-                    {understandingExpanded ? 'Read less' : 'Read more'}
-                  </button>
-                </article>
-
-                <section className="cmp-card cmp-card--perf-impact" aria-label="Performance and driving impact">
-                  <h2 className="cmp-card__title">Performance &amp; Driving Impact</h2>
-                  <PerformanceDrivingCard cards={insights.performanceCards} />
-                </section>
-
-                <div className="cmp-insights-row">
-                  <section className="cmp-card cmp-fuel-panel" aria-label="Fuel economy impact">
-                    <h2 className="cmp-card__title">Fuel Economy Impact</h2>
-                    <p className="cmp-fuel-panel__sub">Based on {vehicleSpeed} {speedUnit} average</p>
-                    <FuelEconomyGauges specsA={specsA} specsB={specsB} />
-                  </section>
-
-                  <section className="cmp-card cmp-insights-split" aria-label="RPM versus speed and tire specs">
-                    <div className="cmp-insights-split__chart">
-                      <RpmVsSpeedChart
+                <div className="cmp-comparison-stage">
+                  <div className="cmp-visual-stage">
+                    {dataSources && comparison ? (
+                      <ComparisonResultsTabs
                         specsA={specsA}
                         specsB={specsB}
-                        sizeA={currentSizeLabel}
-                        sizeB={newSizeLabel}
-                        referenceSpeed={Number(vehicleSpeed) || 60}
+                        sizeA={currentSizeLabel!}
+                        sizeB={newSizeLabel!}
+                        specsC={hasThirdTire && specsC ? specsC : undefined}
+                        sizeC={hasThirdTire ? thirdSizeLabel ?? undefined : undefined}
                         unitSystem={unitSystem}
+                        comparison={comparison}
+                        dataSources={dataSources}
+                        hasThird={hasThirdTire}
+                        extraRows={hasThirdTire ? specRows : null}
                       />
-                    </div>
-                    <div className="cmp-insights-split__divider" aria-hidden="true" />
-                    <div className="cmp-insights-split__specs">
-                      <h2 className="cmp-card__title">Tire Specs Summary</h2>
-                      <TireSpecsSummaryTable rows={insights.specRows} />
-                    </div>
-                  </section>
-                </div>
+                    ) : null}
 
-                <div className={`cmp-bottom-row ${insights.upgradePaths ? '' : 'cmp-bottom-row--single'}`}>
-                  <section className={`cmp-card cmp-consider-card ${insights.upgradePaths ? 'cmp-card--half' : ''}`} aria-label="Things to consider">
-                    <h2 className="cmp-card__title">Things to Consider</h2>
-                    <ul className="cmp-consider-list">
-                      {insights.thingsToConsider.map((item) => (
-                        <li key={item} className="cmp-consider-item">
-                          <span className="cmp-consider-item__icon" aria-hidden="true">
-                            <svg viewBox="0 0 16 16" fill="none">
-                              <path d="M3.75 8.25l2.75 2.75 5.75-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </span>
-                          <span className="cmp-consider-item__text">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                  {insights.upgradePaths && (
-                    <UpgradePathsSection cards={insights.upgradePaths.cards} />
-                  )}
-                </div>
+                    <p className="cmp-source-note" role="note">
+                      {dataSources?.note}
+                    </p>
 
-                {(insights.vehicleCompatibility.current.length > 0 ||
-                  insights.vehicleCompatibility.newTire.length > 0) && (
-                  <section className="cmp-seo-block cmp-vehicle-compat">
-                    <h2>Common Vehicles Using These Tire Sizes</h2>
-                    <div className="cmp-vehicle-compat__grid">
-                      {insights.vehicleCompatibility.current.length > 0 && (
-                        <div className="cmp-vehicle-compat__col">
-                          <h3>Vehicles commonly using {currentSizeLabel}</h3>
-                          <ul className="cmp-vehicle-compat__list">
-                            {insights.vehicleCompatibility.current.map((vehicle) => (
-                              <li key={`${vehicle.label}-${vehicle.detail}`}>
-                                <span className="cmp-vehicle-compat__name">{vehicle.label}</span>
-                                {vehicle.detail && (
-                                  <span className="cmp-vehicle-compat__detail">{vehicle.detail}</span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {insights.vehicleCompatibility.newTire.length > 0 && (
-                        <div className="cmp-vehicle-compat__col">
-                          <h3>Vehicles commonly using {newSizeLabel}</h3>
-                          <ul className="cmp-vehicle-compat__list">
-                            {insights.vehicleCompatibility.newTire.map((vehicle) => (
-                              <li key={`${vehicle.label}-${vehicle.detail}`}>
-                                <span className="cmp-vehicle-compat__name">{vehicle.label}</span>
-                                {vehicle.detail && (
-                                  <span className="cmp-vehicle-compat__detail">{vehicle.detail}</span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                )}
-
-                <article className="cmp-seo-block cmp-seo-block--what-changes">
-                  <h2>What Changes When You Switch From {currentSizeLabel} To {newSizeLabel}</h2>
-                  <p>{insights.seo.whatChanges}</p>
-                </article>
-                <article className="cmp-seo-block cmp-seo-block--good-upgrade">
-                  <h2>Is {newSizeLabel} A Good Upgrade From {currentSizeLabel}?</h2>
-                  <h3>{insights.seo.isGoodUpgrade.headline}</h3>
-                  <p>{insights.seo.isGoodUpgrade.body}</p>
-                </article>
-                <article className="cmp-seo-block cmp-seo-block--who-should">
-                  <h2>Who Should Choose This Tire Size?</h2>
-                  <p>{insights.seo.whoShouldChoose}</p>
-                </article>
-                <section className="cmp-seo-block cmp-seo-block--faq">
-                  <h2>Frequently Asked Questions</h2>
-                  <div className="cmp-faq" ref={faqRef}>
-                    {insights.seo.faqs.map((faq) => (
-                      <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>
-                    ))}
+                    {decisionSupport ? <ComparisonFeelPanel decision={decisionSupport} /> : null}
                   </div>
-                </section>
+
+                  <aside className="cmp-sidebar-right" aria-label="Decision support">
+                    {decisionSupport ? (
+                      <ComparisonDecisionRail decision={decisionSupport} />
+                    ) : (
+                      <div className="cmp-panel cmp-card-level-primary">
+                        <p className="cmp-sidebar-block__title">Dimensional Verdict</p>
+                        <p className="cmp-empty-rail">
+                          Enter two tire sizes to see the verdict and fitment checks.
+                        </p>
+                      </div>
+                    )}
+                  </aside>
+                </div>
               </>
             )}
           </div>
+        </div>
 
-          <aside className="cmp-sidebar-right" aria-label="Comparison guides">
-            {ready && insights && (
-              <>
-                <QuickVerdictCard verdict={insights.quickVerdict} />
+        <div className="cmp-fullwidth">
+          {ready && comparison && specsA && specsB && currentSizeLabel && newSizeLabel && insights ? (
+            <>
+              <ComparisonBelowDashboard
+                sizeA={currentSizeLabel}
+                sizeB={newSizeLabel}
+                specsA={specsA}
+                specsB={specsB}
+                comparison={comparison}
+                unitSystem={unitSystem}
+                onSelectAlternativeSize={handleSelectAlternativeSize}
+              />
 
-                <div className="cmp-panel cmp-panel--personality">
-                  <p className="cmp-sidebar-block__title">Upgrade Personality</p>
-                  <PersonalityCards cards={insights.personalityCards} />
-                </div>
+              <PopularTiresBySize
+                sizeLabel={newSizeLabel}
+                calculatorName={CALCULATOR_NAMES.tireComparison}
+                context="comparison"
+              />
+              <ComparisonPopularPairs
+                links={insights.popularComparisons}
+                viewAllHref={CALCULATOR_PATHS.tireComparison}
+              />
+              <div ref={faqRef}>
+                <ComparisonFaqSection faqs={insights.seo.faqs} />
+              </div>
+            </>
+          ) : null}
 
-                <div className="cmp-panel cmp-panel--will-fit">
-                  <p className="cmp-sidebar-block__title">Will This Fit?</p>
-                  <WillThisFitList rows={insights.willThisFitRows} />
-                </div>
-
-                {insights.popularComparisons.length > 0 && (
-                  <div className="cmp-panel cmp-panel--popular">
-                    <p className="cmp-sidebar-block__title">Popular Comparisons</p>
-                    <ul className="cmp-link-list">
-                      {insights.popularComparisons.map((link) => (
-                        <li key={link.href}>
-                          <a href={link.href}>{link.label}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="cmp-panel cmp-panel--calc-network">
-                  <p className="cmp-sidebar-block__title">Calculator Network</p>
-                  <ul className="cmp-link-list">
-                    {CALCULATOR_LINKS.map((link) => (
-                      <li key={link.href}>
-                        <a
-                          href={link.href}
-                          onClick={() => trackRelatedCalculatorClick(link.href, CALCULATOR_NAMES.tireComparison)}
-                        >
-                          {link.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-              </>
-            )}
-          </aside>
+          <ComparisonTrustStrip sizeA={currentSizeLabel} sizeB={newSizeLabel} />
+          <ComparisonRelatedCalculators />
         </div>
       </div>
 
-      <StickyAnalyzeButton visible={stickyVisible} label="Compare Now" onClick={scrollToResults} />
+      <StickyAnalyzeButton visible={stickyVisible} label="Compare Tires" onClick={scrollToResults} />
     </div>
   );
 }

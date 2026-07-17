@@ -5,6 +5,9 @@ import CompareThisSize from './CompareThisSize';
 import Premium275Hero from './Premium275Hero.astro';
 import PremiumImpactCard from './PremiumImpactCard.astro';
 import PremiumQuickTake from './PremiumQuickTake.astro';
+import AvailableTiresInSize from './AvailableTiresInSize.astro';
+import BestOptionsByUseCase from './BestOptionsByUseCase.astro';
+import ProductSpecComparison from './ProductSpecComparison';
 import { TIRE_SIZES } from '../../../data/tire-sizes';
 import HubSizeSidebar from '../HubSizeSidebar.astro';
 import HubQuickComparison from '../HubQuickComparison.astro';
@@ -20,7 +23,14 @@ import {
 import { getVehicleIcon } from '../../../lib/vehicle-icon';
 import { buildQuickTakeForSize } from '../../../lib/tire-size-quick-take';
 import TrustByline from '../../trust/TrustByline.astro';
-import TrustDisclosure from '../../trust/TrustDisclosure.astro';
+import {
+  getTopProductsForTireSize,
+  getFullSpecProductsForTireSize,
+  getTireSizeDataCoverage,
+  getProductsForTireSize,
+  groupProductsByUseCase,
+} from '../../../lib/tire-size-products';
+import { comparisonPagePathCurrent } from '../../../lib/tire-size-url';
 
 interface Props {
   hub: TireSizeHubData;
@@ -37,13 +47,20 @@ const compareSizeOptions = TIRE_SIZES.map((e) => e.size).filter((s) => s !== hub
 const defaultCompareTarget = buildDefaultCompareTarget(hub, compareSizeOptions);
 const popularComparisons = buildPopularComparisons(hub);
 const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.model}`);
+
+const coverage = getTireSizeDataCoverage(hub.entry.size);
+const allProducts = getProductsForTireSize(hub.entry.size);
+const topProducts = getTopProductsForTireSize(hub.entry.size, 6);
+const fullSpecProducts = getFullSpecProductsForTireSize(hub.entry.size);
+const useCaseBuckets = groupProductsByUseCase(topProducts, 2);
+const compareHref = comparisonPagePathCurrent(hub.entry.size);
 ---
 
 <div class="ref-275">
   <HubBreadcrumb
     crumbs={[
       { label: 'Home', href: '/' },
-      { label: 'Tire Sizes', href: '/tire-sizes' },
+      { label: 'Tire Sizes', href: '/tire-sizes/' },
       { label: displaySize },
     ]}
   />
@@ -52,31 +69,29 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
     <div class="ref-main min-w-0">
       <!-- 1. Hero -->
       <div class="ref-hero-wrap">
-        <Premium275Hero hub={hub} />
+        <Premium275Hero hub={hub} coverage={coverage} />
         <TrustByline class="mt-3" />
       </div>
 
-      <!-- Quick actions (mobile-only in-page navigation) -->
       <nav class="ref-quick-actions" aria-label="Jump to section">
         <a href="#compare-sizes" class="ref-quick-action">
-          <HubIcon name="split-square-vertical" class="ref-quick-action__icon" />
+          <HubIcon name="split-square-vertical" class="ref-quick-action__icon h-4 w-4 shrink-0" />
           <span>Compare</span>
         </a>
         <a href={CALCULATOR_PATHS.tireSize} class="ref-quick-action">
-          <HubIcon name="calculator" class="ref-quick-action__icon" />
+          <HubIcon name="calculator" class="ref-quick-action__icon h-4 w-4 shrink-0" />
           <span>Calculator</span>
         </a>
         <a href="#equivalent-sizes" class="ref-quick-action">
-          <HubIcon name="related" class="ref-quick-action__icon" />
+          <HubIcon name="related" class="ref-quick-action__icon h-4 w-4 shrink-0" />
           <span>Equivalent Sizes</span>
         </a>
         <a href="#vehicles-fitment" class="ref-quick-action">
-          <HubIcon name="car-front" class="ref-quick-action__icon" />
+          <HubIcon name="car-front" class="ref-quick-action__icon h-4 w-4 shrink-0" />
           <span>Vehicles</span>
         </a>
       </nav>
 
-      <!-- Load & Speed Ratings (only when data exists; fields hide individually) -->
       {hub.ratings && (
         <section id="load-speed-ratings" class="ref-section ref-section--ratings">
           <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Load &amp; Speed Ratings</h2>
@@ -125,7 +140,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </section>
       )}
 
-      <!-- 2. Vehicle Fitment -->
+      <!-- Vehicle Fitment -->
       <section id="vehicles-fitment" class="ref-section">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Vehicles Using This Size</h2>
         <p class="ref-section__subtitle">{hub.fitmentIntro}</p>
@@ -134,7 +149,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
             <div class="ref-card ref-card--subtle rounded-card border border-border bg-surface p-4 transition-all hover:border-primary/20 hover:shadow-card-hover">
               <div class="flex items-start gap-2.5">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
-                  <HubIcon name={getVehicleIcon(v.manufacturer, v.model)} class="h-4 w-4" />
+                  <HubIcon name={getVehicleIcon(v.manufacturer, v.model)} class="h-4 w-4 shrink-0" />
                 </span>
                 <div class="min-w-0">
                   <p class="font-bold text-heading">{v.manufacturer}</p>
@@ -161,12 +176,12 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <!-- 3. Real-World Impact -->
+      <!-- Real-World Impact -->
       <section class="ref-section ref-section--impact ref-section--alt">
         <div class="impact-section__header">
           <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Real-World Impact</h2>
           <p class="ref-section__subtitle">
-            Understand how this tire size changes vehicle behavior beyond the raw specifications.
+            How this size changes ride height, speedometer, and feel beyond the raw specs.
           </p>
           {hub.realWorldImpact && (
             <p class="ref-section__subtitle text-xs text-muted">
@@ -184,7 +199,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
             <div class="impact-section__detail rounded-[1rem] border border-border/80 bg-surface-subtle/50 ref-card-pad">
               <p class="text-xs font-semibold uppercase tracking-wider text-muted">In detail</p>
               <ul class="mt-3 space-y-2.5">
-                {premium.impactExplanations.map((line) => (
+                {premium.impactExplanations.slice(0, 3).map((line) => (
                   <li class="flex gap-2.5 text-sm leading-relaxed text-body">
                     <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-primary/70"></span>
                     {line}
@@ -196,10 +211,19 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         )}
       </section>
 
-      <!-- 4. Quick Take -->
+      <!-- Quick Take -->
       <PremiumQuickTake data={quickTake} />
 
-      <!-- 5. Equivalent Sizes -->
+      <!-- Compact product module (after editorial content) -->
+      <AvailableTiresInSize
+        displaySize={displaySize}
+        products={topProducts}
+        totalCount={allProducts.length}
+      />
+
+      <BestOptionsByUseCase buckets={useCaseBuckets} />
+
+      <!-- Equivalent Sizes -->
       <section id="equivalent-sizes" class="ref-section ref-section--equivalent">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Equivalent Sizes</h2>
         <p class="ref-section__subtitle">Within ±3% overall diameter — speedometer-safe alternatives.</p>
@@ -211,7 +235,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
                   <table class="ref-table w-full text-left text-sm">
                     <thead>
                       <tr class="border-b border-border bg-surface-subtle text-xs font-semibold uppercase tracking-wider text-muted">
-                        <th class="py-3.5">Size</th>
+                        <th class="py-3.5 px-3">Size</th>
                         <th class="py-3.5">Overall Diameter</th>
                         <th class="py-3.5">Difference</th>
                         <th class="py-3.5">Difference (%)</th>
@@ -224,7 +248,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
                         const pos = eq.diameterDiffPercent >= 0;
                         return (
                           <tr class="transition-colors hover:bg-surface-subtle/60">
-                            <td class="py-4">
+                            <td class="py-4 px-3">
                               <a href={eq.href} class="hub-text-link font-mono font-semibold text-primary">{eq.size}</a>
                             </td>
                             <td class="py-4 tabular-nums text-body">{eq.diameterIn.toFixed(2)} in</td>
@@ -273,9 +297,9 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <!-- 6. Tire Size Comparison -->
+      <!-- Compare -->
       <section id="compare-sizes" class="ref-section ref-section--alt ref-section--compare">
-        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Compare Tire Sizes</h2>
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Compare This Size</h2>
         <p class="ref-section__subtitle">Compare {displaySize} against common alternative tire sizes.</p>
         <div class="ref-featured-wrap">
           <div class="ref-card ref-featured-card ref-card--elevated overflow-hidden rounded-card border border-border bg-surface ref-inner-pad">
@@ -290,7 +314,7 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <!-- 7. Quick Comparison -->
+      <!-- Quick Comparison -->
       <section class="ref-section ref-section--quick-compare">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Quick Comparison</h2>
         <p class="ref-section__subtitle">Diameter, width, and speedometer error at 60 mph indicated.</p>
@@ -299,20 +323,25 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <!-- 8. FAQ -->
-      <section class="ref-section ref-section--alt ref-section--faq">
+      <!-- Full product table — lower, collapsed by default -->
+      <ProductSpecComparison
+        client:load
+        products={fullSpecProducts}
+        initialVisible={6}
+        startCollapsed={true}
+      />
+
+      <!-- FAQ -->
+      <section class="ref-section ref-section--faq">
         <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">FAQ</h2>
         <div class="ref-section__body--full">
           <HubFaq items={hub.faq} />
         </div>
       </section>
 
-      <!-- 9. Trust & Editorial -->
-      <TrustDisclosure class="ref-section ref-section--editorial" />
-
-      <!-- 10. Related Sizes -->
-      <section class="ref-section ref-section--related">
-        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Related Sizes & Explore More</h2>
+      <!-- Related Sizes -->
+      <section class="ref-section ref-section--related ref-section--alt">
+        <h2 class="ref-section__title text-2xl font-bold tracking-tight text-heading">Related Sizes &amp; Explore More</h2>
         <div class="ref-section__body ref-section__grid grid lg:grid-cols-2">
           <div class="ref-card overflow-hidden rounded-card border border-border bg-surface">
             <div class="border-b border-border bg-surface-subtle/80 ref-card-pad">
@@ -351,21 +380,20 @@ const premiumVehicleNames = premium.vehicles.map((v) => `${v.manufacturer} ${v.m
         </div>
       </section>
 
-      <HubSizeSidebar
-        hub={hub}
-        compareTarget={compareTarget}
-        placement="mobile"
-        vehicleNames={premiumVehicleNames}
-        upgradeCards={upgrades}
-      />
+      <p class="ref-data-note px-[var(--ref-section-px,1.25rem)] pb-2 text-xs leading-relaxed text-muted">
+        Product specs are compiled from official manufacturer data where available.
+      </p>
+
     </div>
 
     <HubSizeSidebar
       hub={hub}
       compareTarget={compareTarget}
-      placement="desktop"
+      placement="responsive"
       vehicleNames={premiumVehicleNames}
       upgradeCards={upgrades}
+      coverage={coverage}
+      compareHref={compareHref}
     />
   </div>
 </div>

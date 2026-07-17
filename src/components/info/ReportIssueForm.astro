@@ -1,0 +1,187 @@
+---
+interface Category {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  categories: ReadonlyArray<Category>;
+  initialSize?: string;
+  initialPageUrl?: string;
+  initialCalculator?: string;
+  initialCategory?: string;
+  initialSection?: string;
+  contactEmail: string;
+}
+
+const {
+  categories,
+  initialSize = '',
+  initialPageUrl = '',
+  initialCalculator = '',
+  initialCategory = '',
+  initialSection = '',
+  contactEmail,
+} = Astro.props;
+---
+
+<form class="info-form" id="report-issue-form" novalidate>
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-category">Issue category</label>
+    <select class="info-form__input" id="report-category" name="category" required>
+      <option value="">Select a category</option>
+      {
+        categories.map((cat) => (
+          <option value={cat.value} selected={cat.value === initialCategory}>
+            {cat.label}
+          </option>
+        ))
+      }
+    </select>
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-size">Tire size (if relevant)</label>
+    <input
+      class="info-form__input"
+      type="text"
+      id="report-size"
+      name="size"
+      value={initialSize}
+      placeholder="e.g. 275/70R18"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-calculator">Calculator / tool</label>
+    <input
+      class="info-form__input"
+      type="text"
+      id="report-calculator"
+      name="calculator"
+      value={initialCalculator}
+      placeholder="Tire Size Calculator"
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-page-url">Page URL</label>
+    <input
+      class="info-form__input"
+      type="url"
+      id="report-page-url"
+      name="pageUrl"
+      value={initialPageUrl}
+      placeholder="https://"
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-section">Relevant section (optional)</label>
+    <input
+      class="info-form__input"
+      type="text"
+      id="report-section"
+      name="section"
+      value={initialSection}
+      placeholder="e.g. Size Snapshot, Popular Tires"
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-description">Description</label>
+    <textarea
+      class="info-form__textarea"
+      id="report-description"
+      name="description"
+      rows="5"
+      required
+      placeholder="What looks wrong, and what did you expect?"
+    ></textarea>
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-manufacturer-url">
+      Supporting manufacturer URL (optional)
+    </label>
+    <input
+      class="info-form__input"
+      type="url"
+      id="report-manufacturer-url"
+      name="manufacturerUrl"
+      placeholder="https://"
+    />
+  </div>
+
+  <div class="info-form__field">
+    <label class="info-form__label" for="report-email">Contact email (optional)</label>
+    <input
+      class="info-form__input"
+      type="email"
+      id="report-email"
+      name="email"
+      autocomplete="email"
+    />
+  </div>
+
+  <button type="submit" class="tl-btn-primary info-form__submit">
+    Open email to send report
+  </button>
+
+  <p class="info-form__status" id="report-issue-status" role="status" aria-live="polite" hidden>
+    Your email client should open with a prefilled message to {contactEmail}. Send the message to
+    complete the report.
+  </p>
+</form>
+
+<script define:vars={{ contactEmail, categories }}>
+  function initReportIssueForm() {
+    const form = document.getElementById('report-issue-form');
+    const status = document.getElementById('report-issue-status');
+    if (!form || form.dataset.bound === 'true') return;
+    form.dataset.bound = 'true';
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const data = new FormData(form);
+      const categoryValue = String(data.get('category') || '');
+      const categoryLabel =
+        (categories.find((c) => c.value === categoryValue) || {}).label || categoryValue;
+
+      const subject = data.get('size')
+        ? `Tire Reference data correction — ${data.get('size')}`
+        : 'Tire Reference data correction';
+
+      const body = [
+        `Category: ${categoryLabel}`,
+        data.get('calculator') ? `Tool: ${data.get('calculator')}` : '',
+        data.get('size') ? `Tire size: ${data.get('size')}` : '',
+        data.get('pageUrl') ? `Page URL: ${data.get('pageUrl')}` : '',
+        data.get('section') ? `Section: ${data.get('section')}` : '',
+        '',
+        'Description:',
+        String(data.get('description') || ''),
+        '',
+        data.get('manufacturerUrl')
+          ? `Supporting manufacturer URL: ${data.get('manufacturerUrl')}`
+          : '',
+        data.get('email') ? `Reply email: ${data.get('email')}` : '',
+      ]
+        .filter((line) => line !== '')
+        .join('\n');
+
+      const params = new URLSearchParams({ subject, body });
+      window.location.href = `mailto:${contactEmail}?${params.toString()}`;
+      if (status) status.hidden = false;
+    });
+  }
+
+  initReportIssueForm();
+  document.addEventListener('astro:page-load', initReportIssueForm);
+</script>

@@ -7,11 +7,22 @@
  * Verdict → recommendation and decision
  * FAQ → procedural questions not answered above
  */
+import type {
+  ComparisonDataSourceSummary,
+  ComparisonSourceMode,
+  PublishedTireMeasurements,
+} from './comparison-data-sources';
+import { resolveComparisonDataSources } from './comparison-data-sources';
 import type { EngineeringAnalysis } from './tire-comparison-engineering-analysis';
-import type { TireComparison, TireSpecs } from './tire-math';
-import { resolveTireCategory } from './tire-comparison-recommendations';
 
-import { nearZero } from './tire-comparison-format';
+import {
+  fmtInQuote,
+  fmtPct,
+  fmtSigned,
+  isSidewallRideUnchanged,
+  nearZero,
+  sidewallRideTier,
+} from './tire-comparison-format';
 
 /** Engineering narrative: causal relationships without repeating spec-table numbers. */
 export function buildEngineeringNarrative(
@@ -19,20 +30,17 @@ export function buildEngineeringNarrative(
   sizeA: string,
   sizeB: string,
 ): string {
-  const { specsA, specsB } = analysis.measurements;
-  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
-  const widthDiffMm = specsB.widthMm - specsA.widthMm;
-  const diamDiff = specsB.overallDiameterIn - specsA.overallDiameterIn;
+  const { specsA, specsB, diamDiffIn, sidewallPct, widthDiffMm, sidewallDiffIn } = analysis.measurements;
 
   const parts: string[] = [
     `Moving from ${sizeA} to ${sizeB} changes three independent geometric variables that compound on the vehicle. The summary bar and spec table quantify those deltas; this section explains the mechanical relationships behind them.`,
   ];
 
-  if (nearZero(diamDiff, 0.05)) {
+  if (nearZero(diamDiffIn, 0.05)) {
     parts.push(
       `Overall diameter stays effectively matched, so rolling circumference — and everything tied to it — should track the factory tire closely. Speedometer calibration, revolutions per distance, static ride height at the axle, and effective final-drive ratio all scale with circumference rather than tread width or sidewall height.`,
     );
-  } else if (diamDiff > 0) {
+  } else if (diamDiffIn > 0) {
     parts.push(
       `The larger overall diameter lengthens rolling circumference. That single change simultaneously raises static ride height under the axle centerline, slows wheel revolutions for a given road speed, and shifts speedometer and odometer readings because the cluster assumes the factory tire covers less ground per revolution. Effective gearing also lengthens — the drivetrain turns fewer times per mile, which typically drops cruising engine speed but can soften throttle response from a stop.`,
     );
@@ -42,11 +50,11 @@ export function buildEngineeringNarrative(
     );
   }
 
-  if (nearZero(sidewallDiff, 0.05)) {
+  if (isSidewallRideUnchanged(sidewallPct)) {
     parts.push(
-      `Sidewall height is essentially unchanged between these sizes. Because sidewall volume acts as an air spring between rim and tread, ride compliance and sidewall flex under cornering loads should feel similar even if diameter or width shifted.`,
+      `Sidewall height is essentially unchanged between these sizes (${fmtPct(sidewallPct)}). Because sidewall volume acts as an air spring between rim and tread, ride compliance and sidewall flex under cornering loads should feel similar even if diameter or width shifted.`,
     );
-  } else if (sidewallDiff > 0) {
+  } else if (sidewallDiffIn > 0) {
     parts.push(
       `Sidewall height increases independently of overall diameter. A taller sidewall carries more air volume between bead and tread, allowing greater vertical deflection over potholes and expansion joints before impact energy reaches the rim. Under lateral load the taller sidewall also permits more tread movement, which can feel softer during turn-in even when contact patch width is unchanged.`,
     );
@@ -83,11 +91,9 @@ export function buildVehicleChangeNarrative(
   sizeA: string,
   sizeB: string,
 ): string {
-  const { specsA, specsB, comparison } = analysis.measurements;
+  const { specsA, specsB, comparison, absDiamPct, widthDiffMm } = analysis.measurements;
   const sameWheel = specsB.wheelDiameterIn === specsA.wheelDiameterIn;
-  const largeStep =
-    Math.abs(comparison.diameterDiffPercent) > 3 ||
-    Math.abs(specsB.widthMm - specsA.widthMm) > 10;
+  const largeStep = absDiamPct > 3 || Math.abs(widthDiffMm) > 10;
 
   return [
     `Switching from ${sizeA} to ${sizeB} changes more than the numbers in the spec table — it changes how the tire package moves inside your wheel well under real suspension travel.`,
@@ -101,169 +107,430 @@ export function buildVehicleChangeNarrative(
   ].join(' ');
 }
 
-/** FAQ: fuel economy — practical guidance without repeating RPM figures from performance cards. */
+/** Single merged explanation — engineering cause + vehicle fitment process, no duplicate sections. */
+export function buildWhatThisChangeMeans(
+  analysis: EngineeringAnalysis,
+  sizeA: string,
+  sizeB: string,
+): string {
+  return [
+    buildEngineeringNarrative(analysis, sizeA, sizeB),
+    buildVehicleChangeNarrative(analysis, sizeA, sizeB),
+  ].join(' ');
+}
+
+/** FAQ: fuel economy — RPM and revs deltas from shared measurements. */
 export function buildFuelEconomyFaqAnswer(analysis: EngineeringAnalysis): string {
-  const { rpmDelta } = analysis.measurements;
-  const fewer = rpmDelta < -10;
-  const more = rpmDelta > 10;
+  const {
+    sizeA,
+    specsA,
+    comparison,
+    unitSystem,
+    indicatedSpeed,
+    speedUnit,
+    rpmA,
+    rpmB,
+    rpmDelta,
+    revsDiff,
+    revsDiffPct,
+    widthDiffMm,
+    widthPct,
+  } = analysis.measurements;
+  const revsLabel = unitSystem === 'metric' ? 'revs/km' : 'revs/mi';
 
   return [
-    `Highway fuel use follows two tire-driven variables: cruising engine speed and rolling resistance. Both shift when overall diameter, sidewall height, or section width change — the Performance & Driving Impact section covers the directional effect on your setup.`,
-    fewer
-      ? `When cruising RPM drops meaningfully, the engine does less work per mile at steady speed, which tends to help highway economy. Around-town consumption also depends on tire weight, tread compound, and sidewall flex — factors not captured by diameter alone.`
-      : more
-        ? `When cruising RPM rises, the engine turns more revolutions per mile at the same indicated speed, which usually increases highway fuel load. A taller or softer sidewall can add rolling resistance from flex even when overall diameter is unchanged.`
-        : `With cruising RPM nearly unchanged, fuel economy should track the reference tire closely — tire construction, tread compound, and inflation pressure drive most real-world differences at this point.`,
-    `Track a full tank on your regular commute before and after the swap. Calculated dimensions predict the direction of change, not an exact MPG figure — your driving style, terrain, and vehicle load dominate the outcome.`,
+    `Rolling circumference changes ${fmtSigned(comparison.circumferenceDiffIn, 2, '"')} (${fmtPct(comparison.diameterDiffPercent)}), shifting ${revsLabel} by ${fmtSigned(revsDiff, unitSystem === 'metric' ? 1 : 0)} (${fmtPct(revsDiffPct)}).`,
+    `At ${indicatedSpeed} ${speedUnit} indicated, engine speed moves ${rpmA.toLocaleString()} → ${rpmB.toLocaleString()} RPM (${fmtSigned(rpmDelta, 0, ' RPM')}) — the primary highway fuel load variable when comparing ${sizeA} to this size.`,
+    nearZero(widthDiffMm, 2)
+      ? `Section width stays at ${specsA.widthMm} mm, so tread-width rolling resistance should track ${sizeA} closely at the same inflation pressure.`
+      : `Section width shifts ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtPct(widthPct)}), changing tread contact area and rolling resistance independently of the ${fmtPct(revsDiffPct)} ${revsLabel} change.`,
   ].join(' ');
 }
 
-/** FAQ: ride/handling — suspension interaction, not a repeat of engineering sections. */
+/** FAQ: ride/handling — sidewall, width, diameter, and RPM from shared measurements. */
 export function buildRideHandlingFaqAnswer(analysis: EngineeringAnalysis): string {
-  const { specsA, specsB } = analysis.measurements;
-  const sidewallDiff = specsB.sidewallIn - specsA.sidewallIn;
-  const softer = sidewallDiff > 0.1;
-  const firmer = sidewallDiff < -0.1;
+  const {
+    specsA,
+    specsB,
+    sizeA,
+    sizeB,
+    comparison,
+    sidewallPct,
+    sidewallDiffIn,
+    widthDiffMm,
+    widthPct,
+    diamDiffIn,
+    groundClearanceChangeIn,
+    rpmA,
+    rpmB,
+    rpmDelta,
+    indicatedSpeed,
+    speedUnit,
+  } = analysis.measurements;
+  const tier = sidewallRideTier(sidewallPct);
 
-  const feel = firmer
-    ? `The shorter sidewall on ${analysis.measurements.sizeB} generally firms transient response and sharpens turn-in on smooth pavement, but transmits more harshness over expansion joints and potholes.`
-    : softer
-      ? `The taller sidewall on ${analysis.measurements.sizeB} generally absorbs more vertical impact before the rim sees load, which softens the ride — but can feel less precise during quick direction changes.`
-      : `Sidewall height is similar between these sizes, so ride and handling differences likely come from section width and overall diameter rather than sidewall compliance alone.`;
+  let sidewallPart: string;
+  if (tier === 'unchanged') {
+    sidewallPart = `Sidewall height stays ${fmtInQuote(specsA.sidewallIn)} on both sizes (${fmtPct(sidewallPct)}), so vertical compliance and sidewall flex under cornering load should match ${sizeA}.`;
+  } else if (tier === 'noticeable') {
+    sidewallPart =
+      sidewallPct > 0
+        ? `Sidewall grows ${fmtSigned(sidewallDiffIn, 2, '"')} (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}, ${fmtPct(sidewallPct)}), adding air-spring volume for bump absorption while allowing more tread movement in transitions.`
+        : `Sidewall shortens ${fmtSigned(sidewallDiffIn, 2, '"')} (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}, ${fmtPct(sidewallPct)}), reducing vertical compliance and limiting tread squirm under lateral load.`;
+  } else {
+    sidewallPart =
+      sidewallPct > 0
+        ? `Sidewall increases ${fmtSigned(sidewallDiffIn, 2, '"')} (${fmtPct(sidewallPct)}), a large air-volume change that noticeably softens impact absorption versus ${fmtInQuote(specsA.sidewallIn)} on ${sizeA}.`
+        : `Sidewall drops ${fmtSigned(Math.abs(sidewallDiffIn), 2, '"')} (${fmtPct(sidewallPct)}), sharply reducing sidewall deflection compared with ${fmtInQuote(specsA.sidewallIn)} on ${sizeA}.`;
+  }
 
-  return [
-    feel,
-    `Tire pressure matters as much as geometry: even a correctly sized tire feels harsh when over-inflated or vague when under-inflated. Reset to the placard cold pressure after mounting and recheck after the first hundred miles.`,
-    `Suspension bushings, shock condition, and alignment settings amplify or mask tire changes. If the vehicle pulls, tram-lines on grooved pavement, or shows uneven wear after the swap, schedule an alignment — especially when section width or wheel offset changed.`,
-    `For winter or all-season compounds, tread block design and siping influence noise and wet grip independently of the size label — compare UTQG traction ratings when choosing between brands at the same size.`,
-  ].join(' ');
+  const widthPart = nearZero(widthDiffMm, 2)
+    ? `Section width is unchanged at ${specsA.widthMm} mm (${fmtInQuote(specsA.sectionWidthIn)}), so contact-patch width and parking-lot steering effort should stay near ${sizeA}.`
+    : `Section width shifts ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtPct(widthPct)}; ${specsA.widthMm} → ${specsB.widthMm} mm), changing scrub radius and steering effort at full lock.`;
+
+  const diamPart = nearZero(diamDiffIn, 0.05)
+    ? `Overall diameter stays ${fmtInQuote(specsA.overallDiameterIn)}, so ride height at the axle and effective gearing remain aligned with ${sizeA}.`
+    : `Overall diameter changes ${fmtSigned(diamDiffIn, 2, '"')} (${fmtPct(comparison.diameterDiffPercent)}), moving static clearance ${fmtSigned(groundClearanceChangeIn, 2, ' in')} at the axle centerline.`;
+
+  const rpmPart =
+    Math.abs(rpmDelta) >= 5
+      ? `At ${indicatedSpeed} ${speedUnit} indicated, cruising RPM shifts ${rpmA.toLocaleString()} → ${rpmB.toLocaleString()} (${fmtSigned(rpmDelta, 0, ' RPM')}), which changes engine load during steady highway driving.`
+      : `Cruising RPM stays within ${Math.abs(rpmDelta)} RPM of ${sizeA} at ${indicatedSpeed} ${speedUnit} indicated, so highway engine load should feel similar.`;
+
+  return [sidewallPart, widthPart, diamPart, rpmPart].join(' ');
 }
 
-/** FAQ set: procedural questions not covered by summary, engineering, performance, or verdict. */
+function sourceModeSentence(
+  mode: ComparisonSourceMode,
+  sizeA: string,
+  sizeB: string,
+  publishedA: PublishedTireMeasurements | null,
+  publishedB: PublishedTireMeasurements | null,
+): string {
+  if (mode === 'model_vs_model' && publishedA && publishedB) {
+    return `This page has published catalog rows for both ${sizeA} (${publishedA.brand} ${publishedA.model}) and ${sizeB} (${publishedB.brand} ${publishedB.model}); headline diameter and speedometer deltas still use nominal geometry, while published fields appear in dedicated table rows.`;
+  }
+  if (mode === 'mixed_source') {
+    const which =
+      publishedA && !publishedB
+        ? `${sizeA} has manufacturer-published fields while ${sizeB} is formula-only`
+        : publishedB && !publishedA
+          ? `${sizeB} has manufacturer-published fields while ${sizeA} is formula-only`
+          : `published fields are available for only one side of ${sizeA} vs ${sizeB}`;
+    return `This is a mixed-source comparison: ${which}. Do not mix a published diameter on one tire with a nominal diameter on the other when judging absolute height.`;
+  }
+  return `This comparison is running on nominal size-code calculations for both ${sizeA} and ${sizeB}. Prefer manufacturer-published overall diameter and revs/mile when you have selected a specific tire model.`;
+}
+
+function rimRangeSnippet(
+  publishedA: PublishedTireMeasurements | null,
+  publishedB: PublishedTireMeasurements | null,
+  sizeA: string,
+  sizeB: string,
+): string {
+  const a = publishedA?.approvedRimRange?.trim() || null;
+  const b = publishedB?.approvedRimRange?.trim() || null;
+  if (a && b) {
+    return `Published approved rim-width ranges in the dataset are ${a} for ${sizeA} and ${b} for ${sizeB}.`;
+  }
+  if (a) return `Published approved rim-width range for ${sizeA} is ${a}; no approved rim range is listed for ${sizeB} in this dataset.`;
+  if (b) return `Published approved rim-width range for ${sizeB} is ${b}; no approved rim range is listed for ${sizeA} in this dataset.`;
+  return `No approved rim-width range is listed for either size in this dataset, so rim fit must be confirmed from the specific tire maker’s documentation.`;
+}
+
+function loadSpeedSnippet(
+  publishedA: PublishedTireMeasurements | null,
+  publishedB: PublishedTireMeasurements | null,
+): string {
+  const parts: string[] = [];
+  if (publishedA?.loadIndex || publishedB?.loadIndex) {
+    parts.push(
+      `Load index ${publishedA?.loadIndex ?? '—'} → ${publishedB?.loadIndex ?? '—'}`,
+    );
+  }
+  if (publishedA?.speedRating || publishedB?.speedRating) {
+    parts.push(
+      `speed rating ${publishedA?.speedRating ?? '—'} → ${publishedB?.speedRating ?? '—'}`,
+    );
+  }
+  if (parts.length === 0) {
+    return 'Load index and speed rating are not populated for both sizes in this dataset.';
+  }
+  return `${parts.join('; ')}. Treat those fields as product-specific when present — they are not encoded in the bare metric size string.`;
+}
+
+/**
+ * Expert FAQ set for the comparison calculator.
+ * Primary questions (first 8) show by default; remaining are behind “Show more questions”.
+ */
 export function buildComparisonFaqs(
   sizeA: string,
   sizeB: string,
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
   analysis: EngineeringAnalysis,
+  dataSources?: ComparisonDataSourceSummary | null,
 ): Array<{ question: string; answer: string }> {
-  const sameWheel = specsB.wheelDiameterIn === specsA.wheelDiameterIn;
-  const largeStep =
-    Math.abs(comparison.diameterDiffPercent) > 3 ||
-    Math.abs(specsB.widthMm - specsA.widthMm) > 10;
-  const speedoHigh = Math.abs(comparison.speedometer.errorPercent) > 3;
-  const categoryB = resolveTireCategory(sizeB, specsB);
-  const isTrailCategory = categoryB === 'off-road' || categoryB === 'light-truck';
+  const {
+    specsA,
+    specsB,
+    comparison,
+    diamDiffIn,
+    widthDiffMm,
+    widthPct,
+    sidewallDiffIn,
+    sidewallPct,
+    groundClearanceChangeIn,
+    wheelDelta,
+    indicatedSpeed,
+    trueSpeed,
+    speedUnit,
+    revsDiff,
+    revsDiffPct,
+    unitSystem,
+  } = analysis.measurements;
 
-  return [
+  const sources =
+    dataSources ??
+    resolveComparisonDataSources({
+      sizeA,
+      sizeB,
+    });
+  const { mode, publishedA, publishedB } = sources;
+  const sameWheel = wheelDelta === 0;
+  const larger = diamDiffIn > 0.05;
+  const smaller = diamDiffIn < -0.05;
+  const revsLabel = unitSystem === 'metric' ? 'revs/km' : 'revs/mi';
+  const hasFlotation = specsA.type === 'flotation' || specsB.type === 'flotation';
+  const dimensionsExample = hasFlotation
+    ? `Applied here: ${sizeA} resolves to ${fmtInQuote(specsA.overallDiameterIn)} overall diameter and ${specsA.widthMm} mm nominal section width on a ${specsA.wheelDiameterIn}" wheel; ${sizeB} resolves to ${fmtInQuote(specsB.overallDiameterIn)} overall diameter and ${specsB.widthMm} mm width on a ${specsB.wheelDiameterIn}" wheel.`
+    : `Applied here: ${sizeA} uses ${specsA.widthMm} mm width and aspect ratio ${Math.round(specsA.aspectRatio)} on a ${specsA.wheelDiameterIn}" wheel → ${fmtInQuote(specsA.sidewallIn)} sidewall and ${fmtInQuote(specsA.overallDiameterIn)} overall diameter; ${sizeB} works out to ${fmtInQuote(specsB.sidewallIn)} sidewall and ${fmtInQuote(specsB.overallDiameterIn)} overall diameter.`;
+  const flotationNote = hasFlotation
+    ? ` At least one size uses flotation notation, where overall diameter and width are stated more directly than a metric aspect-ratio code; published catalog dimensions can still differ from those stated values.`
+    : '';
+
+  const primary: Array<{ question: string; answer: string }> = [
     {
-      question: `What should I inspect during a mock-fit before mounting ${sizeB}?`,
+      question: 'How accurate are the comparison results?',
       answer: [
-        `Mount one tire on the intended wheel and install it at the corner that typically rubs first on your platform — often the front driver side on lowered or wide-track vehicles.`,
-        `Turn the steering to full lock in both directions while watching the gap between the tire shoulder and inner fender liner, pinch weld, and strut.`,
-        `Have an assistant bounce that corner through full suspension compression while you check for contact at the liner, control arm, and brake line.`,
-        largeStep
-          ? `This comparison involves a large dimensional step — repeat the check at the rear, where the tire arc can contact the quarter panel lip under load.`
-          : `Even moderate size changes can rub on tightly packaged platforms — do not skip the rear corners on independent rear suspension vehicles.`,
-      ].join(' '),
+        `Nominal tire dimensions for ${sizeA} and ${sizeB} are calculated from the tire-size code using standard geometric relationships, so the arithmetic for those nominal values is exact.`,
+        `Real mounted tires can still differ because of tread design, approved measuring rim, inflation, load, remaining tread depth and casing construction.`,
+        `For this pair, overall diameter moves ${fmtPct(comparison.diameterDiffPercent)} (${fmtInQuote(specsA.overallDiameterIn)} → ${fmtInQuote(specsB.overallDiameterIn)}) and section width moves ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtPct(widthPct)}).`,
+        sourceModeSentence(mode, sizeA, sizeB, publishedA, publishedB),
+        `Speedometer and gearing figures are theoretical: they assume the indicated speed is based on the original rolling circumference with no cluster recalibration.`,
+      ].join('\n\n'),
     },
     {
-      question: `How can I recalibrate the speedometer after switching to ${sizeB}?`,
+      question: 'How are tire dimensions calculated?',
       answer: [
-        speedoHigh
-          ? `The speedometer error on this comparison exceeds the ±2–3% band most OEMs target, so recalibration is worth planning before long-term use.`
-          : `The speedometer error on this comparison sits within many OEM tolerance bands, but verify against a GPS or known speed trap on your first highway drive.`,
-        `Dealer scan tools, manufacturer apps, and platform-specific tuners (FORScan on Ford, HP Tuners, etc.) can apply a tire-size correction factor where supported.`,
-        `Aftermarket speedometer correction modules and some aftermarket clusters accept a rolling-circumference input directly.`,
-        `Odometer distance accumulates the same proportional error as the speedometer — factor that into lease mileage or maintenance-interval tracking if you rely on the cluster counter.`,
-      ].join(' '),
+        `For metric sizes, sidewall height equals section width × (aspect ratio ÷ 100), wheel diameter is converted with 1 in = 25.4 mm, and overall diameter equals wheel diameter plus two sidewalls.`,
+        `Circumference is π × overall diameter, and revolutions per mile equal inches per mile divided by that circumference.`,
+        dimensionsExample,
+        `The width code is nominal section width, not tread width, and the aspect ratio is a percentage of that section width.${flotationNote}`,
+      ].join('\n\n'),
     },
     {
-      question: `Will ${sizeB} require new wheels compared with ${sizeA}?`,
+      question: 'Will the speedometer be affected?',
+      answer: [
+        larger
+          ? `Yes — the larger rolling circumference on ${sizeB} travels farther per wheel revolution, so at a given indicated speed the vehicle typically moves slightly faster than the cluster shows.`
+          : smaller
+            ? `Yes — the smaller rolling circumference on ${sizeB} travels less distance per revolution, so at a given indicated speed the vehicle typically moves slightly slower than the cluster shows.`
+            : `Only slightly for this pair: overall diameter and circumference stay nearly the same between ${sizeA} and ${sizeB}.`,
+        `Circumference changes ${fmtSigned(comparison.circumferenceDiffIn, 2, '"')} (${fmtPct(comparison.diameterDiffPercent)}), which is the same percentage order as the diameter change for this geometric model.`,
+        `At an indicated ${indicatedSpeed} ${speedUnit}, the theoretical road speed is approximately ${trueSpeed.toFixed(1)} ${speedUnit} (${fmtPct(comparison.speedometer.errorPercent)} versus ${sizeA}).`,
+        `Actual cluster behaviour can still differ after tire wear, load, temperature or any OEM speedometer calibration.`,
+      ].join('\n\n'),
+    },
+    {
+      question: 'Does this calculator confirm vehicle fitment?',
+      answer: [
+        `No. It performs a dimensional comparison of ${sizeA} and ${sizeB}, not a complete vehicle fitment analysis.`,
+        `Confirmed fitment still needs model year, trim, factory tire specification, wheel width, offset, bolt pattern, hub bore, brake clearance, suspension and fender clearance, plus load and speed-rating requirements.`,
+        `What this tool can quantify from size (and published catalog fields when present): diameter difference (${fmtPct(comparison.diameterDiffPercent)}), width difference (${fmtSigned(widthDiffMm, 0, ' mm')}), and wheel diameter requirement (${specsA.wheelDiameterIn}" → ${specsB.wheelDiameterIn}").`,
+        rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
+        loadSpeedSnippet(publishedA, publishedB),
+        `A diameter change near ±3 percent is only a common screening guideline — it is not a fitment guarantee for any specific vehicle.`,
+      ].join('\n\n'),
+    },
+    {
+      question: 'Do I need new wheels?',
       answer: sameWheel
         ? [
-            `Both sizes use a ${specsA.wheelDiameterIn}" bead seat, so your existing wheels may work if the internal barrel width supports the new section width and the offset positions the tire correctly in the well.`,
-            `As a rule of thumb, each 10 mm of additional tire width typically needs roughly 5 mm of additional wheel width.`,
-            `Confirm the wheel load rating meets or exceeds the new tire's load index and that the hub bore and lug pattern match your hub.`,
-          ].join(' ')
+            `Not because of wheel diameter: ${sizeA} and ${sizeB} both specify a ${specsA.wheelDiameterIn}" bead seat, so the size codes alone do not force a diameter change.`,
+            `That still does not mean your existing wheel is automatically compatible. The rim width must fall inside the tire maker’s approved range for the specific product, and offset, bolt pattern, hub bore, brake clearance and load rating remain vehicle- and wheel-specific.`,
+            rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
+          ].join('\n\n')
         : [
-            `${sizeA} mounts on a ${specsA.wheelDiameterIn}" wheel while ${sizeB} requires ${specsB.wheelDiameterIn}" — the bead seat diameter differs, so factory wheels from the current size cannot mount the new tire.`,
-            `Plan on a complete wheel set with correct hub bore, load rating, and brake caliper clearance for the larger or smaller rim.`,
-            `Plus-sizing and minus-sizing also change the brake rotor-to-wheel-barrel relationship — confirm caliper clearance before purchase.`,
-          ].join(' '),
+            `Yes for bead-seat diameter: ${sizeA} is an R${specsA.wheelDiameterIn} tire and ${sizeB} is an R${specsB.wheelDiameterIn} tire (${fmtSigned(wheelDelta, 0, '"')} wheel change). An R${specsA.wheelDiameterIn} tire will not correctly seat on an R${specsB.wheelDiameterIn} wheel.`,
+            `Plan a ${specsB.wheelDiameterIn}" wheel with appropriate width for ${specsB.widthMm} mm section width, then confirm offset, bolt pattern, hub bore, brake clearance and load rating on the target vehicle.`,
+            rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
+          ].join('\n\n'),
     },
     {
-      question: `Do I need a lift kit or fender modification to fit ${sizeB} on a vehicle currently running ${sizeA}?`,
+      question: 'Can different tire sizes use the same wheel?',
       answer: [
-        isTrailCategory && largeStep
-          ? `Trail and truck builds with large diameter or width steps often need a mild lift, negative-offset wheels, or fender trimming to prevent contact at full articulation — mock-fit before committing.`
-          : largeStep
-            ? `Large dimensional steps enlarge the tire envelope in every direction. Some vehicles need a mild lift, revised offset, or minor trimming even when the diameter change looks modest on paper.`
-            : `Many factory-height vehicles absorb moderate size changes without a lift kit, but clearance depends on your exact wheel offset, suspension travel, and fender shape — not tire math alone.`,
-        `Static ride height is only half the picture: the tire moves through an arc as the suspension compresses and the steering turns. Always verify at full droop and full compression.`,
-        `Break-over and approach angles improve when diameter grows, but only if the tire clears the fender at maximum compression — contact at full travel negates the clearance gain.`,
-      ].join(' '),
+        `Only when wheel diameter matches, the rim width sits in the approved range for both tires, load and speed requirements are met, and the bead-seat type is compatible.`,
+        sameWheel
+          ? `${sizeA} and ${sizeB} share a ${specsA.wheelDiameterIn}" wheel diameter, so the same wheel diameter is geometrically possible — but section width still differs by ${fmtSigned(widthDiffMm, 0, ' mm')} (${fmtPct(widthPct)}), so rim width must still be checked.`
+          : `${sizeA} (R${specsA.wheelDiameterIn}) and ${sizeB} (R${specsB.wheelDiameterIn}) cannot use the same wheel diameter; an R${specsA.wheelDiameterIn} tire and an R${specsB.wheelDiameterIn} tire do not share a bead seat.`,
+        `A wider tire does not automatically require a wider wheel, but mounting outside the published rim range can distort the tread profile and change handling and load behaviour.`,
+        rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
+      ].join('\n\n'),
     },
     {
-      question: `How does switching to ${sizeB} affect ABS, traction control, and TPMS?`,
+      question: 'How much clearance should I check?',
       answer: [
-        `ABS and stability-control modules compare wheel-speed sensor inputs across all four corners. A tire with a different rolling circumference changes the expected speed ratio at any given road speed.`,
-        Math.abs(comparison.revsPerMileDiffPercent) > 3
-          ? `The revolutions-per-mile shift on this comparison exceeds the ±3% wheel-speed tolerance cited by many OEMs — a brief fault code or reduced intervention is possible until the system relearns or is recalibrated.`
-          : `The revolutions-per-mile shift on this comparison is within the tolerance band most factory ABS modules accept without fault codes, though a 10–15 minute mixed driving relearn cycle helps establish new baselines.`,
-        `Traction control, hill-descent, and adaptive cruise systems use the same wheel-speed data — the same tolerance applies.`,
-        `Confirm your TPMS module supports the new size and that sensors are relearned after mounting. Some modules require a dealer tool; others relearn after a drive cycle at specified speeds.`,
-      ].join(' '),
+        `Clearance must be checked through the suspension and steering travel, not only when the vehicle is parked on level ground.`,
+        `Inspect full steering lock, suspension compression, inner sidewall to strut or control arm, outer shoulder to fender or liner, brake and wheel-barrel clearance, and tire growth/deflection under load — plus any wheel offset or width change.`,
+        `For this pair, half the overall diameter change approximates the static radius or ground-clearance shift: about ${fmtSigned(groundClearanceChangeIn, 2, ' in')} from the ${fmtPct(comparison.diameterDiffPercent)} diameter move (${fmtInQuote(specsA.overallDiameterIn)} → ${fmtInQuote(specsB.overallDiameterIn)}).`,
+        `Width increase (${fmtSigned(widthDiffMm, 0, ' mm')}) spreads around the wheel centreline only when wheel width and offset stay unchanged; a different offset moves the whole package inward or outward.`,
+      ].join('\n\n'),
     },
     {
-      question: `Should I replace all four tires when moving from ${sizeA} to ${sizeB}?`,
+      question: 'Can I mix tire sizes front and rear?',
       answer: [
-        `Mixing significantly different rolling circumferences across an axle — or between front and rear on AWD platforms — can stress differentials and confuse traction systems.`,
-        `The recommended approach is to replace all four tires at once when overall diameter changes meaningfully, so every corner reports a consistent wheel speed to ABS and AWD controllers.`,
-        `If budget requires a staggered approach, keep the most worn tires on the same axle and never mix bias-ply with radial or widely different tread depths on AWD vehicles.`,
-        `After installing four matching tires, rotate on the schedule in your owner's manual and recheck inflation cold — mismatched pressure mimics mismatched diameter.`,
-      ].join(' '),
-    },
-    {
-      question: `How will fuel economy change with ${sizeB} versus ${sizeA}?`,
-      answer: buildFuelEconomyFaqAnswer(analysis),
-    },
-    {
-      question: `How does the switch from ${sizeA} to ${sizeB} affect ride quality and handling feel?`,
-      answer: buildRideHandlingFaqAnswer(analysis),
+        `Only when the vehicle manufacturer approves a staggered or mixed setup — do not create one casually from a comparison tool.`,
+        `Mixing ${sizeA} and ${sizeB} across axles would put roughly ${fmtPct(comparison.diameterDiffPercent)} (${fmtSigned(diamDiffIn, 2, '"')}) of rolling-circumference difference between front and rear if one size sat on one axle and the other on the opposite axle.`,
+        `ABS, stability control and especially AWD/4WD systems can be sensitive to axle circumference mismatch; transfer-case and differential hardware may see extra stress, and tire rotation patterns become limited.`,
+        `Follow the placard or OEM staggered specification. There is no universal “safe” percentage that applies to every drivetrain.`,
+      ].join('\n\n'),
     },
   ];
+
+  const secondary: Array<{ question: string; answer: string }> = [
+    {
+      question: 'Why do actual tire dimensions differ between brands?',
+      answer: [
+        `Two products sharing the ${sizeA} or ${sizeB} size code can still publish different overall diameters and revolutions per mile.`,
+        `Measuring rim width, tread pattern, sidewall and casing construction, rated load and pressure, manufacturing tolerances, and new-versus-worn tread all shift the measured envelope.`,
+        `Use the size-code geometry on this page for planning, then prefer the manufacturer’s published diameter and ${revsLabel} for the exact model you intend to buy.`,
+      ].join('\n\n'),
+    },
+    {
+      question: 'What is the difference between nominal and published tire dimensions?',
+      answer: [
+        `Nominal values come from the tire-size formula applied to the size code — for example ${fmtInQuote(specsA.overallDiameterIn)} overall diameter on ${sizeA} and ${fmtInQuote(specsB.overallDiameterIn)} on ${sizeB}.`,
+        `Published values come from physical measurement or manufacturer specifications for a specific brand and model, and can differ from that formula result.`,
+        `Nominal figures are useful for generic size-to-size comparison; published figures are preferred for exact model-to-model analysis.`,
+        sourceModeSentence(mode, sizeA, sizeB, publishedA, publishedB),
+      ].join('\n\n'),
+    },    {
+      question: 'How does tire size affect effective gearing?',
+      answer: [
+        larger
+          ? `A larger rolling diameter on ${sizeB} produces taller effective gearing: fewer wheel revolutions per road mile and usually a small drop in engine RPM at a given true road speed.`
+          : smaller
+            ? `A smaller rolling diameter on ${sizeB} produces shorter effective gearing: more wheel revolutions per road mile and usually a small rise in engine RPM at a given true road speed.`
+            : `Rolling diameter is nearly matched between ${sizeA} and ${sizeB}, so effective gearing should stay close.`,
+        `${revsLabel} moves ${fmtSigned(revsDiff, unitSystem === 'metric' ? 1 : 0)} (${fmtPct(revsDiffPct)}). At ${indicatedSpeed} ${speedUnit} indicated, theoretical engine speed shifts with that circumference change — exact RPM also depends on final-drive ratio and transmission gear.`,
+        `Acceleration response can feel slightly softer with taller gearing or sharper with shorter gearing; treat those effects as directional rather than guaranteed for every powertrain.`,
+      ].join('\n\n'),
+    },
+    {
+      question: 'Why does sidewall height matter?',
+      answer: [
+        `Sidewall height sets how much vertical rubber is available to deflect under load.`,
+        `For this pair sidewall changes ${fmtSigned(sidewallDiffIn, 2, '"')} (${fmtInQuote(specsA.sidewallIn)} → ${fmtInQuote(specsB.sidewallIn)}, ${fmtPct(sidewallPct)}). Lower sidewalls generally reduce flex; taller sidewalls generally add compliance.`,
+        `Construction, inflation pressure, load and tread design still matter — sidewall height alone does not determine handling or comfort.`,
+      ].join('\n\n'),
+    },
+  ];
+
+  return [...primary, ...secondary];
 }
 
-/** Fitment checklist bullets for "Things to Consider" — process, not measurements. */
-export function buildFitmentConsiderations(
-  sizeA: string,
-  sizeB: string,
-  comparison: TireComparison,
-  specsA: TireSpecs,
-  specsB: TireSpecs,
-): string[] {
-  const sameWheel = specsB.wheelDiameterIn === specsA.wheelDiameterIn;
-  const speedoHigh = Math.abs(comparison.speedometer.errorPercent) > 3;
-  const largeStep =
-    Math.abs(comparison.diameterDiffPercent) > 3 ||
-    Math.abs(specsB.widthMm - specsA.widthMm) > 10;
+/** Things-to-consider bullets — each line signed from B minus A (current → new). */
+export function buildFitmentConsiderations(analysis: EngineeringAnalysis): string[] {
+  const {
+    sizeA,
+    sizeB,
+    specsA,
+    specsB,
+    comparison,
+    diamDiffIn,
+    widthDiffMm,
+    sidewallDiffIn,
+    sidewallPct,
+    groundClearanceChangeIn,
+    absDiamPct,
+    absWidthPct,
+  } = analysis.measurements;
 
-  const items = [
-    'Mock-fit one tire at full steering lock before purchasing all four.',
-    'Cycle suspension through full compression and inspect inner liner clearance.',
-    sameWheel
-      ? 'Confirm existing wheel width and offset support the new section width.'
-      : `Plan for new ${specsB.wheelDiameterIn}" wheels — bead seat differs from ${sizeA}.`,
-    largeStep
-      ? 'Budget for possible trimming, revised offset, or mild lift if mock-fit shows contact.'
-      : 'Verify rear corners under load — independent rear suspension can rub where the front clears.',
-    speedoHigh
-      ? 'Investigate speedometer recalibration before relying on cruise control long-term.'
-      : 'Drive a mixed cycle after install so ABS and ESC relearn wheel-speed baselines.',
-    'Match load index and speed rating to your door-placard minimum.',
-  ];
+  const items: string[] = [];
+
+  if (nearZero(diamDiffIn, 0.05)) {
+    items.push(
+      `Ground clearance unchanged — ${specsA.overallDiameterIn.toFixed(2)} in overall diameter on both sizes`,
+    );
+  } else if (diamDiffIn > 0) {
+    items.push(
+      `More ground clearance — +${groundClearanceChangeIn.toFixed(2)} in at the axle from +${diamDiffIn.toFixed(2)} in overall diameter (${specsA.overallDiameterIn.toFixed(2)} → ${specsB.overallDiameterIn.toFixed(2)} in)`,
+    );
+  } else {
+    items.push(
+      `Less ground clearance — ${fmtSigned(groundClearanceChangeIn, 2, ' in')} at the axle from ${fmtSigned(diamDiffIn, 2, '"')} overall diameter (${specsA.overallDiameterIn.toFixed(2)} → ${specsB.overallDiameterIn.toFixed(2)} in)`,
+    );
+  }
+
+  if (nearZero(widthDiffMm, 2)) {
+    items.push(`Contact patch unchanged — section width stays at ${specsA.widthMm} mm`);
+  } else if (widthDiffMm > 0) {
+    items.push(
+      `Larger contact patch — +${widthDiffMm} mm section width (${specsA.widthMm} → ${specsB.widthMm} mm)`,
+    );
+  } else {
+    items.push(
+      `Smaller contact patch — ${widthDiffMm} mm section width (${specsA.widthMm} → ${specsB.widthMm} mm)`,
+    );
+  }
+
+  if (isSidewallRideUnchanged(sidewallPct)) {
+    items.push(`Sidewall height unchanged — ${specsA.sidewallIn.toFixed(2)} in on both sizes (${fmtPct(sidewallPct)})`);
+  } else if (sidewallDiffIn > 0) {
+    items.push(
+      `Taller sidewall — +${sidewallDiffIn.toFixed(2)} in (${specsA.sidewallIn.toFixed(2)} → ${specsB.sidewallIn.toFixed(2)} in) adds compliance`,
+    );
+  } else {
+    items.push(
+      `Shorter sidewall — ${fmtSigned(sidewallDiffIn, 2, ' in')} (${specsA.sidewallIn.toFixed(2)} → ${specsB.sidewallIn.toFixed(2)} in) firms ride response`,
+    );
+  }
+
+  const envelopeLarger =
+    diamDiffIn > 0.05 || widthDiffMm > 3 || sidewallDiffIn > 0.05;
+  const envelopeSmaller =
+    diamDiffIn < -0.05 || widthDiffMm < -3 || sidewallDiffIn < -0.05;
+
+  if (envelopeLarger && !envelopeSmaller) {
+    items.push(`Heavier rotating mass — ${sizeB} carries a larger tire envelope than ${sizeA}`);
+  } else if (envelopeSmaller && !envelopeLarger) {
+    items.push(`Lighter rotating mass — ${sizeB} carries a smaller tire envelope than ${sizeA}`);
+  } else if (envelopeLarger && envelopeSmaller) {
+    items.push(
+      `Mixed envelope change — compare mounted weight; width and sidewall shifts partly offset diameter (${sizeA} → ${sizeB})`,
+    );
+  }
+
+  const minimalStep =
+    absDiamPct < 1.5 && absWidthPct < 3 && Math.abs(sidewallDiffIn) < 0.1;
+  const largeStep = absDiamPct > 3 || absWidthPct > 5;
+
+  if (minimalStep) {
+    items.push(`Easier fitment margin — dimensional change stays close to ${sizeA}`);
+  } else if (largeStep) {
+    items.push(
+      `Tighter fitment margin — ${fmtPct(comparison.diameterDiffPercent)} diameter and ${fmtSigned(widthDiffMm, 0, ' mm')} width; mock-fit at full lock and compression`,
+    );
+  } else {
+    items.push(
+      `Moderate fitment change — verify fender and steering clearance before buying four tires`,
+    );
+  }
+
+  if (Math.abs(comparison.speedometer.errorPercent) > 3) {
+    items.push(
+      `Speedometer error ${fmtPct(comparison.speedometer.errorPercent)} at ${comparison.speedometer.indicatedSpeed} mph — plan for recalibration`,
+    );
+  }
 
   return items.slice(0, 6);
 }

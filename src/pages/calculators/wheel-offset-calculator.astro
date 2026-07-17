@@ -1,14 +1,32 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PremiumWheelOffsetCalculator from '../../components/calculators/PremiumWheelOffsetCalculator';
+import { parseWheelOffsetFromSearch } from '../../lib/calculator-url-state';
 import { OFFSET_FAQS } from '../../lib/wheel-offset-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
-import TrustDisclosure from '../../components/trust/TrustDisclosure.astro';
+import { buildEditorialArticleSchema } from '../../lib/seo/editorial-schema';
+import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
+
+const { current: initialCurrent, new: initialNew } = parseWheelOffsetFromSearch(
+  Astro.url.searchParams,
+  {
+    current: { widthIn: '8', diameterIn: '18', offsetMm: '35' },
+    new: { widthIn: '9', diameterIn: '18', offsetMm: '20' },
+  },
+);
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Wheel Offset Calculator'),
   faqs: OFFSET_FAQS.map((faq) => ({ question: faq.question, answer: faq.answer })),
+  extra: [
+    buildEditorialArticleSchema({
+      headline: 'Wheel Offset & Backspacing Calculator',
+      description: SEO_DESCRIPTIONS.wheelOffsetCalculator,
+      url: '/calculators/wheel-offset-calculator/',
+      dateModified: SITE_CONTENT_UPDATED,
+    }),
+  ],
 });
 ---
 
@@ -18,11 +36,9 @@ const schema = buildPageSchema({
   canonical="/calculators/wheel-offset-calculator/"
   schema={schema}
 >
-  <PremiumWheelOffsetCalculator client:load />
-  <div class="tl-container pb-10 lg:pb-14">
-    <TrustDisclosure
-      title="How our calculators work"
-      subtitle="Offset, backspacing, and clearance use standard wheel-geometry formulas independent of tire diameter math — methodology and sources below."
-    />
-  </div>
+  <PremiumWheelOffsetCalculator
+    client:load
+    initialCurrent={initialCurrent}
+    initialNew={initialNew}
+  />
 </Layout>

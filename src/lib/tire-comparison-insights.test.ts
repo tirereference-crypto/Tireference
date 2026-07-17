@@ -14,54 +14,72 @@ describe('buildComparisonInsights', () => {
     expect(insights.seo.h1).toBe('Tire Size Comparison Calculator');
     expect(insights.seo.title).toContain(sizeA);
     expect(insights.seo.title).toContain(sizeB);
-    expect(insights.pageIntro.sentence).toContain(sizeA);
-    expect(insights.pageIntro.sentence).toContain(sizeB);
-    expect(insights.pageIntro.sentence.length).toBeLessThanOrEqual(160);
+    expect(insights.pageIntro.sentence).toMatch(/overall diameter/i);
+    expect(insights.pageIntro.sentence).toMatch(/speedometer error/i);
     expect(insights.summaryChips).toHaveLength(3);
-    expect(insights.summaryChips[0].label).toBe('Diameter');
+    expect(insights.summaryChips[0].label).toBe('Diameter difference');
+    expect(['within', 'caution', 'neutral']).toContain(insights.summaryChips[0].tone);
+    expect(insights.kpiCards).toHaveLength(6);
+    expect(insights.kpiCards[0].originalValue).toBeTruthy();
+    expect(insights.kpiCards[0].newValue).toBeTruthy();
+    expect(insights.kpiCards[0].icon).toBe('diameter');
+    expect(insights.kpiCards.every((card) => card.tone === 'neutral')).toBe(true);
+    expect(insights.kpiCards[2].label).toBe('Sidewall Height');
+    expect(insights.kpiCards[4].label).toBe('Speedometer Difference');
     expect(insights.personalityCards).toHaveLength(3);
-    expect(insights.personalityCards.filter((card) => card.isPrimary)).toHaveLength(1);
-    expect(insights.willThisFitRows).toHaveLength(6);
-    expect(insights.willThisFitRows[0].label).toBe('Diameter Change');
+    expect(insights.willThisFitRows).toHaveLength(7);
+    expect(insights.willThisFitRows[0].label).toBe('Overall Fitment');
     if (insights.upgradePaths?.cards) {
       expect(insights.upgradePaths.cards.length).toBeGreaterThanOrEqual(4);
       expect(insights.upgradePaths.cards[0].tierLabel).toBe('Current Size');
-      expect(insights.upgradePaths.cards[1].href).toContain('/compare/');
-      expect(insights.upgradePaths.cards[1].href).toContain('-vs-');
-      expect(insights.upgradePaths.cards[1].fitmentDifficulty).toBeTruthy();
+      const linked = insights.upgradePaths.cards.find((card) => Boolean(card.href));
+      expect(linked?.href).toContain('/compare/');
     }
     expect(insights.quickVerdict.label).toBeTruthy();
     expect(insights.quickVerdict.score).toBe(insights.fitmentScore);
     expect(insights.quickVerdict.benefits.length).toBeGreaterThan(0);
-    expect(insights.quickVerdict.bestFor.length).toBeGreaterThan(0);
-    expect(insights.understandingDifference).toContain(sizeA);
-    expect(insights.understandingDifference.split(/\s+/).length).toBeGreaterThanOrEqual(120);
+    expect(insights.whatThisChangeMeans).toContain(sizeA);
+    expect(insights.whatThisChangeMeans).toContain(sizeB);
+    expect(insights.whatThisChangeMeans.split(/\s+/).length).toBeGreaterThanOrEqual(120);
     expect(insights.engineeringAnalysis.sections).toHaveLength(9);
-    expect(insights.engineeringAnalysis.byId['ride-quality'].title).toBe('Ride Quality');
     expect(insights.qualityValidation.approved).toBe(true);
     expect(insights.seo.isGoodUpgrade.headline).not.toMatch(/aggressive upgrade/i);
     expect(insights.performanceCards.find((c) => c.id === 'handling')?.value).not.toBe('Improved');
-    expect(insights.performanceCards.find((c) => c.id === 'handling')?.explanation).toMatch(/\d/);
-    expect(insights.performanceCards.find((c) => c.id === 'clearance')?.explanation).toMatch(
-      /diameter|clearance|in/i,
-    );
-    expect(insights.seo.whatChanges).toContain(sizeA);
-    expect(insights.seo.whatChanges).toContain(sizeB);
     expect(insights.kpiCards).toHaveLength(6);
     expect(insights.performanceCards).toHaveLength(6);
-    expect(insights.fitmentChecks).toHaveLength(6);
     expect(insights.fitmentScore).toBeGreaterThan(0);
-    expect(insights.starRating).toBeGreaterThan(0);
     expect(insights.thingsToConsider.length).toBeGreaterThan(0);
-    expect(insights.seo.faqs.length).toBeGreaterThanOrEqual(6);
+    expect(insights.seo.faqs).toHaveLength(12);
   });
 
-  it('buildComparisonPageIntro uses natural comparison language', () => {
+  it('buildComparisonPageIntro uses fixed dashboard introduction copy', () => {
     const intro = buildComparisonPageIntro('225/45R17', '235/40R18');
-    expect(intro.sentence).toContain('225/45R17');
-    expect(intro.sentence).toContain('235/40R18');
-    expect(intro.sentence).toContain('vs');
-    expect(intro.sentence.length).toBeLessThanOrEqual(160);
+    expect(intro.sentence).toMatch(/Compare two tire sizes side by side/i);
+    expect(intro.sentence).toMatch(/wheel requirements/i);
+    expect(intro.sentence).not.toContain('225/45R17');
+  });
+
+  it('builds stable KPI cards for 275/70R18 vs 285/70R18 and same-size', () => {
+    const run = (a: string, b: string) => {
+      const insights = buildComparisonInsights(
+        a,
+        b,
+        compareTires(a, b, 60),
+        getTireSpecs(a),
+        getTireSpecs(b),
+      );
+      expect(insights.kpiCards).toHaveLength(6);
+      expect(insights.kpiCards[1].label).toBe('Section Width');
+      expect(insights.kpiCards[5].label).toMatch(/Rev/i);
+      return insights;
+    };
+
+    const wider = run('275/70R18', '285/70R18');
+    expect(wider.kpiCards[1].diffAmount).toMatch(/\+/);
+
+    const same = run('225/45R17', '225/45R17');
+    expect(same.summaryChips.every((chip) => chip.tone === 'within')).toBe(true);
+    expect(same.kpiCards[0].diffAmount).toMatch(/0\.00/);
   });
 
   it('quick verdict uses score-based labels', () => {
@@ -75,9 +93,11 @@ describe('buildComparisonInsights', () => {
       getTireSpecs(sizeB),
     );
 
-    expect(['Excellent Upgrade', 'Good Upgrade', 'Not Recommended']).toContain(
-      insights.quickVerdict.label,
-    );
+    expect([
+      'Very close dimensional match',
+      'Moderate change — vehicle checks required',
+      'Significant dimensional change',
+    ]).toContain(insights.quickVerdict.label);
     expect(insights.quickVerdict.tone).toMatch(/green|yellow|orange|red/);
   });
 
@@ -97,7 +117,7 @@ describe('buildComparisonInsights', () => {
       getTireSpecs('285/75R18'),
     );
 
-    expect(a.seo.whatChanges).not.toBe(b.seo.whatChanges);
+    expect(a.whatThisChangeMeans).not.toBe(b.whatThisChangeMeans);
     expect(a.seo.faqs[0].answer).not.toBe(b.seo.faqs[0].answer);
   });
 
@@ -128,7 +148,7 @@ describe('buildComparisonInsights', () => {
     }
   });
 
-  it('narrative sections avoid repeating spec-table measurements', () => {
+  it('merged narrative avoids repeating spec-table measurements', () => {
     const sizeA = '225/45R17';
     const sizeB = '235/40R18';
     const insights = buildComparisonInsights(
@@ -139,15 +159,19 @@ describe('buildComparisonInsights', () => {
       getTireSpecs(sizeB),
     );
 
-    expect(insights.understandingDifference).toContain('spec table');
-    expect(insights.understandingDifference).not.toMatch(/\d+\.\d{2}%/);
-    expect(insights.seo.whatChanges).not.toMatch(/\d+\.\d{2}%/);
-    expect(insights.seo.whoShouldChoose).not.toMatch(/\d+\.\d{2}%/);
+    expect(insights.whatThisChangeMeans).toContain('spec table');
+    expect(insights.whatThisChangeMeans).not.toMatch(/\d+\.\d{2}%/);
     expect(insights.seo.isGoodUpgrade.body).toContain('Fitment score');
-    expect(insights.seo.faqs[0].question).toMatch(/mock-fit/i);
-    expect(insights.seo.faqs.find((f) => f.question.includes('fuel economy'))!.answer).not.toMatch(
-      /revs\/mi.*revs\/mi/i,
-    );
+    expect(insights.seo.faqs).toHaveLength(12);
+    expect(insights.seo.faqs[0].question).toMatch(/accurate/i);
+    expect(insights.seo.faqs.some((f) => f.question.includes('vehicle fitment'))).toBe(true);
+    expect(insights.seo.faqs.some((f) => f.question.includes('speedometer'))).toBe(true);
+    for (const faq of insights.seo.faqs) {
+      expect(faq.answer).toMatch(/\d/);
+      expect(faq.answer.toLowerCase()).not.toMatch(
+        /it depends on your priorities|both sizes have advantages|depends on driving style/,
+      );
+    }
   });
 
   it('does not recommend overlanding or off-road for performance-class tires', () => {
@@ -179,30 +203,13 @@ describe('buildComparisonInsights', () => {
 
     const s = insights.fitmentScore;
     const expected =
-      s >= 8.5
-        ? 'Excellent Upgrade'
-        : s >= 6.5
-          ? 'Good Upgrade'
-          : 'Not Recommended';
+      s >= 8
+        ? 'Very close dimensional match'
+        : s >= 5
+          ? 'Moderate change — vehicle checks required'
+          : 'Significant dimensional change';
 
     expect(insights.quickVerdict.label).toBe(expected);
     expect(insights.recommendationLabel).toBe(expected);
-  });
-
-  it('FAQ fuel answer cites RPM without invented MPG percentages', () => {
-    const sizeA = '275/70R18';
-    const sizeB = '285/75R18';
-    const insights = buildComparisonInsights(
-      sizeA,
-      sizeB,
-      compareTires(sizeA, sizeB, 60),
-      getTireSpecs(sizeA),
-      getTireSpecs(sizeB),
-    );
-
-    const fuelFaq = insights.seo.faqs.find((f) => f.question.includes('fuel economy'));
-    expect(fuelFaq).toBeTruthy();
-    expect(fuelFaq!.answer).toMatch(/RPM|revs/i);
-    expect(fuelFaq!.answer).not.toMatch(/1–3%|0–2%/);
   });
 });

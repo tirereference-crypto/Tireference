@@ -1,16 +1,19 @@
 /**
  * Single source of truth for site-wide trust / E-E-A-T signals.
  *
- * Nothing about authorship, review, methodology, sources, or update dates is
- * hardcoded inside page templates — every trust component reads from here, so
- * updating a name, a source, or the review date happens in exactly one place.
- *
- * All descriptions reflect what the codebase actually does — no invented
- * credentials, certifications, or individual reviewer identities.
+ * Author and reviewer profiles live in `src/data/people.ts`. This module
+ * re-exports the default editorial credits used by trust components and schema.
  */
 
+import {
+  getDefaultAuthorEditorial,
+  getDefaultReviewerEditorial,
+} from './people';
+
 export interface EditorialPerson {
-  /** Display name (individual or team). */
+  /** Profile slug — links to /author/[slug]. */
+  slug?: string;
+  /** Display name. */
   name: string;
   /** Short role/title shown under the name. */
   role: string;
@@ -20,6 +23,8 @@ export interface EditorialPerson {
   initials: string;
   /** Where the name links to (author/reviewer profile). */
   profileUrl: string;
+  /** Optional headshot — site-relative or absolute URL. */
+  photoUrl?: string;
 }
 
 export interface EditorialStep {
@@ -34,23 +39,11 @@ export interface DataSource {
   url?: string;
 }
 
-/** Team credited as the author of research and editorial content. */
-export const EDITORIAL_AUTHOR: EditorialPerson = {
-  name: 'Tire Reference Editorial Team',
-  role: 'Tire sizing research & calculator content',
-  bio: 'Maintains the curated tire-size dataset, implements the sizing math in our calculators, and writes hub and comparison guidance from calculated outputs — not manufacturer marketing copy.',
-  initials: 'TR',
-  profileUrl: '/about',
-};
+/** Default author credited on guides, comparisons, and calculators. */
+export const EDITORIAL_AUTHOR: EditorialPerson = getDefaultAuthorEditorial();
 
-/** Team/process credited with pre-publication technical checks — not a named individual. */
-export const EDITORIAL_REVIEWER: EditorialPerson = {
-  name: 'Tire Reference Technical Review',
-  role: 'Automated calculation & content verification',
-  bio: 'Runs structural fitment checks, compares generated prose against calculated specs for contradictions, and blocks pages that fail validation before they are published.',
-  initials: 'TR',
-  profileUrl: '/about',
-};
+/** Default technical reviewer credited on published content. */
+export const EDITORIAL_REVIEWER: EditorialPerson = getDefaultReviewerEditorial();
 
 export const METHODOLOGY: { intro: string; steps: EditorialStep[] } = {
   intro:

@@ -9,8 +9,8 @@ export const HOME_POPULAR_TIRE_SIZES = [
   '285/70R17',
   '315/70R17',
   '305/70R18',
-  'LT265/75R16',
   '275/65R18',
+  '225/45R17',
 ] as const;
 
 function sizeHasHubPage(size: string): boolean {
@@ -21,56 +21,147 @@ function sizeHasHubPage(size: string): boolean {
 }
 
 export type HomeCategorySlug =
+  | 'passenger'
   | 'suv'
   | 'truck'
   | 'off-road'
-  | 'passenger'
-  | 'performance';
+  | 'performance'
+  | 'winter'
+  | 'ev'
+  | 'touring';
+
+/**
+ * Representative hub size for a homepage browse card.
+ * Must exist in TIRE_SIZES so hubPagePath resolves to a real page.
+ */
+const HOME_CATEGORY_HUB_SIZES = {
+  passenger: '205/55R16',
+  suv: '235/65R17',
+  truck: '285/75R16',
+  'off-road': '275/70R18',
+  performance: '225/45R17',
+  /** Closest catalog sizes — no dedicated winter/EV/touring categories. */
+  winter: '195/65R15',
+  ev: '255/55R19',
+  touring: '215/55R17',
+} as const satisfies Record<HomeCategorySlug, string>;
+
+export type HomeCategoryAccent = 'purple' | 'blue' | 'orange' | 'green' | 'pink' | 'cyan';
 
 export interface HomeCategoryCard {
   title: string;
   description: string;
   slug: HomeCategorySlug;
-  /** Placeholder until dedicated category pages ship. */
+  /** Individual tire-size hub page for a representative size in the category. */
   href: string;
   icon: HomeCategorySlug;
+  accent: HomeCategoryAccent;
+  imageSrc: string;
+  imageAlt: string;
+  imageWidth: number;
+  imageHeight: number;
 }
 
+/**
+ * Eight discovery cards. Each opens a real tire-size hub page for a
+ * representative size from that category (never calculators or index anchors).
+ */
 export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
   {
-    title: 'SUV Tires',
-    description: 'Crossover and SUV fitments with taller sidewalls and load ratings.',
-    slug: 'suv',
-    href: '/tire-sizes#SUV',
-    icon: 'suv',
-  },
-  {
-    title: 'Truck Tires',
-    description: 'Light-truck sizes for towing, payload, and daily driving.',
-    slug: 'truck',
-    href: '/tire-sizes#light-truck',
-    icon: 'truck',
-  },
-  {
-    title: 'Off-Road Tires',
-    description: 'All-terrain and mud sizes for trail and overland builds.',
-    slug: 'off-road',
-    href: '/tire-sizes#off-road',
-    icon: 'off-road',
-  },
-  {
-    title: 'Passenger Cars',
-    description: 'OEM and plus-size options for sedans, hatchbacks, and coupes.',
+    title: 'Passenger',
+    description: 'Comfort and everyday driving',
     slug: 'passenger',
-    href: '/tire-sizes#passenger',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.passenger),
     icon: 'passenger',
+    accent: 'blue',
+    imageSrc: '/images/home/categories/passenger.jpg',
+    imageAlt: 'Everyday sedan parked on a quiet street',
+    imageWidth: 960,
+    imageHeight: 640,
   },
   {
-    title: 'Performance Cars',
-    description: 'Low-profile fitments focused on grip, response, and stance.',
+    title: 'SUV',
+    description: 'All-road confidence and versatility',
+    slug: 'suv',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.suv),
+    icon: 'suv',
+    accent: 'green',
+    imageSrc: '/images/home/categories/suv.jpg',
+    imageAlt: 'Modern SUV suited to all-road driving',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'Truck',
+    description: 'Towing, hauling and work',
+    slug: 'truck',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.truck),
+    icon: 'truck',
+    accent: 'orange',
+    imageSrc: '/images/home/categories/truck.jpg',
+    imageAlt: 'Pickup truck for towing and work use',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'Off-Road',
+    description: 'Trails, rocks and rough terrain',
+    slug: 'off-road',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES['off-road']),
+    icon: 'off-road',
+    accent: 'purple',
+    imageSrc: '/images/home/categories/off-road.jpg',
+    imageAlt: 'Lifted trail vehicle for off-road driving',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'Performance',
+    description: 'Grip, precision and speed',
     slug: 'performance',
-    href: '/tire-sizes#performance',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.performance),
     icon: 'performance',
+    accent: 'pink',
+    imageSrc: '/images/home/categories/performance.jpg',
+    imageAlt: 'Sports coupe on a winding road',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'Winter',
+    description: 'Snow and cold-weather control',
+    slug: 'winter',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.winter),
+    icon: 'winter',
+    accent: 'cyan',
+    imageSrc: '/images/home/categories/winter.jpg',
+    imageAlt: 'Vehicle driving on a snowy winter road',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'EV',
+    description: 'Efficiency, load and quiet driving',
+    slug: 'ev',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.ev),
+    icon: 'ev',
+    accent: 'blue',
+    imageSrc: '/images/home/categories/ev.jpg',
+    imageAlt: 'Modern electric vehicle at a charging station',
+    imageWidth: 960,
+    imageHeight: 640,
+  },
+  {
+    title: 'Touring',
+    description: 'Long-distance comfort',
+    slug: 'touring',
+    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.touring),
+    icon: 'touring',
+    accent: 'purple',
+    imageSrc: '/images/home/categories/touring.jpg',
+    imageAlt: 'Car on a long scenic highway',
+    imageWidth: 960,
+    imageHeight: 640,
   },
 ] as const;
 
@@ -108,8 +199,8 @@ export interface PopularComparisonCard {
   href: string;
 }
 
-export function buildPopularComparisonCards(): PopularComparisonCard[] {
-  return buildCuratedPopularComparisons(8).map(({ label, href }) => ({ label, href }));
+export function buildPopularComparisonCards(limit = 5): PopularComparisonCard[] {
+  return buildCuratedPopularComparisons(limit).map(({ label, href }) => ({ label, href }));
 }
 
 export type HomeTrustIconName =
@@ -126,35 +217,24 @@ export interface HomeTrustCard {
   icon: HomeTrustIconName;
 }
 
-export const HOME_TRUST_CARDS: readonly HomeTrustCard[] = [
+/** Slim trust points for the homepage trust panel (no OEM fitment claims). */
+export const HOME_TRUST_PANEL: readonly HomeTrustCard[] = [
   {
-    title: 'Accurate & Verified',
-    description: 'Calculations use standard tire math with specs cross-checked against our size library.',
+    title: 'Accurate Formulas',
+    description: 'Clear calculations based on established tire and wheel geometry.',
     icon: 'verified',
   },
   {
-    title: 'Real World Fitment',
-    description: 'OEM fitment data connects factory tire sizes to the vehicles that actually use them.',
-    icon: 'fitment',
-  },
-  {
-    title: 'Fast Calculations',
-    description: 'Get diameter, comparison, and gearing answers instantly — no waiting on page loads.',
-    icon: 'fast',
-  },
-  {
-    title: '100% Free',
-    description: 'Every calculator and size guide on Tire Reference is free to use with no paywalls.',
-    icon: 'free',
-  },
-  {
-    title: 'Privacy First',
-    description: 'Your searches stay in the browser. We do not sell vehicle or tire lookup data.',
-    icon: 'privacy',
-  },
-  {
     title: 'No Signup Required',
-    description: 'Open a calculator and start typing. No account, email, or install required.',
+    description: 'Use every calculator instantly without creating an account.',
     icon: 'signup',
   },
+  {
+    title: 'Built for Real-World Decisions',
+    description: 'Practical comparisons for everyday drivers and enthusiasts.',
+    icon: 'fast',
+  },
 ] as const;
+
+/** @deprecated Prefer HOME_TRUST_PANEL on the redesigned homepage. */
+export const HOME_TRUST_CARDS = HOME_TRUST_PANEL;

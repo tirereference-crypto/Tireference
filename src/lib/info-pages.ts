@@ -37,7 +37,7 @@ export const ABOUT_BUILD_CARDS = [
     title: 'Fitment Resources',
     description:
       'Browse tire size hubs, OEM-style specs, equivalents, and vehicle-oriented fitment context.',
-    href: '/tire-sizes',
+    href: '/tire-sizes/',
   },
 ] as const;
 
@@ -73,13 +73,28 @@ export const CONTACT_REASONS = [
   },
 ] as const;
 
+export const FOOTER_TOOL_LINKS = [
+  { label: 'Tire Size Calculator', href: CALCULATOR_PATHS.tireSize },
+  { label: 'Tire Size Comparison', href: CALCULATOR_PATHS.tireComparison },
+  { label: 'Wheel Offset Calculator', href: CALCULATOR_PATHS.wheelOffset },
+  { label: 'Speedometer Error Calculator', href: CALCULATOR_PATHS.speedometerError },
+  { label: 'Tire Diameter Calculator', href: CALCULATOR_PATHS.tireDiameter },
+  { label: 'Gear Ratio Calculator', href: CALCULATOR_PATHS.gearRatio },
+] as const;
+
+export const FOOTER_RESOURCE_LINKS = [
+  { label: 'Tire Sizes', href: '/tire-sizes/' },
+  { label: 'Data & Calculation Standards', href: '/data-standards/' },
+  { label: 'Report an Issue', href: '/report-an-issue/' },
+] as const;
+
 export const FOOTER_COMPANY_LINKS = [
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
+  { label: 'About', href: '/about/' },
+  { label: 'Contact', href: '/contact/' },
 ] as const;
 
 export const FOOTER_LEGAL_LINKS = [
-  { label: 'Privacy Policy', href: '/privacy-policy' },
-  { label: 'Terms of Use', href: '/terms' },
-  { label: 'Disclaimer', href: '/disclaimer' },
+  { label: 'Privacy Policy', href: '/privacy-policy/' },
+  { label: 'Terms of Use', href: '/terms/' },
+  { label: 'Disclaimer', href: '/disclaimer/' },
 ] as const;

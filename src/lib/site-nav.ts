@@ -26,21 +26,34 @@ const NAV_CALCULATOR_META: readonly Omit<NavCalculatorItem, 'href'>[] = [
     description: 'Find overall tire diameter and matching tire sizes.',
   },
   {
-    emoji: '⚙️',
-    label: 'Gear Ratio Calculator',
-    description: 'Calculate ideal axle gearing after changing tire sizes.',
-  },
-  {
     emoji: '🛞',
     label: 'Wheel Offset Calculator',
     description: 'Visualize wheel position and fitment.',
   },
+  {
+    emoji: '⏱️',
+    label: 'Speedometer Error Calculator',
+    description: 'See how tire-size changes affect indicated speed.',
+  },
+  {
+    emoji: '⚙️',
+    label: 'Gear Ratio Calculator',
+    description: 'Calculate ideal axle gearing after changing tire sizes.',
+  },
 ] as const;
 
-export const NAV_CALCULATORS: readonly NavCalculatorItem[] = SITE_CALCULATORS.map((calc, index) => ({
-  ...NAV_CALCULATOR_META[index],
-  href: calc.href,
-}));
+export const NAV_CALCULATORS: readonly NavCalculatorItem[] = SITE_CALCULATORS.map((calc, index) => {
+  const meta = NAV_CALCULATOR_META[index];
+  if (!meta || meta.label !== calc.label) {
+    throw new Error(
+      `NAV_CALCULATOR_META order must match SITE_CALCULATORS (mismatch at index ${index}: expected "${calc.label}", got "${meta?.label ?? 'undefined'}").`,
+    );
+  }
+  return {
+    ...meta,
+    href: calc.href,
+  };
+});
 
 export const NAV_POPULAR_TIRE_SIZE_LABELS = [
   '275/70R18',
@@ -98,15 +111,15 @@ export const NAV_COMPARE = {
 
 export const NAV_ABOUT = {
   label: 'About',
-  href: '/about',
+  href: '/about/',
 } as const;
 
 export const NAV_CONTACT = {
   label: 'Contact',
-  href: '/contact',
+  href: '/contact/',
 } as const;
 
-export const NAV_ALL_TIRE_SIZES_HREF = '/tire-sizes';
+export const NAV_ALL_TIRE_SIZES_HREF = '/tire-sizes/';
 
 /** Strip trailing slashes and query strings for nav path comparison. */
 export function normalizeNavPathname(pathname: string): string {
