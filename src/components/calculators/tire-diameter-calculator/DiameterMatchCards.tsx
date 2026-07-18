@@ -5,7 +5,8 @@ import {
   type ToleranceOption,
 } from '../../../lib/tire-diameter-search';
 import { hasTireSizeGuide } from '../../../lib/has-tire-size-guide';
-import { comparisonPagePathCurrent, tireSizeCalculatorPath } from '../../../lib/tire-size-url';
+import { preferredSizeCompareLink } from '../../../lib/crawlable-links';
+import { tireSizeCalculatorPath } from '../../../lib/tire-size-url';
 import { getExactSizeCoverage } from '../../../lib/exact-size-coverage';
 import { formatIn, getAbsDiffPercent, getDiffTone } from './diameter-display';
 import { getMatchStatusBadges } from '../../../lib/tire-diameter-ranking';
@@ -133,6 +134,7 @@ export function DiameterMatchCards({
           const sizeHref = guide ? match.hubHref : tireSizeCalculatorPath(match.size);
           const actionLabel =
             guide || uniqueModelCount > 0 ? 'View Tire Models' : 'View Size';
+          const compareLink = preferredSizeCompareLink(match.size);
 
           return (
             <article
@@ -207,13 +209,8 @@ export function DiameterMatchCards({
                 <a className="dia-match-card__link" href={sizeHref}>
                   {actionLabel}
                 </a>
-                <a
-                  className="dia-match-card__compare"
-                  href={comparisonPagePathCurrent(match.size)}
-                  aria-label={`Compare ${match.size} with another size`}
-                  title={`Compare ${match.size} with another size`}
-                >
-                  Compare
+                <a className="dia-match-card__compare" href={compareLink.href}>
+                  {compareLink.label}
                 </a>
               </div>
             </article>

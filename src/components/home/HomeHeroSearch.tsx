@@ -113,13 +113,9 @@ export default function HomeHeroSearch() {
           {HOME_POPULAR_SEARCHES.map((size, index) => (
             <span key={size} className="home-hero__popular-item">
               {index > 0 ? <span className="home-hero__popular-sep" aria-hidden="true"> </span> : null}
-              <button
-                type="button"
-                className="home-hero__popular-link"
-                onClick={() => window.location.assign(popularSearchHref(size))}
-              >
+              <a className="home-hero__popular-link" href={popularSearchHref(size)}>
                 {size}
-              </button>
+              </a>
             </span>
           ))}
         </div>

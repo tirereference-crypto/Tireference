@@ -1,12 +1,20 @@
 import { TIRE_SIZES } from '../data/tire-sizes';
+import {
+  canonicalComparisonPath,
+  comparisonSlugFromSizes,
+  getCanonicalComparisonPair,
+  orderComparisonSizes,
+  parseComparisonSlug as parseSharedComparisonSlug,
+  tireSizeComparisonSlug,
+} from './comparison-url';
 import { fmtDiffWithPct, fmtPct, fmtSigned } from './tire-comparison-format';
 import { getTireSpecs, compareTires } from './tire-math';
 import { buildComparisonMeasurements } from './tire-comparison-engineering-analysis';
 import { fieldsToTireSizeString, parseFullSizeToFields } from './tire-size-input';
 import { buildTireSizeHubData, getTireSizeEntry } from './tire-size-hub';
 import { getPremiumOverride } from './tire-size-premium-overrides';
-import { isProductionTireSize, normalizeTireSizeKey } from './tire-size-validation';
-import { isComparisonPublishable } from './tire-comparison-insights';
+import { isProductionTireSize } from './tire-size-validation';
+import { isComparisonPublishable } from './tire-comparison-insights-core';
 import {
   isValidComparison,
   isValidComparisonPair,
@@ -19,6 +27,7 @@ import {
   type ComparisonCandidateInput,
   type ComparisonCandidateSource,
 } from './tire-comparison-relevance';
+import { normalizeTireSize } from './tire-size-primitives';
 
 export const POPULAR_COMPARISON_LIMIT = 6;
 
@@ -59,22 +68,13 @@ export const MOST_SEARCHED_COMPARISON_PAIRS: Array<[string, string]> = [
   ['235/55R18', '245/60R18'],
 ];
 
-export function sizeToComparisonSlug(size: string): string {
-  const normalized = size.trim().toUpperCase();
-  const lt = normalized.startsWith('LT');
-  const body = lt ? normalized.slice(2) : normalized.startsWith('P') ? normalized.slice(1) : normalized;
-  const match = body.match(/^(\d+)\/(\d+)R(\d+(?:\.\d+)?)$/);
-  if (!match) {
-    return normalized.toLowerCase().replace(/\//g, '-');
-  }
-  const [, width, aspect, wheel] = match;
-  const prefix = lt ? 'lt-' : '';
-  return `${prefix}${width}-${aspect}-r${wheel}`.toLowerCase();
-}
-
-export function comparisonSlugFromSizes(sizeA: string, sizeB: string): string {
-  return `${sizeToComparisonSlug(sizeA)}-vs-${sizeToComparisonSlug(sizeB)}`;
-}
+export {
+  canonicalComparisonPath,
+  comparisonSlugFromSizes,
+  getCanonicalComparisonPair,
+  orderComparisonSizes,
+  tireSizeComparisonSlug as sizeToComparisonSlug,
+};
 
 export function comparisonSlugPath(
   sizeA: string,
@@ -82,7 +82,7 @@ export function comparisonSlugPath(
   options?: ComparisonValidationOptions,
 ): string | null {
   if (!isValidComparisonPair(sizeA, sizeB, options)) return null;
-  return `/compare/${comparisonSlugFromSizes(sizeA, sizeB)}`;
+  return canonicalComparisonPath(sizeA, sizeB);
 }
 
 function isSameComparisonPair(
@@ -91,10 +91,8 @@ function isSameComparisonPair(
   pageCurrent: string,
   pageNew: string,
 ): boolean {
-  return (
-    normalizeTireSizeKey(sizeA) === normalizeTireSizeKey(pageCurrent) &&
-    normalizeTireSizeKey(sizeB) === normalizeTireSizeKey(pageNew)
-  );
+  return comparisonSlugFromSizes(sizeA, sizeB) ===
+    comparisonSlugFromSizes(pageCurrent, pageNew);
 }
 
 function shouldEmitComparisonLink(
@@ -119,7 +117,7 @@ export function publishedComparisonSlugPath(
 ): string | null {
   if (!isValidComparisonPair(sizeA, sizeB, options)) return null;
   if (!shouldEmitComparisonLink(sizeA, sizeB, options)) return null;
-  return `/compare/${comparisonSlugFromSizes(sizeA, sizeB)}`;
+  return canonicalComparisonPath(sizeA, sizeB);
 }
 
 function dedupePopularLinks(links: PopularComparisonLink[]): PopularComparisonLink[] {
@@ -131,34 +129,22 @@ function dedupePopularLinks(links: PopularComparisonLink[]): PopularComparisonLi
   });
 }
 
-function comparisonSlugToSize(slug: string): string | null {
-  const normalized = slug.trim().toLowerCase();
-  const lt = normalized.startsWith('lt-');
-  const body = lt ? normalized.slice(3) : normalized;
-  const match = body.match(/^(\d+)-(\d+)-r(\d+(?:\.\d+)?)$/);
-  if (!match) return null;
-
-  const [, width, aspect, wheel] = match;
-  const candidate = `${lt ? 'LT' : ''}${width}/${aspect}R${wheel}`;
-  const entry = getTireSizeEntry(candidate);
-  return entry?.size ?? null;
-}
-
 export function hasTireSizeHubPage(size: string): boolean {
   return !!getTireSizeEntry(size);
 }
 
 /** True when the three-field calculator inputs round-trip to this exact database size. */
 export function isFieldBackedTireSize(size: string): boolean {
-  if (!isProductionTireSize(size)) return false;
+  const normalized = normalizeTireSize(size);
+  if (!normalized || !isProductionTireSize(normalized)) return false;
 
-  const fields = parseFullSizeToFields(size);
+  const fields = parseFullSizeToFields(normalized);
   if (!fields) return false;
 
   const rebuilt = fieldsToTireSizeString(fields);
   if (!rebuilt || !isProductionTireSize(rebuilt)) return false;
 
-  return normalizeTireSizeKey(rebuilt) === normalizeTireSizeKey(size);
+  return normalizeTireSize(rebuilt) === normalized;
 }
 
 export { isValidComparison, isValidComparisonPair } from './tire-comparison-validation';
@@ -189,10 +175,11 @@ export function buildCuratedPopularComparisons(
     if (!isValidComparisonPair(sizeA, sizeB, options)) continue;
     const href = publishedComparisonSlugPath(sizeA, sizeB, options);
     if (!href) continue;
+    const ordered = orderComparisonSizes(sizeA, sizeB);
     links.push({
-      current: sizeA,
-      new: sizeB,
-      label: `${sizeA} vs ${sizeB}`,
+      current: ordered.current,
+      new: ordered.new,
+      label: `${ordered.current} vs ${ordered.new}`,
       href,
       priority: 1,
     });
@@ -203,15 +190,11 @@ export function buildCuratedPopularComparisons(
 }
 
 export function parseComparisonSlug(slug: string): { current: string; new: string } | null {
-  const marker = '-vs-';
-  const lower = slug.toLowerCase();
-  const vsIndex = lower.indexOf(marker);
-  if (vsIndex === -1) return null;
-
-  const current = comparisonSlugToSize(slug.slice(0, vsIndex));
-  const newSize = comparisonSlugToSize(slug.slice(vsIndex + marker.length));
-  if (!current || !newSize || !isValidComparisonPair(current, newSize)) return null;
-
+  const parsed = parseSharedComparisonSlug(slug);
+  if (!parsed) return null;
+  const { current, new: newSize } = parsed.canonical;
+  if (!getTireSizeEntry(current) || !getTireSizeEntry(newSize)) return null;
+  if (!isValidComparisonPair(current, newSize)) return null;
   return { current, new: newSize };
 }
 
@@ -232,7 +215,7 @@ function addComparisonCandidateInput(
 ): void {
   if (!isValidComparisonPair(current, newSize, options)) return;
 
-  const key = `${normalizeTireSizeKey(current)}|${normalizeTireSizeKey(newSize)}`;
+  const key = `${normalizeTireSize(current)}|${normalizeTireSize(newSize)}`;
   if (seen.has(key)) return;
   seen.add(key);
 
@@ -250,11 +233,11 @@ function collectComparisonCandidateInputs(
 
   const inputs: ComparisonCandidateInput[] = [];
   const seen = new Set<string>();
-  const baseKey = normalizeTireSizeKey(sizeA);
+  const baseKey = normalizeTireSize(sizeA);
 
   for (const [a, b] of MOST_SEARCHED_COMPARISON_PAIRS) {
-    if (normalizeTireSizeKey(a) === baseKey) addComparisonCandidateInput(inputs, seen, a, b, 'curated', options);
-    if (normalizeTireSizeKey(b) === baseKey) addComparisonCandidateInput(inputs, seen, b, a, 'curated', options);
+    if (normalizeTireSize(a) === baseKey) addComparisonCandidateInput(inputs, seen, a, b, 'curated', options);
+    if (normalizeTireSize(b) === baseKey) addComparisonCandidateInput(inputs, seen, b, a, 'curated', options);
   }
 
   const override = getPremiumOverride(sizeA);
@@ -308,10 +291,11 @@ export function buildPopularComparisonsForSize(
         .map((item, index) => {
           const href = publishedComparisonSlugPath(sizeA, item.target, options);
           if (!href) return null;
+          const ordered = orderComparisonSizes(sizeA, item.target);
           return {
-            current: sizeA,
-            new: item.target,
-            label: `${sizeA} vs ${item.target}`,
+            current: ordered.current,
+            new: ordered.new,
+            label: `${ordered.current} vs ${ordered.new}`,
             href,
             priority: index + 1,
           };
@@ -381,9 +365,10 @@ export function getAllComparisonSlugs(
   const seen = new Set<string>();
   const results: Array<{ slug: string; current: string; new: string }> = [];
 
-  for (const entryA of TIRE_SIZES) {
-    for (const entryB of TIRE_SIZES) {
-      if (entryA.size === entryB.size) continue;
+  for (let firstIndex = 0; firstIndex < TIRE_SIZES.length; firstIndex++) {
+    for (let secondIndex = firstIndex + 1; secondIndex < TIRE_SIZES.length; secondIndex++) {
+      const entryA = TIRE_SIZES[firstIndex];
+      const entryB = TIRE_SIZES[secondIndex];
 
       const href = requirePublished
         ? publishedComparisonSlugPath(entryA.size, entryB.size, {
@@ -393,10 +378,11 @@ export function getAllComparisonSlugs(
         : comparisonSlugPath(entryA.size, entryB.size, options);
       if (!href) continue;
 
-      const slug = href.replace('/compare/', '');
+      const ordered = orderComparisonSizes(entryA.size, entryB.size);
+      const slug = comparisonSlugFromSizes(ordered.current, ordered.new);
       if (seen.has(slug)) continue;
       seen.add(slug);
-      results.push({ slug, current: entryA.size, new: entryB.size });
+      results.push({ slug, current: ordered.current, new: ordered.new });
     }
   }
 

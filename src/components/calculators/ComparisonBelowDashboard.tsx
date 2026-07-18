@@ -2,8 +2,9 @@ import type { UnitSystem } from '../../lib/calculator-types';
 import {
   buildDashboardImpactCards,
   buildDashboardWhatChangesContent,
-  CHECKLIST_GROUPS,
+  buildPairSpecificChecklistGroups,
 } from '../../lib/comparison-dashboard-impact';
+import { FITMENT_DIAMETER_PCT } from '../../lib/tire-comparison-fitment';
 import type { TireComparison, TireSpecs } from '../../lib/tire-math';
 import { useMemo } from 'react';
 import { ComparisonAlternativePaths } from './ComparisonLowerPage';
@@ -129,9 +130,6 @@ function ChecklistGroupIcon({ id }: { id: string }) {
   );
 }
 
-const DIAMETER_SCREENING_NOTE =
-  'Many comparisons use ±3% diameter change as a general screening guideline, not a vehicle-fitment guarantee.';
-
 export function ComparisonBelowDashboard({
   sizeA,
   sizeB,
@@ -158,6 +156,10 @@ export function ComparisonBelowDashboard({
     () => buildDashboardWhatChangesContent(sizeA, sizeB, comparison, specsA, specsB),
     [sizeA, sizeB, comparison, specsA, specsB],
   );
+  const checklistGroups = useMemo(
+    () => buildPairSpecificChecklistGroups(sizeA, sizeB, comparison, specsA, specsB),
+    [sizeA, sizeB, comparison, specsA, specsB],
+  );
 
   return (
     <div className="cmp-below-dashboard">
@@ -166,10 +168,6 @@ export function ComparisonBelowDashboard({
         aria-label="Driving and vehicle impact"
       >
         <h2 className="cmp-card__title">Driving &amp; Vehicle Impact</h2>
-        <p className="cmp-card__lede">
-          What the driver may notice, what changes mechanically, and what still needs purchase or
-          vehicle verification—interpreted from the comparison above.
-        </p>
         <div className="cmp-impact-grid cmp-impact-grid--dashboard">
           {cards.map((card) => (
             <article key={card.id} className="cmp-impact-card cmp-card-level-secondary">
@@ -188,35 +186,39 @@ export function ComparisonBelowDashboard({
 
       <div className="cmp-below-dashboard__split">
         <div className="cmp-below-dashboard__left">
-          <section
-            className="cmp-card cmp-below-dashboard__checklist cmp-card-level-secondary"
-            aria-label="Things to check before changing sizes"
-          >
-            <h2 className="cmp-card__title">Things to Check Before Changing Sizes</h2>
-            <div className="cmp-check-mini-grid">
-              {CHECKLIST_GROUPS.map((group) => (
-                <article key={group.id} className="cmp-check-mini-card">
-                  <header className="cmp-check-mini-card__head">
-                    <span className={`cmp-check-mini-card__icon cmp-check-mini-card__icon--${group.id}`}>
-                      <ChecklistGroupIcon id={group.id} />
-                    </span>
-                    <h3 className="cmp-check-mini-card__title">{group.title}</h3>
-                  </header>
-                  <ul className="cmp-check-mini-card__list">
-                    {group.items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-            <p className="cmp-check-screening-note" role="note">
-              {DIAMETER_SCREENING_NOTE}
-            </p>
-          </section>
+          {checklistGroups.length > 0 ? (
+            <section
+              className="cmp-card cmp-below-dashboard__checklist cmp-card-level-secondary"
+              aria-label="Pair-specific checks"
+            >
+              <h2 className="cmp-card__title">Checks Triggered by This Comparison</h2>
+              <div className="cmp-check-mini-grid">
+                {checklistGroups.map((group) => (
+                  <article key={group.id} className="cmp-check-mini-card">
+                    <header className="cmp-check-mini-card__head">
+                      <span className={`cmp-check-mini-card__icon cmp-check-mini-card__icon--${group.id}`}>
+                        <ChecklistGroupIcon id={group.id} />
+                      </span>
+                      <h3 className="cmp-check-mini-card__title">{group.title}</h3>
+                    </header>
+                    <ul className="cmp-check-mini-card__list">
+                      {group.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+              <p className="cmp-check-screening-note" role="note">
+                The ±{FITMENT_DIAMETER_PCT.pass}% diameter threshold is a comparison screen, not
+                confirmed vehicle fitment.
+              </p>
+            </section>
+          ) : null}
 
           <ComparisonAlternativePaths
             baseSize={sizeA}
+            comparedSize={sizeB}
             unitSystem={unitSystem}
             variant="compact"
             limit={4}

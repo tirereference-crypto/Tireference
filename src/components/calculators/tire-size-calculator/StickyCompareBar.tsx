@@ -6,11 +6,13 @@ export function StickyCompareBar({
   sizeLabel,
   specs,
   compareHref,
+  compareLabel,
 }: {
   visible: boolean;
   sizeLabel: string;
   specs: TireSpecs;
   compareHref: string;
+  compareLabel: string;
 }) {
   const handleCompare = () => {
     trackEvent('calculator_compare_clicked', {
@@ -38,7 +40,7 @@ export function StickyCompareBar({
           </span>
         </div>
         <a href={compareHref} className="tsc-sticky-bar__cta" onClick={handleCompare}>
-          Compare This Size
+          {compareLabel}
         </a>
       </div>
     </div>

@@ -1,7 +1,6 @@
 /**
  * Shared tire-size guide page data builder.
- * Used by every /tire-size/[size]/ page. 275/70R18 keeps hand-tuned overrides
- * where noted; other sizes use category-aware rule-based content.
+ * Used by every /tire-size/[size]/ page via TireSizeGuide.astro.
  */
 
 import type { TireCategory } from '../data/tire-sizes';
@@ -12,8 +11,7 @@ import {
   type TireSizeHubData,
 } from './tire-size-hub';
 import type { TireSpecs } from './tire-math';
-import { comparisonPagePathCurrent, hubPagePath, tireSizeCalculatorPath } from './tire-size-url';
-import { comparisonPagePath } from './tire-comparison-paths';
+import { tireSizeCalculatorPath } from './tire-size-url';
 import {
   dedupeProducts,
   getProductsForTireSize,
@@ -31,8 +29,9 @@ import {
   getExactSizeCoverage,
 } from './exact-size-coverage';
 import { buildExpertFaqsForTireSize } from './tire-size-expert-faq';
-import { CALCULATOR_PATHS } from './calculator-links';
 import { getTireSizeSuggestions } from './tire-size-suggestions';
+import { buildPopularComparisonsForSize } from './tire-comparison-links';
+import { preferredSizeCompareLink } from './crawlable-links';
 
 export const GUIDE_275_SIZE = '275/70R18';
 
@@ -51,6 +50,8 @@ const ALLOWED_BRANDS = new Set(
 export interface GlanceRow {
   label: string;
   value: string;
+  /** Where the value comes from for disclosure labels. */
+  provenance: 'calculated' | 'manufacturer' | 'standard';
 }
 
 export interface OverviewBullet {
@@ -62,6 +63,7 @@ export interface GuideVehicle {
   manufacturer: string;
   model: string;
   trim?: string;
+  yearRange?: string;
 }
 
 export interface SizeChip {
@@ -72,6 +74,11 @@ export interface SizeChip {
 
 export interface GuideUseCaseBucket extends UseCaseBucket {
   description: string;
+}
+
+export interface PopularComparisonLink {
+  size: string;
+  href: string;
 }
 
 export interface TireSizeGuideData {
@@ -89,9 +96,11 @@ export interface TireSizeGuideData {
   equivalents: SizeChip[];
   upgrades: SizeChip[];
   related: SizeChip[];
+  popularComparisons: PopularComparisonLink[];
   brands: string[];
   faq: HubFaqItem[];
   compareHref: string;
+  compareLabel: string;
   calculatorHref: string;
   loadRanges: string[];
   speedRatings: string[];
@@ -415,64 +424,11 @@ const USE_CASE_COPY: Record<string, { label: string; description: string }> = {
   },
 };
 
-const VEHICLES_275: GuideVehicle[] = [
-  { manufacturer: 'Ford', model: 'F-150' },
-  { manufacturer: 'Ram', model: '1500' },
-  { manufacturer: 'Toyota', model: '4Runner' },
-  { manufacturer: 'Chevrolet', model: 'Silverado 1500' },
-  { manufacturer: 'GMC', model: 'Sierra 1500' },
-  { manufacturer: 'Toyota', model: 'Land Cruiser' },
-];
-
-function overview275(): {
-  bestFor: OverviewBullet[];
-  considerIf: OverviewBullet[];
-  realWorldImpact: OverviewBullet[];
-} {
-  return {
-    bestFor: [
-      {
-        text: 'Near-33-inch truck tire with meaningful sidewall and stronger load-range availability',
-        tone: 'good',
-      },
-      {
-        text: 'Daily-driven pickups and SUVs that also see towing, gravel, trails, or overland use',
-        tone: 'good',
-      },
-      {
-        text: 'Broad all-terrain and highway-terrain coverage without jumping to a full 35-inch build',
-        tone: 'good',
-      },
-    ],
-    considerIf: [
-      {
-        text: 'Fuel economy, light steering, and factory-like ride comfort matter more than clearance',
-        tone: 'warn',
-      },
-      {
-        text: 'You prefer a smaller, more stock look or quieter highway manners',
-        tone: 'warn',
-      },
-      {
-        text: 'You need a dedicated extreme off-road size beyond mixed daily use',
-        tone: 'warn',
-      },
-    ],
-    realWorldImpact: [
-      { text: 'More ground clearance and a taller off-road footprint', tone: 'good' },
-      { text: 'Stronger load-carrying options for towing and payload', tone: 'good' },
-      { text: 'Heavier steering feel and a bit more rotational mass', tone: 'warn' },
-      { text: 'Usually a small hit to fuel economy vs smaller highway sizes', tone: 'warn' },
-    ],
-  };
-}
-
 export function buildTireSizeGuideData(hub: TireSizeHubData): TireSizeGuideData {
   const size = hub.entry.size;
   const displaySize = hub.displaySize;
   const specs = hub.specs;
   const category = hub.entry.category;
-  const is275 = size.toUpperCase() === GUIDE_275_SIZE;
 
   const products = getGuideProductsForSize(size, category);
   const coverageBase = getTireSizeDataCoverage(size);
@@ -518,26 +474,36 @@ export function buildTireSizeGuideData(hub: TireSizeHubData): TireSizeGuideData 
     products.map((p) => (p.speed_rating || '').trim().toUpperCase()),
   );
 
+  const loadRangeValue = formatGlanceLoadRanges(loadRanges);
+  const speedRatingValue = formatGlanceSpeedRatings(products);
+
   const glance: GlanceRow[] = [
-    { label: 'Rim Diameter', value: `${specs.wheelDiameterIn}"` },
-    { label: 'Section Width', value: `${specs.widthMm} mm` },
-    { label: 'Aspect Ratio', value: `${specs.aspectRatio}%` },
-    { label: 'Load Range', value: formatGlanceLoadRanges(loadRanges) },
-    { label: 'Speed Rating', value: formatGlanceSpeedRatings(products) },
-    { label: 'Construction', value: 'Radial' },
+    { label: 'Rim Diameter', value: `${specs.wheelDiameterIn}"`, provenance: 'calculated' },
+    { label: 'Section Width', value: `${specs.widthMm} mm`, provenance: 'calculated' },
+    { label: 'Aspect Ratio', value: `${specs.aspectRatio}%`, provenance: 'calculated' },
+    {
+      label: 'Load Range',
+      value: loadRangeValue,
+      provenance: loadRangeValue !== '—' ? 'manufacturer' : 'calculated',
+    },
+    {
+      label: 'Speed Rating',
+      value: speedRatingValue,
+      provenance: speedRatingValue !== '—' ? 'manufacturer' : 'calculated',
+    },
+    { label: 'Construction', value: 'Radial', provenance: 'standard' },
   ];
 
-  const overview = is275 ? overview275() : overviewForCategory(category, displaySize);
+  const overview = overviewForCategory(category, displaySize);
 
-  const vehicles: GuideVehicle[] = is275
-    ? VEHICLES_275
-    : getVehicleFitment(size)
-        .slice(0, 6)
-        .map((v) => ({
-          manufacturer: v.manufacturer,
-          model: v.model,
-          trim: v.trim || undefined,
-        }));
+  const vehicles: GuideVehicle[] = getVehicleFitment(size)
+    .slice(0, 6)
+    .map((v) => ({
+      manufacturer: v.manufacturer,
+      model: v.model,
+      trim: v.trim || undefined,
+      yearRange: v.yearRange || undefined,
+    }));
 
   const sorted = [...products].sort((a, b) => {
     const full = Number(isFullSpecs(b)) - Number(isFullSpecs(a));
@@ -588,9 +554,18 @@ export function buildTireSizeGuideData(hub: TireSizeHubData): TireSizeGuideData 
       href: c.href,
     }));
 
+  const popularComparisons: PopularComparisonLink[] = buildPopularComparisonsForSize(size, 3)
+    .map((link) => {
+      const sizeKey = size.toUpperCase();
+      const target =
+        link.current.toUpperCase() === sizeKey ? link.new : link.current;
+      return { size: target, href: link.href };
+    });
+
   const nearbyCompareExamples = [
     ...upgrades.map((u) => u.size),
     ...equivalents.map((e) => e.size),
+    ...popularComparisons.map((c) => c.size),
   ]
     .filter((s, i, arr) => arr.indexOf(s) === i && s !== size)
     .slice(0, 3);
@@ -612,6 +587,8 @@ export function buildTireSizeGuideData(hub: TireSizeHubData): TireSizeGuideData 
       coverage,
     }) ?? [];
 
+  const compareLink = preferredSizeCompareLink(size);
+
   return {
     size,
     displaySize,
@@ -627,9 +604,11 @@ export function buildTireSizeGuideData(hub: TireSizeHubData): TireSizeGuideData 
     equivalents,
     upgrades,
     related,
+    popularComparisons,
     brands,
     faq,
-    compareHref: comparisonPagePathCurrent(size),
+    compareHref: compareLink.href,
+    compareLabel: compareLink.label,
     calculatorHref: tireSizeCalculatorPath(size),
     loadRanges,
     speedRatings,

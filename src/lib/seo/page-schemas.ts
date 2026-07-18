@@ -1,5 +1,10 @@
 import { CALCULATOR_PATHS } from '../calculator-links';
 import {
+  canonicalComparisonPath,
+  formatDisplaySize,
+  orderComparisonSizes,
+} from '../comparison-url';
+import {
   buildBreadcrumbSchema,
   buildFaqPageSchema,
   mergeJsonLd,
@@ -33,18 +38,29 @@ export function calculatorBreadcrumbs(label: string): BreadcrumbItem[] {
   ];
 }
 
-export function comparisonBreadcrumbs(current: string, next: string, slug: string): BreadcrumbItem[] {
+export function comparisonBreadcrumbs(current: string, next: string): BreadcrumbItem[] {
+  const ordered = orderComparisonSizes(current, next);
+  const currentLabel = formatDisplaySize(ordered.current) ?? ordered.current;
+  const nextLabel = formatDisplaySize(ordered.new) ?? ordered.new;
   return [
     { name: 'Home', item: '/' },
     { name: 'Compare', item: CALCULATOR_PATHS.tireComparison },
-    { name: `${current} vs ${next}`, item: `/compare/${slug}` },
+    {
+      name: `${currentLabel} vs ${nextLabel}`,
+      item: canonicalComparisonPath(ordered.current, ordered.new),
+    },
   ];
 }
 
-export function hubBreadcrumbs(displaySize: string, pagePath: string): BreadcrumbItem[] {
+export function hubBreadcrumbs(
+  displaySize: string,
+  pagePath: string,
+  category?: { name: string; item: string },
+): BreadcrumbItem[] {
   return [
     { name: 'Home', item: '/' },
     { name: 'Tire Sizes', item: '/tire-sizes/' },
+    ...(category ? [category] : []),
     { name: displaySize, item: pagePath },
   ];
 }

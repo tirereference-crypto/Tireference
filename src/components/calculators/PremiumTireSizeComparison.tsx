@@ -5,6 +5,7 @@ import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
 import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import { COMPARISON_PAGE_INTRO_FALLBACK } from '../../lib/tire-comparison-insights';
+import { COMPARISON_CALCULATOR_HEADING } from '../../lib/comparison-seo';
 import {
   ComparisonFeelPanel,
   ComparisonFitmentPanel,
@@ -182,7 +183,21 @@ function TireSegmentInputs({
   );
 }
 
-export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOptions = {}) {
+interface PremiumTireSizeComparisonProps extends UseTireSizeComparisonOptions {
+  /** Pair pages pass a size-specific H1; the blank calculator keeps the tool name. */
+  pageHeading?: string;
+  /** Pair-specific calculated answer under the H1. Omit on the blank calculator. */
+  pageAnswer?: string;
+  /** When true, render the calculator H2 above the interactive interface. */
+  showCalculatorHeading?: boolean;
+}
+
+export default function PremiumTireSizeComparison({
+  pageHeading = COMPARISON_CALCULATOR_HEADING,
+  pageAnswer,
+  showCalculatorHeading = false,
+  ...comparisonOptions
+}: PremiumTireSizeComparisonProps = {}) {
   const {
     currentFields,
     newFields,
@@ -212,7 +227,7 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     newValidation,
     setVehicleSpeed,
     setUnitSystem,
-  } = useTireSizeComparison(props);
+  } = useTireSizeComparison(comparisonOptions);
 
   const formRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -265,13 +280,6 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     [markInteracted, selectNewTireSize],
   );
 
-  useEffect(() => {
-    if (!insights) return;
-    document.title = insights.seo.title;
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', insights.seo.metaDescription);
-  }, [insights]);
-
   const scrollToResults = useCallback(() => {
     markInteracted();
     trackComparisonIfReady();
@@ -287,7 +295,12 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
     [handleSelectNewTireSize],
   );
 
-  const pageIntro = COMPARISON_PAGE_INTRO_FALLBACK;
+  const isPairPage = pageAnswer != null;
+  const displayHeading =
+    isPairPage && insights?.seo.h1 ? insights.seo.h1 : pageHeading;
+  const displayAnswer = isPairPage
+    ? (insights?.pageIntro.sentence ?? pageAnswer)
+    : COMPARISON_PAGE_INTRO_FALLBACK.sentence;
 
   const ready = message.status === 'ready' && specsA && specsB && currentSizeLabel && newSizeLabel && insights;
   const dataSources = useMemo(
@@ -337,15 +350,31 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
         </div>
 
         <header className="cmp-page-header cmp-page-header--compact cmp-page-header--full">
-          <h1 className="cmp-page-header__title">Tire Size Comparison Calculator</h1>
-          <p className="cmp-page-header__intro">{pageIntro.sentence}</p>
+          <h1 className="cmp-page-header__title">{displayHeading}</h1>
+          <p
+            className={
+              isPairPage
+                ? 'cmp-page-header__intro cmp-page-header__intro--answer'
+                : 'cmp-page-header__intro'
+            }
+          >
+            {displayAnswer}
+          </p>
         </header>
+
+        {showCalculatorHeading ? (
+          <h2 className="cmp-calculator-section-title">{COMPARISON_CALCULATOR_HEADING}</h2>
+        ) : null}
 
         <div className="cmp-layout cmp-dashboard">
           <aside ref={formRef} className="cmp-sidebar-left" aria-label="Comparison inputs">
             <div className="cmp-panel cmp-enter-card cmp-card-level-primary">
               <div className="cmp-enter-card__heading">
-                <h2 className="cmp-enter-card__title">Enter Tire Sizes</h2>
+                {showCalculatorHeading ? (
+                  <h3 className="cmp-enter-card__title">Enter Tire Sizes</h3>
+                ) : (
+                  <h2 className="cmp-enter-card__title">Enter Tire Sizes</h2>
+                )}
                 <button
                   type="button"
                   className="cmp-swap-btn"

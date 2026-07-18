@@ -146,7 +146,11 @@ export function getActiveNavItem(pathname: string): string | null {
   ) {
     return 'calculators';
   }
-  if (pathname.startsWith('/tire-size/') || navPathMatches(pathname, NAV_ALL_TIRE_SIZES_HREF)) {
+  if (
+    pathname.startsWith('/tire-size/') ||
+    pathname.startsWith('/tire-sizes/') ||
+    navPathMatches(pathname, NAV_ALL_TIRE_SIZES_HREF)
+  ) {
     return 'tire-sizes';
   }
   return null;

@@ -1,5 +1,9 @@
 import { TIRE_SIZES } from '../data/tire-sizes';
 import { buildCuratedPopularComparisons } from './tire-comparison-links';
+import {
+  tireCategoryHubPath,
+  type TireHubCategorySlug,
+} from './tire-category-hubs';
 import { hubPagePath, tireSizeCalculatorPath } from './tire-size-url';
 
 export const HOME_POPULAR_TIRE_SIZES = [
@@ -20,31 +24,7 @@ function sizeHasHubPage(size: string): boolean {
   return Boolean(withoutLt && hubSizeSet.has(withoutLt));
 }
 
-export type HomeCategorySlug =
-  | 'passenger'
-  | 'suv'
-  | 'truck'
-  | 'off-road'
-  | 'performance'
-  | 'winter'
-  | 'ev'
-  | 'touring';
-
-/**
- * Representative hub size for a homepage browse card.
- * Must exist in TIRE_SIZES so hubPagePath resolves to a real page.
- */
-const HOME_CATEGORY_HUB_SIZES = {
-  passenger: '205/55R16',
-  suv: '235/65R17',
-  truck: '285/75R16',
-  'off-road': '275/70R18',
-  performance: '225/45R17',
-  /** Closest catalog sizes — no dedicated winter/EV/touring categories. */
-  winter: '195/65R15',
-  ev: '255/55R19',
-  touring: '215/55R17',
-} as const satisfies Record<HomeCategorySlug, string>;
+export type HomeCategorySlug = TireHubCategorySlug;
 
 export type HomeCategoryAccent = 'purple' | 'blue' | 'orange' | 'green' | 'pink' | 'cyan';
 
@@ -52,7 +32,7 @@ export interface HomeCategoryCard {
   title: string;
   description: string;
   slug: HomeCategorySlug;
-  /** Individual tire-size hub page for a representative size in the category. */
+  /** Indexable category hub route. */
   href: string;
   icon: HomeCategorySlug;
   accent: HomeCategoryAccent;
@@ -63,15 +43,15 @@ export interface HomeCategoryCard {
 }
 
 /**
- * Eight discovery cards. Each opens a real tire-size hub page for a
- * representative size from that category (never calculators or index anchors).
+ * Eight discovery cards. Each opens its authoritative category hub while the
+ * visual card treatment remains owned by HomeCategories.astro.
  */
 export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
   {
     title: 'Passenger',
     description: 'Comfort and everyday driving',
     slug: 'passenger',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.passenger),
+    href: tireCategoryHubPath('passenger'),
     icon: 'passenger',
     accent: 'blue',
     imageSrc: '/images/home/categories/passenger.jpg',
@@ -83,7 +63,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'SUV',
     description: 'All-road confidence and versatility',
     slug: 'suv',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.suv),
+    href: tireCategoryHubPath('suv'),
     icon: 'suv',
     accent: 'green',
     imageSrc: '/images/home/categories/suv.jpg',
@@ -95,7 +75,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'Truck',
     description: 'Towing, hauling and work',
     slug: 'truck',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.truck),
+    href: tireCategoryHubPath('truck'),
     icon: 'truck',
     accent: 'orange',
     imageSrc: '/images/home/categories/truck.jpg',
@@ -107,7 +87,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'Off-Road',
     description: 'Trails, rocks and rough terrain',
     slug: 'off-road',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES['off-road']),
+    href: tireCategoryHubPath('off-road'),
     icon: 'off-road',
     accent: 'purple',
     imageSrc: '/images/home/categories/off-road.jpg',
@@ -119,7 +99,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'Performance',
     description: 'Grip, precision and speed',
     slug: 'performance',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.performance),
+    href: tireCategoryHubPath('performance'),
     icon: 'performance',
     accent: 'pink',
     imageSrc: '/images/home/categories/performance.jpg',
@@ -131,7 +111,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'Winter',
     description: 'Snow and cold-weather control',
     slug: 'winter',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.winter),
+    href: tireCategoryHubPath('winter'),
     icon: 'winter',
     accent: 'cyan',
     imageSrc: '/images/home/categories/winter.jpg',
@@ -143,7 +123,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'EV',
     description: 'Efficiency, load and quiet driving',
     slug: 'ev',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.ev),
+    href: tireCategoryHubPath('ev'),
     icon: 'ev',
     accent: 'blue',
     imageSrc: '/images/home/categories/ev.jpg',
@@ -155,7 +135,7 @@ export const HOME_BROWSE_CATEGORIES: readonly HomeCategoryCard[] = [
     title: 'Touring',
     description: 'Long-distance comfort',
     slug: 'touring',
-    href: hubPagePath(HOME_CATEGORY_HUB_SIZES.touring),
+    href: tireCategoryHubPath('touring'),
     icon: 'touring',
     accent: 'purple',
     imageSrc: '/images/home/categories/touring.jpg',

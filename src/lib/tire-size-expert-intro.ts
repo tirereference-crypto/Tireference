@@ -5,6 +5,7 @@
 
 import type { TireCategory } from '../data/tire-sizes';
 import { TIRE_SIZES } from '../data/tire-sizes';
+import { formatInchWheel } from './inch-article';
 import type { TireSpecs } from './tire-math';
 import {
   getProductsForTireSize,
@@ -155,7 +156,7 @@ function buildExpertIntroBlock27570R18(
 
   const paragraph =
     `275/70R18 sits in the sweet spot for full-size trucks and body-on-frame SUVs that need more sidewall and load capacity without stepping into true 35-inch territory. ` +
-    `At roughly ${diameterRounded}" overall on an ${rim}" rim (~${sidewall}" sidewall), it adds clearance and a tougher footprint while staying close enough to common truck sizing for daily drivability.`;
+    `At roughly ${diameterRounded}" overall on ${formatInchWheel(rim)} (~${sidewall}" sidewall), it adds clearance and a tougher footprint while staying close enough to common truck sizing for daily drivability.`;
 
   const fitmentNotes = [
     'Often selected for half-ton pickups, body-on-frame SUVs, and overland builds that want near-33" capability.',
@@ -182,31 +183,32 @@ function buildExpertIntroBlockGeneric(
   const diameter = (Math.round(specs.overallDiameterIn * 10) / 10).toFixed(1);
   const sidewall = specs.sidewallIn.toFixed(1).replace(/\.0$/, '');
   const rim = specs.wheelDiameterIn;
+  const wheelPhrase = formatInchWheel(rim);
   const availability = categoryAvailabilityPhrase(products);
 
   let paragraph: string;
   if (category === 'performance') {
     paragraph =
-      `${display} is a lower-profile performance size built around sharper steering response and a wider contact patch on an ${rim}" rim. ` +
+      `${display} is a lower-profile performance size built around sharper steering response and a wider contact patch on ${wheelPhrase}. ` +
       `At roughly ${diameter}" overall with about ${sidewall}" of sidewall, it favors dry-road grip and turn-in over the tall cushion of truck or touring sizes. ` +
       (availability ? `${availability} ` : '') +
       `Tradeoffs include a firmer ride and more sensitivity to potholes — confirm wheel diameter and speed rating before swapping.`;
   } else if (category === 'passenger') {
     paragraph =
-      `${display} is a common passenger/touring size defined by ${specs.widthMm} mm section width, ${specs.aspectRatio}% aspect ratio, and an ${rim}" rim. ` +
+      `${display} is a common passenger/touring size defined by ${specs.widthMm} mm section width, ${specs.aspectRatio}% aspect ratio, and ${wheelPhrase}. ` +
       `At roughly ${diameter}" overall (~${sidewall}" sidewall), it prioritizes everyday ride comfort, wet manners, and replacement availability over truck clearance. ` +
       (availability ? `${availability} ` : '') +
       `Use the comparisons on this page when judging diameter change vs nearby sizes — do not treat marketing fitment lists as a guarantee.`;
   } else if (category === 'SUV') {
     paragraph =
       `${display} sits in the crossover/SUV band: enough sidewall for daily comfort with more footprint than compact passenger sizes. ` +
-      `Roughly ${diameter}" overall on an ${rim}" rim (~${sidewall}" sidewall) suits mixed pavement, light gravel, and family hauling. ` +
+      `Roughly ${diameter}" overall on ${wheelPhrase} (~${sidewall}" sidewall) suits mixed pavement, light gravel, and family hauling. ` +
       (availability ? `${availability} ` : '') +
       `Load range still varies by model — match placard requirements before towing or carrying heavy loads.`;
   } else {
     // off-road / light-truck
     paragraph =
-      `${display} is a truck/SUV-oriented size that pairs ${specs.widthMm} mm width with a ${specs.aspectRatio}% sidewall on an ${rim}" rim. ` +
+      `${display} is a truck/SUV-oriented size that pairs ${specs.widthMm} mm width with a ${specs.aspectRatio}% sidewall on ${wheelPhrase}. ` +
       `At roughly ${diameter}" overall (~${sidewall}" sidewall), it is typically chosen for clearance, load capacity, and mixed on/off-road use rather than max fuel economy. ` +
       (availability ? `${availability} ` : '') +
       `Expect heavier steering and a possible speedometer change vs shorter factory sizes — verify clearance and load range before upgrading.`;

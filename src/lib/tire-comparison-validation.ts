@@ -1,7 +1,8 @@
 import type { TireCategory } from '../data/tire-sizes';
+import { normalizeTireSize } from './tire-size-primitives';
 import { getTireSpecs } from './tire-math';
 import { getTireSizeEntry } from './tire-size-hub';
-import { isProductionTireSize, normalizeTireSizeKey } from './tire-size-validation';
+import { isProductionTireSize } from './tire-size-validation';
 import { fieldsToTireSizeString, parseFullSizeToFields } from './tire-size-input';
 
 /** Legacy SEO quality gates for tire comparison pages. */
@@ -75,15 +76,16 @@ function valid(): ComparisonValidationResult {
 }
 
 function isFieldBackedTireSize(size: string): boolean {
-  if (!isProductionTireSize(size)) return false;
+  const normalized = normalizeTireSize(size);
+  if (!normalized || !isProductionTireSize(normalized)) return false;
 
-  const fields = parseFullSizeToFields(size);
+  const fields = parseFullSizeToFields(normalized);
   if (!fields) return false;
 
   const rebuilt = fieldsToTireSizeString(fields);
   if (!rebuilt || !isProductionTireSize(rebuilt)) return false;
 
-  return normalizeTireSizeKey(rebuilt) === normalizeTireSizeKey(size);
+  return normalizeTireSize(rebuilt) === normalized;
 }
 
 function hasTireSizeHubPage(size: string): boolean {
@@ -219,8 +221,8 @@ export function isValidComparison(
   sizeB: string,
   options?: ComparisonValidationOptions,
 ): ComparisonValidationResult {
-  const keyA = normalizeTireSizeKey(sizeA);
-  const keyB = normalizeTireSizeKey(sizeB);
+  const keyA = normalizeTireSize(sizeA);
+  const keyB = normalizeTireSize(sizeB);
 
   if (!keyA || !keyB) {
     return invalid('One or both tire sizes could not be normalized.');
@@ -230,20 +232,20 @@ export function isValidComparison(
     return invalid('Cannot compare a tire size to itself.');
   }
 
-  if (!isProductionTireSize(sizeA) || !isProductionTireSize(sizeB)) {
+  if (!isProductionTireSize(keyA) || !isProductionTireSize(keyB)) {
     return invalid('Both sizes must be valid production tire sizes.');
   }
 
-  if (!isFieldBackedTireSize(sizeA) || !isFieldBackedTireSize(sizeB)) {
+  if (!isFieldBackedTireSize(keyA) || !isFieldBackedTireSize(keyB)) {
     return invalid('Both sizes must round-trip through the calculator field format.');
   }
 
-  if (!hasTireSizeHubPage(sizeA) || !hasTireSizeHubPage(sizeB)) {
+  if (!hasTireSizeHubPage(keyA) || !hasTireSizeHubPage(keyB)) {
     return invalid('Both sizes must have a tire-size hub page in the dataset.');
   }
 
-  const entryA = getTireSizeEntry(sizeA);
-  const entryB = getTireSizeEntry(sizeB);
+  const entryA = getTireSizeEntry(keyA);
+  const entryB = getTireSizeEntry(keyB);
   if (!entryA || !entryB) {
     return invalid('Both sizes must exist in the tire-size dataset.');
   }
@@ -251,13 +253,13 @@ export function isValidComparison(
   let specsA: ReturnType<typeof getTireSpecs>;
   let specsB: ReturnType<typeof getTireSpecs>;
   try {
-    specsA = getTireSpecs(sizeA);
-    specsB = getTireSpecs(sizeB);
+    specsA = getTireSpecs(keyA);
+    specsB = getTireSpecs(keyB);
   } catch {
     return invalid('Could not parse tire specifications for one or both sizes.');
   }
 
-  const legacy = passesLegacyRules(sizeA, sizeB, entryA, entryB, specsA, specsB);
+  const legacy = passesLegacyRules(keyA, keyB, entryA, entryB, specsA, specsB);
   if (!legacy.valid) return legacy;
 
   if (!options?.skipDimensional) {

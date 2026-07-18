@@ -13,11 +13,11 @@ const title = 'Disclaimer';
 const description =
   'Read important disclaimers about Tire Reference calculators and technical content. Always verify tire and wheel fitment with a professional before purchase.';
 
-const schema = buildInfoPageSchema(title, description, '/disclaimer', 'Disclaimer');
+const schema = buildInfoPageSchema(title, description, '/disclaimer/', 'Disclaimer');
 const updated = formatEditorialDate();
 ---
 
-<Layout title={title} description={description} canonical="/disclaimer" schema={schema}>
+<Layout title={title} description={description} canonical="/disclaimer/" schema={schema}>
   <div class="info-page">
     <div class="info-shell info-shell--narrow">
       <InfoPageHero

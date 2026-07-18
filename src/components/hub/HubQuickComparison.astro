@@ -33,7 +33,9 @@ const { rows } = Astro.props;
           </td>
           <td class="px-4 py-3">
             {row.comparisonHref && (
-              <a href={row.comparisonHref} class="hub-text-link text-sm font-medium text-primary">Compare →</a>
+              <a href={row.comparisonHref} class="hub-text-link text-sm font-medium text-primary">
+                Compare with {row.size}
+              </a>
             )}
           </td>
         </tr>
@@ -42,10 +44,10 @@ const { rows } = Astro.props;
   </table>
 </div>
 
-<!-- Mobile cards -->
+<!-- Mobile cards — size guide when no published compare (avoid parameterized URLs) -->
 <div class="space-y-3 md:hidden">
-  {rows.filter((row) => row.comparisonHref).map((row) => (
-    <a href={row.comparisonHref!} class="hub-link-card block rounded-card border border-border bg-surface p-4">
+  {rows.map((row) => (
+    <a href={row.comparisonHref ?? row.href} class="hub-link-card block rounded-card border border-border bg-surface p-4">
       <div class="flex items-center justify-between">
         <span class="font-mono font-semibold text-heading">{row.size}</span>
         <span class={`rounded-full px-2 py-0.5 text-xs font-bold ${row.speedoErrorPercent >= 0 ? 'hub-diff-badge-positive' : 'hub-diff-badge-negative'}`}>
@@ -53,6 +55,9 @@ const { rows } = Astro.props;
         </span>
       </div>
       <p class="mt-2 text-sm text-body">{row.diameterIn.toFixed(2)} in · {row.widthMm} mm wide</p>
+      <p class="mt-1 text-sm font-medium text-primary">
+        {row.comparisonHref ? `Compare with ${row.size}` : `Open ${row.size} tire guide`}
+      </p>
     </a>
   ))}
 </div>

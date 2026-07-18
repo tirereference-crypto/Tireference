@@ -1,18 +1,17 @@
 ---
 /**
- * Shared premium guide layout for all /tire-size/[size]/ pages.
- * Structure matches the approved 275/70R18 reference template.
+ * Authoritative premium guide layout for every /tire-size/[size]/ page.
  */
 import HubBreadcrumb from '../HubBreadcrumb.astro';
 import Premium275Hero from './Premium275Hero.astro';
 import ProductSpecComparison from './ProductSpecComparison';
 import HubAvailableTires from './HubAvailableTires';
 import HubIcon from '../HubIcon.astro';
+import LastUpdated from '../../trust/LastUpdated.astro';
 import type { TireSizeHubData } from '../../../lib/tire-size-hub';
 import {
   buildTireSizeGuideData,
   formatTireModelDisplayName,
-  GUIDE_275_SIZE,
 } from '../../../lib/tire-size-guide';
 import { canonicalProductBrand, tireProductToVerifiedModel } from '../../../lib/tire-product-display';
 import {
@@ -20,7 +19,18 @@ import {
   SITE_CALCULATORS,
 } from '../../../lib/calculator-links';
 import type { HubIconName } from '../../../lib/hub-icons';
-import { SITE_CONTENT_UPDATED } from '../../../lib/editorial';
+import {
+  TIRE_CATEGORY_HUBS,
+  getPrimaryTireSizeHubCategory,
+  getTireSizeHubCategories,
+  tireCategoryHubPath,
+} from '../../../lib/tire-category-hubs';
+import {
+  SITE_CONTENT_UPDATED,
+  formatEditorialDate,
+  METHODOLOGY,
+  DATA_SOURCES,
+} from '../../../lib/editorial';
 
 interface Props {
   hub: TireSizeHubData;
@@ -29,19 +39,36 @@ interface Props {
 const { hub } = Astro.props;
 const { displaySize, specs } = hub;
 const guide = buildTireSizeGuideData(hub);
-const is275 = hub.entry.size.toUpperCase() === GUIDE_275_SIZE;
 const hasProducts = guide.productTotal > 0;
-const vehiclesNote = is275
-  ? 'This size is often selected by owners moving up from smaller factory truck/SUV sizes. Vehicle clearance depends on trim, wheel offset, suspension height, and tire model. Confirm fitment before buying.'
-  : hub.entry.category === 'performance' || hub.entry.category === 'passenger'
-    ? 'Commonly associated platforms vary by year and trim. Confirm the door placard, wheel diameter, and load/speed markings before treating any vehicle as a guaranteed fit.'
-    : 'Vehicle clearance depends on trim, wheel offset, suspension height, and tire model. Confirm fitment before buying.';
-const closingTitle = is275
-  ? `Next step: compare ${displaySize} before you buy`
-  : `Next step: compare ${displaySize} before changing tire sizes`;
-const closingCopy = is275
-  ? `Compare ${displaySize} against nearby sizes like 285/70R18, 285/65R18, and 265/70R17 to check diameter change, speedometer impact, and clearance tradeoffs.`
-  : `Compare ${displaySize} against nearby sizes to check diameter change, speedometer impact, clearance, and fitment tradeoffs.`;
+const hasVehicles = guide.vehicles.length > 0;
+const hasNearbyAlternatives =
+  guide.equivalents.length > 0 || guide.upgrades.length > 0 || guide.related.length > 0;
+const hasPopularComparisons = guide.popularComparisons.length > 0;
+const sidebarPopularComparisons = guide.popularComparisons.filter(
+  (link) => link.href !== guide.compareHref,
+);
+const rimIn = specs.wheelDiameterIn;
+const applicableCategories = getTireSizeHubCategories(hub.entry).map((slug) => ({
+  slug,
+  label: TIRE_CATEGORY_HUBS[slug].label,
+  href: tireCategoryHubPath(slug),
+}));
+const primaryCategory = getPrimaryTireSizeHubCategory(hub.entry);
+const primaryCategoryHub = {
+  label: TIRE_CATEGORY_HUBS[primaryCategory].label,
+  href: tireCategoryHubPath(primaryCategory),
+};
+
+const vehiclesNote =
+  hub.entry.category === 'performance' || hub.entry.category === 'passenger'
+    ? 'Documented fitment mappings for research — confirm the door placard, wheel diameter, and load/speed markings before treating any vehicle as a guaranteed fit.'
+    : 'Documented fitment mappings for research. Vehicle clearance depends on trim, wheel offset, suspension height, and tire model — confirm fitment before buying.';
+
+const closingTitle = `Next step: compare ${displaySize} before changing tire sizes`;
+const closingCopy =
+  guide.nearbyCompareExamples.length > 0
+    ? `Compare ${displaySize} against nearby sizes like ${guide.nearbyCompareExamples.join(', ')} to check diameter change, speedometer impact, clearance, and fitment tradeoffs.`
+    : `Compare ${displaySize} against nearby sizes to check diameter change, speedometer impact, clearance, and fitment tradeoffs.`;
 
 const CALC_ICONS: Record<string, HubIconName> = {
   [CALCULATOR_PATHS.tireSize]: 'calculator',
@@ -57,32 +84,29 @@ const relatedCalculators = SITE_CALCULATORS
       calc.href !== CALCULATOR_PATHS.tireSize &&
       calc.href !== CALCULATOR_PATHS.tireComparison,
   )
-  .map((calc) => {
-  let href = calc.href;
-  return {
+  .map((calc) => ({
     label: calc.label,
     description: calc.description,
-    href,
+    href: calc.href,
     icon: CALC_ICONS[calc.href] ?? 'calculator',
-  };
-  });
+  }));
 
-// Re-export guide FAQ for the page schema via a data attribute pattern —
-// page reads hub.faq; we mutate a local copy for display only.
 const faq = guide.faq;
 const availableTireModels = guide.products.map(tireProductToVerifiedModel);
-const availableTiresDetailHref =
-  guide.fullSpecProducts.length > 0 ? '#spec-comparison' : null;
 const relatedSizeDestinations = new Set(guide.related.map((chip) => chip.href));
 const sidebarUpgrades = guide.upgrades.filter(
   (chip) => !relatedSizeDestinations.has(chip.href),
 );
 
-const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'long',
-  timeZone: 'UTC',
-}).format(new Date(`${SITE_CONTENT_UPDATED}T00:00:00Z`));
+const lastReviewedLabel = formatEditorialDate(SITE_CONTENT_UPDATED);
+
+const PROVENANCE_LABEL: Record<string, string> = {
+  calculated: 'Calculated',
+  manufacturer: 'Manufacturer',
+  standard: 'Standard',
+};
+
+const methodologySteps = METHODOLOGY.steps.slice(0, 3);
 ---
 
 <div class="ref-275 guide-275">
@@ -90,32 +114,71 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
     crumbs={[
       { label: 'Home', href: '/' },
       { label: 'Tire Sizes', href: '/tire-sizes/' },
+      { label: primaryCategoryHub.label, href: primaryCategoryHub.href },
       { label: displaySize },
     ]}
   />
 
   <div class="guide-275__layout mt-6 lg:mt-8">
     <div class="guide-275__main min-w-0 space-y-8">
-      <!-- Hero shares main column width with sections below -->
+      <!-- 1–2. Size-specific H1 + short explanation -->
       <Premium275Hero hub={hub} coverage={guide.coverage} />
 
-      <!-- At a Glance -->
+      <!-- 3. Main dimensions and calculated specifications -->
       <section class="guide-card" id="at-a-glance" aria-labelledby="glance-heading">
         <h2 id="glance-heading" class="guide-card__title">At a Glance</h2>
         <p class="guide-card__lead">
-          A quick technical snapshot of {displaySize} before you compare products or alternate sizes.
+          Nominal dimensions calculated from the {displaySize} size code
+          ({specs.widthMm}/{specs.aspectRatio}R{rimIn}). Load range and speed rating come from
+          indexed manufacturer products when available.
         </p>
         <div class="guide-glance">
           {guide.glance.map((row) => (
             <div class="guide-glance__item">
-              <p class="guide-glance__label">{row.label}</p>
+              <p class="guide-glance__label">
+                {row.label}
+                <span class="guide-glance__provenance">{PROVENANCE_LABEL[row.provenance]}</span>
+              </p>
               <p class="guide-glance__value">{row.value}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <!-- Trio: Best For / Consider / Impact -->
+      <!-- Data-backed contextual links to applicable category hubs -->
+      <section class="guide-card" id="applicable-categories" aria-labelledby="categories-heading">
+        <h2 id="categories-heading" class="guide-card__title">Applicable Tire Categories</h2>
+        <p class="guide-card__lead">
+          Based on this size’s editorial category and exact-size product metadata. A size may
+          support several uses without every product in the size belonging to every category.
+        </p>
+        <div class="guide-category-links">
+          {applicableCategories.map((category) => (
+            <a href={category.href}>
+              <span>{category.label} tire sizes</span>
+              <HubIcon name="chevron-right" class="h-3.5 w-3.5 shrink-0 text-primary" />
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <!-- 4. Formula and methodology disclosure -->
+      <section class="guide-card" id="methodology" aria-labelledby="methodology-heading">
+        <h2 id="methodology-heading" class="guide-card__title">Formula &amp; Methodology</h2>
+        <p class="guide-card__lead">{METHODOLOGY.intro}</p>
+        <ol class="guide-methodology">
+          {methodologySteps.map((step) => (
+            <li>
+              <strong>{step.title}.</strong> {step.detail}
+            </li>
+          ))}
+        </ol>
+        <p class="guide-methodology__note">
+          Rim diameter shown on this page is always {rimIn}" — the bead-seat diameter encoded in {displaySize}.
+        </p>
+      </section>
+
+      <!-- 5–6. Best-use cases and trade-offs -->
       <section class="guide-trio" aria-label="Size overview">
         <article class="guide-card guide-trio__card">
           <h2 class="guide-card__title">Best For</h2>
@@ -164,70 +227,57 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
         </article>
       </section>
 
-      <!-- Common Vehicles -->
-      {guide.vehicles.length > 0 ? (
+      <!-- 7. Verified vehicle examples (only when available) -->
+      {hasVehicles && (
         <section class="guide-card" id="vehicles-fitment" aria-labelledby="vehicles-heading">
           <div class="guide-card__head">
             <div>
-              <h2 id="vehicles-heading" class="guide-card__title !mb-0">Common Vehicles</h2>
+              <h2 id="vehicles-heading" class="guide-card__title !mb-0">Verified Vehicle Examples</h2>
               <p class="mt-1 text-xs text-muted">
-                Commonly seen on or upgraded to by owners of these platforms — confirm clearance and trim before buying.
+                Documented OE or commonly associated platforms for {displaySize}.
               </p>
             </div>
           </div>
           <ul class="guide-vehicle-chips mt-4">
             {guide.vehicles.map((v) => (
-              <li class="guide-vehicle-chip">{v.manufacturer} {v.model}</li>
+              <li class="guide-vehicle-chip">
+                {v.manufacturer} {v.model}
+                {v.trim ? ` ${v.trim}` : ''}
+                {v.yearRange ? ` (${v.yearRange})` : ''}
+              </li>
             ))}
           </ul>
-          <p class="guide-vehicles-note">
-            {vehiclesNote}
-          </p>
-        </section>
-      ) : (
-        <section class="guide-card" id="vehicles-fitment" aria-labelledby="vehicles-heading">
-          <h2 id="vehicles-heading" class="guide-card__title">Common Vehicles</h2>
-          <p class="text-sm text-body">
-            Exact vehicle fitment rows are limited for this size. Use the door placard, wheel diameter, and load markings — plus the size class notes above — before changing tires.
-          </p>
+          <p class="guide-vehicles-note">{vehiclesNote}</p>
         </section>
       )}
 
-      <!-- Real Tires Available -->
-      <section class="guide-card" id="available-tires" aria-labelledby="tires-heading">
-        <div class="guide-card__head">
-          <div>
-            <h2 id="tires-heading" class="guide-card__title !mb-0">Real Tires Available in This Size</h2>
-            <p class="mt-1 text-xs text-muted">
-              {hasProducts
-                ? `Indexed tire models available in ${displaySize}`
-                : 'Real tire products indexed in this size'}
-            </p>
+      <!-- 8. Real tire products (exact size only) -->
+      {hasProducts && (
+        <section class="guide-card" id="available-tires" aria-labelledby="tires-heading">
+          <div class="guide-card__head">
+            <div>
+              <h2 id="tires-heading" class="guide-card__title !mb-0">Real Tires Available in This Size</h2>
+              <p class="mt-1 text-xs text-muted">
+                Indexed manufacturer models confirmed in exact size {displaySize}
+              </p>
+            </div>
+            {guide.fullSpecProducts.length > 0 && (
+              <a href="#spec-comparison" class="guide-link">View all indexed tires →</a>
+            )}
           </div>
-          {hasProducts && guide.fullSpecProducts.length > 0 && (
-            <a href="#spec-comparison" class="guide-link">View all indexed tires →</a>
-          )}
-        </div>
-        <p class="guide-source-line">
-          Sources: official manufacturer product/spec data from Michelin, Goodyear, BFGoodrich, Toyo, and Falken where available.
-        </p>
-        {hasProducts ? (
+          <p class="guide-source-line">
+            Manufacturer-provided product/spec data from Michelin, Goodyear, BFGoodrich, Toyo, and Falken where available.
+          </p>
           <div class="mt-4">
             <HubAvailableTires
               client:load
               displaySize={displaySize}
               models={availableTireModels}
-              detailHref={availableTiresDetailHref}
             />
           </div>
-        ) : (
-          <p class="mt-4 text-sm text-body">
-            We do not have indexed manufacturer product data for this size yet.
-          </p>
-        )}
-      </section>
+        </section>
+      )}
 
-      <!-- Best Options by Use Case -->
       {guide.useCases.length > 0 && (
         <section class="guide-card" id="best-by-use" aria-labelledby="usecase-heading">
           <h2 id="usecase-heading" class="guide-card__title">Best Options by Use Case</h2>
@@ -250,80 +300,140 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
         </section>
       )}
 
-      <!-- Equivalent sizes -->
-      {guide.equivalents.length > 0 && (
-        <section class="guide-card" id="equivalent-sizes" aria-labelledby="equiv-heading">
+      <!-- 9. Nearby alternative sizes -->
+      {hasNearbyAlternatives && (
+        <section class="guide-card" id="nearby-alternatives" aria-labelledby="nearby-heading">
           <div class="guide-card__head">
             <div>
-              <h2 id="equiv-heading" class="guide-card__title !mb-0">Equivalent Tire Sizes</h2>
-              <p class="mt-1 text-xs text-muted">Nearby sizes that keep diameter close.</p>
+              <h2 id="nearby-heading" class="guide-card__title !mb-0">Nearby Alternative Sizes</h2>
+              <p class="mt-1 text-xs text-muted">
+                Equivalent, upgrade, and related sizes near {displaySize}.
+              </p>
             </div>
             <a href="/tire-sizes/" class="guide-link">View all →</a>
           </div>
-          <div class="guide-chips mt-4">
-            {guide.equivalents.map((chip) => {
-              const pos = chip.diameterDiffPercent >= 0;
-              return (
-                <a href={chip.href} class="guide-chip">
-                  <span class="guide-chip__size">{chip.size}</span>
-                  <span class:list={['guide-chip__pct', pos ? 'is-pos' : 'is-neg']}>
-                    {pos ? '+' : ''}{chip.diameterDiffPercent.toFixed(2)}%
-                  </span>
-                </a>
-              );
-            })}
-          </div>
+
+          {guide.equivalents.length > 0 && (
+            <div class="mt-4">
+              <h3 class="guide-subhead">Equivalent tire sizes</h3>
+              <div class="guide-chips">
+                {guide.equivalents.map((chip) => {
+                  const pos = chip.diameterDiffPercent >= 0;
+                  return (
+                    <a href={chip.href} class="guide-chip">
+                      <span class="guide-chip__size">{chip.size}</span>
+                      <span class:list={['guide-chip__pct', pos ? 'is-pos' : 'is-neg']}>
+                        {pos ? '+' : ''}{chip.diameterDiffPercent.toFixed(2)}%
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {guide.upgrades.length > 0 && (
+            <div class="mt-4">
+              <h3 class="guide-subhead">Popular upgrades</h3>
+              <div class="guide-chips">
+                {guide.upgrades.map((chip) => (
+                  <a href={chip.href} class="guide-chip guide-chip--upgrade">
+                    <span class="guide-chip__size">{chip.size}</span>
+                    <span class="guide-chip__pct is-pos">
+                      +{chip.diameterDiffPercent.toFixed(2)}%
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
-      <!-- Popular upgrades -->
-      {guide.upgrades.length > 0 && (
-        <section class="guide-card" id="popular-upgrades" aria-labelledby="upgrades-heading">
-          <div class="guide-card__head">
-            <div>
-              <h2 id="upgrades-heading" class="guide-card__title !mb-0">Popular Upgrades</h2>
-              <p class="mt-1 text-xs text-muted">Larger sizes with realistic fitment/diameter changes.</p>
-            </div>
-          </div>
-          <div class="guide-chips mt-4">
-            {guide.upgrades.map((chip) => (
-              <a href={chip.href} class="guide-chip guide-chip--upgrade">
-                <span class="guide-chip__size">{chip.size}</span>
-                <span class="guide-chip__pct is-pos">
-                  +{chip.diameterDiffPercent.toFixed(2)}%
-                </span>
-              </a>
+      <!-- 10. Popular comparison links -->
+      {hasPopularComparisons && (
+        <section class="guide-card" id="popular-comparisons" aria-labelledby="comparisons-heading">
+          <h2 id="comparisons-heading" class="guide-card__title">Popular Comparisons</h2>
+          <p class="guide-card__lead">
+            Side-by-side diameter, speedometer, and clearance math for {displaySize}.
+          </p>
+          <ul class="guide-compare-links">
+            {guide.popularComparisons.map((link) => (
+              <li>
+                <a href={link.href}>
+                  <span>{displaySize} vs {link.size}</span>
+                  <HubIcon name="chevron-right" class="h-3.5 w-3.5 shrink-0 text-primary" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {guide.fullSpecProducts.length > 0 && (
+        <ProductSpecComparison
+          client:load
+          products={guide.fullSpecProducts}
+          initialVisible={6}
+          startCollapsed={true}
+          description={`Compare tread depth, weight, max load, pressure, and revs per mile for full-spec ${displaySize} products.`}
+        />
+      )}
+
+      {faq.length > 0 && (
+        <section class="guide-card" id="faq" aria-labelledby="faq-heading">
+          <h2 id="faq-heading" class="guide-card__title">FAQ</h2>
+          <div class="guide-faq">
+            {faq.map((item) => (
+              <details class="guide-faq__item">
+                <summary>
+                  <span>{item.question}</span>
+                  <HubIcon name="chevron-right" class="guide-faq__chevron h-4 w-4 shrink-0" />
+                </summary>
+                <p>{item.answer}</p>
+              </details>
             ))}
           </div>
         </section>
       )}
 
-      <!-- Compact table (lower, collapsed) -->
-      <ProductSpecComparison
-        client:load
-        products={guide.fullSpecProducts}
-        initialVisible={6}
-        startCollapsed={true}
-        description={`Compare tread depth, weight, max load, pressure, and revs per mile for full-spec ${displaySize} products.`}
-      />
+      <!-- 14. Safety and fitment limitations -->
+      <section class="guide-card" id="safety-fitment" aria-labelledby="safety-heading">
+        <h2 id="safety-heading" class="guide-card__title">Safety &amp; Fitment Limitations</h2>
+        <ul class="guide-safety">
+          <li>
+            Calculated dimensions are nominal planning baselines from the size code — mounted tires can differ with tread depth, inflation, rim width, and production tolerance.
+          </li>
+          <li>
+            Always confirm {displaySize} against the door placard or owner’s manual, including load index, load range, and speed rating for your vehicle.
+          </li>
+          <li>
+            Changing diameter affects speedometer accuracy, gearing feel, ABS/traction calibration, and clearance at fenders, control arms, and the spare well.
+          </li>
+          <li>
+            Vehicle examples and product cards are not a guarantee of fitment. Verify wheel diameter ({rimIn}"), offset, and suspension setup before buying.
+          </li>
+        </ul>
+      </section>
 
-      <!-- FAQ -->
-      <section class="guide-card" id="faq" aria-labelledby="faq-heading">
-        <h2 id="faq-heading" class="guide-card__title">FAQ</h2>
-        <div class="guide-faq">
-          {faq.map((item) => (
-            <details class="guide-faq__item">
-              <summary>
-                <span>{item.question}</span>
-                <HubIcon name="chevron-right" class="guide-faq__chevron h-4 w-4 shrink-0" />
-              </summary>
-              <p>{item.answer}</p>
-            </details>
+      <!-- Sources and last-reviewed date -->
+      <section class="guide-card" id="sources-review" aria-labelledby="sources-heading">
+        <h2 id="sources-heading" class="guide-card__title">Sources &amp; Review</h2>
+        <p class="guide-card__lead">
+          Dimensions are calculated from the tire size label; product rows and fitment mappings come from documented manufacturer and OE sources where available.
+        </p>
+        <ul class="guide-sources">
+          {DATA_SOURCES.slice(0, 4).map((source) => (
+            <li>
+              <strong>{source.name}.</strong> {source.detail}
+            </li>
           ))}
+        </ul>
+        <div class="guide-byline">
+          <LastUpdated date={SITE_CONTENT_UPDATED} label="Content last reviewed" />
         </div>
       </section>
 
-      <!-- Closing CTA -->
       <section class="guide-closing" aria-labelledby="closing-heading">
         <h2 id="closing-heading" class="guide-closing__title">
           {closingTitle}
@@ -332,14 +442,14 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
           {closingCopy}
         </p>
         <div class="guide-closing__actions">
-          <a href={guide.compareHref} class="guide-btn guide-btn--accent">Compare this size</a>
-          <a href="#available-tires" class="guide-btn guide-btn--outline">See {displaySize} product data</a>
+          <a href={guide.compareHref} class="guide-btn guide-btn--accent">{guide.compareLabel}</a>
+          {hasProducts ? (
+            <a href="#available-tires" class="guide-btn guide-btn--outline">See {displaySize} product data</a>
+          ) : (
+            <a href={guide.calculatorHref} class="guide-btn guide-btn--outline">Open size calculator</a>
+          )}
         </div>
       </section>
-
-      <p class="guide-disclaimer">
-        Product specs are compiled from official manufacturer data where available.
-      </p>
     </div>
 
     <!-- Sidebar -->
@@ -347,17 +457,22 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
       <div class="guide-sidebar-rail">
         <div class="guide-card">
           <h3 class="guide-card__title">Quick Facts</h3>
+          <p class="guide-facts__note">Calculated from the size code unless marked manufacturer.</p>
           <dl class="guide-facts">
-            <div><dt>Overall diameter</dt><dd>{specs.overallDiameterIn.toFixed(2)}"</dd></div>
-            <div><dt>Section width</dt><dd>{specs.sectionWidthIn.toFixed(2)}" ({specs.widthMm} mm)</dd></div>
-            <div><dt>Sidewall height</dt><dd>{specs.sidewallIn.toFixed(2)}"</dd></div>
-            <div><dt>Circumference</dt><dd>{specs.circumferenceIn.toFixed(2)}"</dd></div>
-            <div><dt>Revs per mile</dt><dd>{Math.round(specs.revsPerMile)}</dd></div>
-            <div><dt>Rim diameter</dt><dd>{specs.wheelDiameterIn}"</dd></div>
-            <div><dt>Aspect ratio</dt><dd>{specs.aspectRatio}%</dd></div>
-            <div><dt>Load range</dt><dd>{guide.loadRanges.slice(0, 4).join(' / ') || '—'}</dd></div>
-            <div><dt>Speed rating</dt><dd>{guide.speedRatings.slice(0, 5).join(' / ') || '—'}</dd></div>
-            <div><dt>Construction</dt><dd>Radial</dd></div>
+            <div><dt>Overall diameter <span class="guide-facts__tag">Calc.</span></dt><dd>{specs.overallDiameterIn.toFixed(2)}"</dd></div>
+            <div><dt>Section width <span class="guide-facts__tag">Calc.</span></dt><dd>{specs.sectionWidthIn.toFixed(2)}" ({specs.widthMm} mm)</dd></div>
+            <div><dt>Sidewall height <span class="guide-facts__tag">Calc.</span></dt><dd>{specs.sidewallIn.toFixed(2)}"</dd></div>
+            <div><dt>Circumference <span class="guide-facts__tag">Calc.</span></dt><dd>{specs.circumferenceIn.toFixed(2)}"</dd></div>
+            <div><dt>Revs per mile <span class="guide-facts__tag">Calc.</span></dt><dd>{Math.round(specs.revsPerMile)}</dd></div>
+            <div><dt>Rim diameter <span class="guide-facts__tag">Calc.</span></dt><dd>{rimIn}"</dd></div>
+            <div><dt>Aspect ratio <span class="guide-facts__tag">Calc.</span></dt><dd>{specs.aspectRatio}%</dd></div>
+            {guide.loadRanges.length > 0 && (
+              <div><dt>Load range <span class="guide-facts__tag">Mfr.</span></dt><dd>{guide.loadRanges.slice(0, 4).join(' / ')}</dd></div>
+            )}
+            {guide.speedRatings.length > 0 && (
+              <div><dt>Speed rating <span class="guide-facts__tag">Mfr.</span></dt><dd>{guide.speedRatings.slice(0, 5).join(' / ')}</dd></div>
+            )}
+            <div><dt>Construction <span class="guide-facts__tag">Std.</span></dt><dd>Radial</dd></div>
           </dl>
         </div>
 
@@ -366,8 +481,24 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
           <p class="guide-card__copy guide-card__copy--light">
             See diameter, speedometer, and clearance change vs another size.
           </p>
-          <a href={guide.compareHref} class="guide-btn guide-btn--accent">Start Comparison</a>
+          <a href={guide.compareHref} class="guide-btn guide-btn--accent">{guide.compareLabel}</a>
         </div>
+
+        {sidebarPopularComparisons.length > 0 && (
+          <div class="guide-card">
+            <h3 class="guide-card__title">Popular Comparisons</h3>
+            <ul class="guide-side-links">
+              {sidebarPopularComparisons.map((link) => (
+                <li>
+                  <a href={link.href}>
+                    <span>vs {link.size}</span>
+                    <HubIcon name="chevron-right" class="h-3.5 w-3.5 shrink-0 text-primary" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {guide.related.length > 0 && (
           <div class="guide-card">
@@ -401,9 +532,9 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
           </div>
         )}
 
-        <div class="guide-card">
-          <h3 class="guide-card__title">Brand Availability</h3>
-          {guide.brands.length > 0 ? (
+        {guide.brands.length > 0 && (
+          <div class="guide-card">
+            <h3 class="guide-card__title">Brand Availability</h3>
             <ul class="guide-brands">
               {guide.brands.map((brand) => (
                 <li>
@@ -414,10 +545,8 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p class="text-sm text-muted">No indexed manufacturer brands for this size yet.</p>
-          )}
-        </div>
+          </div>
+        )}
 
         <div class="guide-card">
           <h3 class="guide-card__title">Data Coverage</h3>
@@ -426,7 +555,7 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
             <div><dt>Service variants</dt><dd>{guide.coverage.serviceVariantCount}</dd></div>
             <div><dt>Full-spec products</dt><dd>{guide.coverage.fullSpecProducts}</dd></div>
             <div><dt>Brands indexed</dt><dd>{guide.coverage.brands.length}</dd></div>
-            <div><dt>Source type</dt><dd>Manufacturer data</dd></div>
+            <div><dt>Source type</dt><dd>Calculated + manufacturer</dd></div>
             <div><dt>Last reviewed</dt><dd>{lastReviewedLabel}</dd></div>
           </dl>
         </div>
@@ -516,14 +645,173 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
     letter-spacing: -0.01em;
     color: var(--color-heading);
   }
-
+  .guide-card__title--light {
+    color: #f8fafc;
+  }
   .guide-card__lead {
     margin: -0.35rem 0 0.875rem;
     font-size: 0.8125rem;
     line-height: 1.45;
     color: var(--color-muted);
   }
+  .guide-card__copy {
+    margin: -0.25rem 0 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+  .guide-card__copy--light {
+    color: rgb(203 213 225);
+  }
+  .guide-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
 
+  .guide-glance {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .guide-glance {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .guide-glance__item {
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-primary-light) 12%, var(--color-surface));
+    padding: 0.75rem 0.875rem;
+  }
+  .guide-glance__label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .guide-glance__provenance {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-primary) 70%, var(--color-muted));
+  }
+  .guide-glance__value {
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+
+  .guide-category-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .guide-category-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.42rem 0.7rem;
+    color: var(--color-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .guide-category-links a:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 38%, var(--color-border));
+  }
+
+  .guide-methodology {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.55rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+  .guide-methodology__note {
+    margin-top: 0.875rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+  }
+
+  .guide-trio {
+    display: grid;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .guide-trio {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .guide-bullets {
+    display: grid;
+    gap: 0.65rem;
+  }
+  .guide-bullets__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-body);
+  }
+  .guide-bullets__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.05rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .guide-bullets__icon--good {
+    background: color-mix(in srgb, #16a34a 18%, white);
+    color: #15803d;
+  }
+  .guide-bullets__icon--warn {
+    background: color-mix(in srgb, #ea580c 16%, white);
+    color: #c2410c;
+  }
+  .guide-bullets__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: 0.4rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .guide-bullets__dot--good { background: #16a34a; }
+  .guide-bullets__dot--warn { background: #ea580c; }
+
+  .guide-vehicle-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .guide-vehicle-chip {
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
   .guide-vehicles-note {
     margin-top: 0.875rem;
     font-size: 0.75rem;
@@ -536,6 +824,283 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
     font-size: 0.6875rem;
     line-height: 1.4;
     color: var(--color-muted);
+  }
+
+  .guide-subhead {
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .guide-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .guide-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.45rem 0.7rem;
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .guide-chip:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+    box-shadow: 0 1px 4px rgb(15 23 42 / 0.06);
+  }
+  .guide-chip__size {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .guide-chip__pct {
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .guide-chip__pct.is-pos { color: #15803d; }
+  .guide-chip__pct.is-neg { color: #c2410c; }
+
+  .guide-compare-links {
+    display: grid;
+    gap: 0.35rem;
+  }
+  .guide-compare-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    padding: 0.65rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-heading);
+    text-decoration: none;
+  }
+  .guide-compare-links a:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  }
+
+  .guide-safety {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.55rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+
+  .guide-sources {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.55rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+
+  .guide-byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    margin-top: 1rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .guide-usecases {
+    display: grid;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .guide-usecases {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .guide-usecase__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .guide-usecase__desc {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+  .guide-usecase__list {
+    margin-top: 0.55rem;
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+    color: var(--color-body);
+  }
+
+  .guide-faq {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .guide-faq__item {
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-border);
+    padding: 0.15rem 0.85rem;
+  }
+  .guide-faq__item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 0.7rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+  .guide-faq__item summary::-webkit-details-marker { display: none; }
+  .guide-faq__item[open] .guide-faq__chevron {
+    transform: rotate(90deg);
+  }
+  .guide-faq__chevron {
+    transition: transform 0.15s ease;
+  }
+  .guide-faq__item p {
+    padding: 0 0 0.85rem;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--color-body);
+  }
+
+  .guide-closing {
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+    background: color-mix(in srgb, var(--color-primary-light) 22%, var(--color-surface));
+    padding: 1.25rem 1.35rem;
+  }
+  .guide-closing__title {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--color-heading);
+  }
+  .guide-closing__copy {
+    margin-top: 0.4rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+  .guide-closing__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1rem;
+  }
+
+  .guide-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.625rem;
+    padding: 0.55rem 0.95rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .guide-btn--accent {
+    background: var(--color-primary);
+    color: white;
+  }
+  .guide-btn--outline {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-heading);
+  }
+
+  .guide-link {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .guide-facts {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .guide-facts__note {
+    margin: -0.35rem 0 0.75rem;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+  .guide-facts > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+  }
+  .guide-facts dt {
+    color: var(--color-muted);
+  }
+  .guide-facts__tag {
+    margin-left: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-primary) 65%, var(--color-muted));
+  }
+  .guide-facts dd {
+    font-weight: 700;
+    color: var(--color-heading);
+    text-align: right;
+  }
+
+  .guide-side-links {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .guide-side-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-heading);
+    text-decoration: none;
+  }
+  .guide-side-links__pct {
+    font-size: 0.6875rem;
+    color: #15803d;
+  }
+
+  .guide-brands {
+    display: grid;
+    gap: 0.35rem;
+  }
+  .guide-brands li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--color-heading);
+  }
+  .guide-brands__check {
+    display: inline-flex;
+    color: #15803d;
   }
 
   .guide-coverage {
@@ -563,13 +1128,11 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
     gap: 0.375rem;
     margin-bottom: 0.625rem;
   }
-
   .guide-related-calcs__list {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
   }
-
   .guide-calc-link {
     display: flex;
     align-items: center;
@@ -577,457 +1140,28 @@ const lastReviewedLabel = new Intl.DateTimeFormat('en-US', {
     border-radius: 0.625rem;
     border: 1px solid transparent;
     padding: 0.4rem 0.35rem;
-    transition:
-      border-color 0.15s ease,
-      background-color 0.15s ease;
+    text-decoration: none;
   }
   .guide-calc-link:hover {
-    border-color: color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
-    background: color-mix(in srgb, var(--color-primary-light) 40%, var(--color-surface));
+    border-color: var(--color-border);
+    background: color-mix(in srgb, var(--color-primary-light) 20%, var(--color-surface));
   }
   .guide-calc-link__icon {
-    display: flex;
-    height: 1.75rem;
-    width: 1.75rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    background: var(--color-primary-light);
+    display: inline-flex;
     color: var(--color-primary);
-  }
-  .guide-calc-link__icon :global(svg) {
-    width: 0.875rem !important;
-    height: 0.875rem !important;
-    max-width: 0.875rem !important;
-    max-height: 0.875rem !important;
   }
   .guide-calc-link__label {
     display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    line-height: 1.25;
+    font-size: 0.8125rem;
+    font-weight: 700;
     color: var(--color-heading);
-  }
-  .guide-calc-link:hover .guide-calc-link__label {
-    color: var(--color-primary);
   }
   .guide-calc-link__desc {
     display: block;
-    margin-top: 0.1rem;
-    font-size: 0.625rem;
-    line-height: 1.3;
+    font-size: 0.6875rem;
     color: var(--color-muted);
   }
   .guide-calc-link__chevron {
     color: var(--color-muted);
-  }
-  .guide-calc-link:hover .guide-calc-link__chevron {
-    color: var(--color-primary);
-  }
-  .guide-card__title--light {
-    color: #fff;
-  }
-  .guide-card__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .guide-card__copy {
-    margin-top: -0.35rem;
-    margin-bottom: 0.875rem;
-    font-size: 0.75rem;
-    line-height: 1.45;
-    color: var(--color-muted);
-  }
-  .guide-card__copy--light {
-    color: rgb(226 232 240);
-  }
-
-  .guide-link {
-    flex-shrink: 0;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--color-primary);
-  }
-  .guide-link:hover {
-    text-decoration: underline;
-  }
-
-  .guide-glance {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem 1rem;
-  }
-  @media (min-width: 640px) {
-    .guide-glance {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 900px) {
-    .guide-glance {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-  }
-  .guide-glance__label {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-muted);
-  }
-  .guide-glance__value {
-    margin-top: 0.25rem;
-    font-size: 0.9375rem;
-    font-weight: 700;
-    color: var(--color-heading);
-  }
-
-  .guide-trio {
-    display: grid;
-    gap: 1rem;
-  }
-  @media (min-width: 768px) {
-    .guide-trio {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-
-  .guide-bullets {
-    display: grid;
-    gap: 0.625rem;
-  }
-  .guide-bullets__item {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    font-size: 0.8125rem;
-    line-height: 1.45;
-    color: var(--color-body);
-  }
-  .guide-bullets__icon {
-    display: inline-flex;
-    height: 1.125rem;
-    width: 1.125rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0.1rem;
-    border-radius: 9999px;
-  }
-  .guide-bullets__icon :global(svg) {
-    width: 0.75rem !important;
-    height: 0.75rem !important;
-    max-width: 0.75rem !important;
-    max-height: 0.75rem !important;
-  }
-  .guide-bullets__icon--good {
-    background: color-mix(in srgb, var(--color-success) 12%, transparent);
-    color: var(--color-success);
-  }
-  .guide-bullets__icon--warn {
-    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
-    color: var(--color-danger);
-  }
-  .guide-bullets__dot {
-    width: 0.4375rem;
-    height: 0.4375rem;
-    margin-top: 0.4rem;
-    flex-shrink: 0;
-    border-radius: 9999px;
-  }
-  .guide-bullets__dot--good {
-    background: var(--color-success);
-  }
-  .guide-bullets__dot--warn {
-    background: var(--color-danger);
-  }
-
-  .guide-vehicle-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .guide-vehicle-chip {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface-subtle);
-    padding: 0.45rem 0.8rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.25;
-    color: var(--color-heading);
-  }
-
-  .guide-available-tires-media {
-    margin: 0;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .guide-available-tires-media .tsc-section-carousel {
-    margin-top: 0;
-  }
-
-  .guide-available-tires-media .tsc-popular__card {
-    min-width: min(100%, 11.5rem);
-  }
-
-  .guide-usecases {
-    display: grid;
-    gap: 0.75rem;
-  }
-  @media (min-width: 640px) {
-    .guide-usecases {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 900px) {
-    .guide-usecases {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-  .guide-usecase {
-    border-radius: 0.75rem;
-    background: color-mix(in srgb, var(--color-primary-light) 55%, var(--color-surface));
-    padding: 0.875rem;
-  }
-  .guide-usecase__title {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--color-heading);
-  }
-  .guide-usecase__desc {
-    margin-top: 0.35rem;
-    font-size: 0.6875rem;
-    line-height: 1.4;
-    color: var(--color-muted);
-  }
-  .guide-usecase__list {
-    margin-top: 0.625rem;
-    display: grid;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    line-height: 1.35;
-    color: var(--color-body);
-  }
-
-  .guide-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .guide-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 0.625rem;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    padding: 0.5rem 0.75rem;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
-  }
-  .guide-chip:hover {
-    border-color: color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
-    background: var(--color-primary-light);
-  }
-  .guide-chip__size {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--color-heading);
-  }
-  .guide-chip__pct {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .guide-chip__pct.is-pos {
-    color: var(--color-success);
-  }
-  .guide-chip__pct.is-neg {
-    color: var(--color-danger);
-  }
-
-  .guide-faq {
-    display: grid;
-    gap: 0.5rem;
-  }
-  @media (min-width: 768px) {
-    .guide-faq {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  .guide-faq__item {
-    border-radius: 0.625rem;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface-subtle);
-    padding: 0;
-  }
-  .guide-faq__item summary {
-    display: flex;
-    cursor: pointer;
-    list-style: none;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.75rem 0.875rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-heading);
-  }
-  .guide-faq__item summary::-webkit-details-marker {
-    display: none;
-  }
-  .guide-faq__chevron {
-    color: var(--color-muted);
-    transition: transform 0.15s ease;
-  }
-  .guide-faq__item[open] .guide-faq__chevron {
-    transform: rotate(90deg);
-  }
-  .guide-faq__item p {
-    padding: 0 0.875rem 0.875rem;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: var(--color-body);
-  }
-
-  .guide-closing {
-    border-radius: 0.875rem;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
-    background: color-mix(in srgb, var(--color-primary-light) 40%, var(--color-surface));
-    padding: 1.125rem 1.25rem;
-  }
-  .guide-closing__title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--color-heading);
-  }
-  .guide-closing__copy {
-    margin-top: 0.5rem;
-    max-width: 40rem;
-    font-size: 0.8125rem;
-    line-height: 1.45;
-    color: var(--color-body);
-  }
-  .guide-closing__actions {
-    margin-top: 0.875rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .guide-disclaimer {
-    font-size: 0.75rem;
-    line-height: 1.45;
-    color: var(--color-muted);
-    text-align: center;
-  }
-
-  .guide-facts {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .guide-facts > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-    font-size: 0.75rem;
-  }
-  .guide-facts dt {
-    color: var(--color-muted);
-  }
-  .guide-facts dd {
-    font-weight: 700;
-    text-align: right;
-    color: var(--color-heading);
-  }
-
-  .guide-btn {
-    display: inline-flex;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.625rem;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    transition: opacity 0.15s ease;
-  }
-  .guide-btn:hover {
-    opacity: 0.92;
-  }
-  .guide-btn--accent {
-    background: var(--color-primary);
-    color: #fff;
-  }
-  .guide-btn--outline {
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-heading);
-  }
-  .guide-btn--outline:hover {
-    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
-    background: var(--color-primary-light);
-  }
-
-  .guide-side-links {
-    display: grid;
-    gap: 0.25rem;
-  }
-  .guide-side-links a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.35rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-heading);
-  }
-  .guide-side-links a:hover {
-    background: var(--color-surface-subtle);
-    color: var(--color-primary);
-  }
-  .guide-side-links__pct {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    color: var(--color-success);
-  }
-
-  .guide-brands {
-    display: grid;
-    gap: 0.45rem;
-  }
-  .guide-brands li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-heading);
-  }
-  .guide-brands__check {
-    display: inline-flex;
-    height: 1rem;
-    width: 1rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: color-mix(in srgb, var(--color-success) 14%, transparent);
-    color: var(--color-success);
-  }
-  .guide-brands__check :global(svg) {
-    width: 0.625rem !important;
-    height: 0.625rem !important;
-    max-width: 0.625rem !important;
-    max-height: 0.625rem !important;
   }
 </style>

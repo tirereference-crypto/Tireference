@@ -2,16 +2,11 @@
 import Methodology from './Methodology.astro';
 import DataSources from './DataSources.astro';
 import EditorialProcess from './EditorialProcess.astro';
-import Author from './Author.astro';
-import ReviewedBy from './ReviewedBy.astro';
 import LastUpdated from './LastUpdated.astro';
-import type { EditorialPerson } from '../../lib/editorial';
 
 interface Props {
   title?: string;
   subtitle?: string;
-  author?: EditorialPerson;
-  reviewer?: EditorialPerson;
   updated?: string;
   /** Extra classes for the wrapping <section> (e.g. hub ordering hooks). */
   class?: string;
@@ -20,8 +15,6 @@ interface Props {
 const {
   title = 'How we research & verify this data',
   subtitle = 'Dimensions come from our tire-math module; recommendations from category-aware rules; comparison pages must pass structural and prose validation before publish.',
-  author,
-  reviewer,
   updated,
   class: className = '',
 } = Astro.props;
@@ -37,11 +30,6 @@ const {
     <Methodology />
     <DataSources />
     <EditorialProcess />
-  </div>
-
-  <div class="mt-4 grid gap-4 sm:grid-cols-2">
-    <Author person={author} variant="card" />
-    <ReviewedBy person={reviewer} variant="card" />
   </div>
 
   <div class="mt-3">

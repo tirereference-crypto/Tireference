@@ -5,6 +5,7 @@
 
 import type { TireCategory } from '../data/tire-sizes';
 import { TIRE_SIZES } from '../data/tire-sizes';
+import { formatInchWheel } from './inch-article';
 import type { TireSpecs } from './tire-math';
 import { getTireSpecs } from './tire-math';
 import type { HubFaqItem } from './tire-size-hub';
@@ -105,7 +106,7 @@ function buildExpertFaqs27570R18(sizeData: ExpertFaqSizeData): HubFaqItem[] {
     {
       question: 'Is 275/70R18 good for off-road?',
       answer:
-        `Yes — 275/70R18 is a strong off-road and overland size because it gives a tall sidewall (about ${sidewall}") on an ${rim}-inch wheel while staying below true 35-inch territory (roughly ${diameter}" overall). The extra sidewall helps with rough-road compliance, aired-down traction, and rim protection compared with lower-profile highway sizes. It works especially well when paired with all-terrain, rugged-terrain, or mud-terrain tires.`,
+        `Yes — 275/70R18 is a strong off-road and overland size because it gives a tall sidewall (about ${sidewall}") on ${formatInchWheel(rim)} while staying below true 35-inch territory (roughly ${diameter}" overall). The extra sidewall helps with rough-road compliance, aired-down traction, and rim protection compared with lower-profile highway sizes. It works especially well when paired with all-terrain, rugged-terrain, or mud-terrain tires.`,
     },
     {
       question: 'What vehicles use 275/70R18 tires?',
@@ -152,17 +153,18 @@ function buildExpertFaqsGeneric(
   const diameter = specs.overallDiameterIn.toFixed(2);
   const sidewall = specs.sidewallIn.toFixed(2);
   const rim = specs.wheelDiameterIn;
+  const wheelPhrase = formatInchWheel(rim);
   const useCase = mainUseCaseLabel(category);
   const compareTarget = sizeData.compareTarget?.toUpperCase() ?? null;
 
   const useCaseAnswer =
     category === 'performance'
-      ? `${size} can be a strong choice for ${useCase} when you want sharper steering and a wider contact patch on an ${rim}" wheel (about ${diameter}" overall, ~${sidewall}" sidewall). It is less ideal if ride comfort, winter traction, or lower replacement cost matter more than dry-road response. Match speed rating and load index to the vehicle placard.`
+      ? `${size} can be a strong choice for ${useCase} when you want sharper steering and a wider contact patch on ${wheelPhrase} (about ${diameter}" overall, ~${sidewall}" sidewall). It is less ideal if ride comfort, winter traction, or lower replacement cost matter more than dry-road response. Match speed rating and load index to the vehicle placard.`
       : category === 'passenger'
-        ? `${size} is generally a solid ${useCase} size — roughly ${diameter}" overall with about ${sidewall}" of sidewall on an ${rim}" rim. It favors quiet commuting and replacement availability over truck clearance or max performance grip. Always confirm the door placard size before replacing tires.`
+        ? `${size} is generally a solid ${useCase} size — roughly ${diameter}" overall with about ${sidewall}" of sidewall on ${wheelPhrase}. It favors quiet commuting and replacement availability over truck clearance or max performance grip. Always confirm the door placard size before replacing tires.`
         : category === 'SUV'
-          ? `${size} works well for ${useCase} when you need a bit more footprint than a compact passenger tire without jumping to a tall truck flotation size. Overall diameter is about ${diameter}" with ~${sidewall}" of sidewall on an ${rim}" rim. Confirm load range if you tow or haul regularly.`
-          : `${size} is a capable ${useCase} size when clearance, load capacity, or mixed trail use matter. At roughly ${diameter}" overall (~${sidewall}" sidewall on an ${rim}" rim), it sits in the truck/SUV capability band rather than a pure fuel-economy size. Pair it with the right tread and load range for your mileage mix.`;
+          ? `${size} works well for ${useCase} when you need a bit more footprint than a compact passenger tire without jumping to a tall truck flotation size. Overall diameter is about ${diameter}" with ~${sidewall}" of sidewall on ${wheelPhrase}. Confirm load range if you tow or haul regularly.`
+          : `${size} is a capable ${useCase} size when clearance, load capacity, or mixed trail use matter. At roughly ${diameter}" overall (~${sidewall}" sidewall on ${wheelPhrase}), it sits in the truck/SUV capability band rather than a pure fuel-economy size. Pair it with the right tread and load range for your mileage mix.`;
 
   const vehiclesAnswer =
     category === 'performance'

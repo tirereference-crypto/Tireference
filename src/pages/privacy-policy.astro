@@ -17,11 +17,11 @@ const title = 'Privacy Policy';
 const description =
   'Read the Tire Reference privacy policy to understand what information we collect, how we use it, the cookies we set, and the choices you have over your data.';
 
-const schema = buildInfoPageSchema(title, description, '/privacy-policy', 'Privacy Policy');
+const schema = buildInfoPageSchema(title, description, '/privacy-policy/', 'Privacy Policy');
 const updated = formatEditorialDate();
 ---
 
-<Layout title={title} description={description} canonical="/privacy-policy" schema={schema}>
+<Layout title={title} description={description} canonical="/privacy-policy/" schema={schema}>
   <div class="info-page">
     <div class="info-shell info-shell--narrow">
       <InfoPageHero

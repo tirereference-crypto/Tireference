@@ -10,7 +10,8 @@ import { getTireDiagramImages } from '../../lib/tire-diagram-images';
 import { buildAtAGlanceProfile } from '../../lib/tire-at-a-glance';
 import { buildDynamicQuickFacts } from '../../lib/tire-calculator-insights';
 import { buildPerformanceImpactCards, buildPerformanceImpactSummary } from '../../lib/tire-performance-impact';
-import { comparisonPagePathCurrent, hubPagePath } from '../../lib/tire-size-url';
+import { preferredSizeCompareLink } from '../../lib/crawlable-links';
+import { hubPagePath } from '../../lib/tire-size-url';
 import { metricToFlotation } from '../../lib/tire-math';
 import type { TireSpecs } from '../../lib/tire-math';
 import { CALCULATOR_PATHS, getRelatedCalculatorLinks } from '../../lib/calculator-links';
@@ -696,11 +697,13 @@ function StickyResultsBar({
   sizeLabel,
   specs,
   compareHref,
+  compareLabel,
 }: {
   visible: boolean;
   sizeLabel: string;
   specs: TireSpecs;
   compareHref: string;
+  compareLabel: string;
 }) {
   return (
     <div className={`calc-sticky-bar ${visible ? 'calc-sticky-bar--visible' : ''}`} role="region" aria-label="Calculation summary">
@@ -721,7 +724,7 @@ function StickyResultsBar({
           href={compareHref}
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
         >
-          Compare This Size →
+          {compareLabel}
         </a>
       </div>
     </div>
@@ -1289,7 +1292,7 @@ export default function PremiumTireSizeCalculator({
   const displaySpecs = liveInsights?.specs ?? FALLBACK_SPECS;
   const displayLabel = liveInsights?.sizeLabel ?? EDUCATION_SIZE_LABEL;
   const tireParts = getTireSizeParts(displayLabel, displaySpecs);
-  const compareHref = comparisonPagePathCurrent(displayLabel);
+  const compareLink = preferredSizeCompareLink(displayLabel);
   const ready = message.status === 'ready' && specs && liveInsights;
 
   const scrollToResults = useCallback(() => {
@@ -1389,7 +1392,8 @@ export default function PremiumTireSizeCalculator({
           visible={stickyCompareVisible}
           sizeLabel={liveInsights.sizeLabel}
           specs={specs}
-          compareHref={compareHref}
+          compareHref={compareLink.href}
+          compareLabel={compareLink.label}
         />
       ) : null}
 

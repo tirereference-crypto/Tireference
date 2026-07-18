@@ -14,16 +14,20 @@ describe('buildExploreFurtherData', () => {
     expect(data.comparisons.length).toBe(data.upgradePaths.length);
     expect(data.popularTires.length).toBe(3);
 
+    // Clean published /compare/ or size-guide fallback — never parameterized.
+    const comparisonHrefPattern =
+      /^(\/compare\/275-70-r18-vs-[a-z0-9-]+\/|\/tire-size\/)/;
+
     for (const path of data.upgradePaths) {
       expect(path.diameterChangeIn).toBeGreaterThan(0);
-      expect(path.comparisonHref).toContain('from=275%2F70R18');
+      expect(path.comparisonHref).toMatch(comparisonHrefPattern);
       expect(path.fitmentNote.length).toBeGreaterThan(0);
       expect(isValidComparisonPair('275/70R18', path.size)).toBe(true);
     }
 
     for (const comparison of data.comparisons) {
       expect(comparison.label).toContain('275/70R18 vs');
-      expect(comparison.comparisonHref).toContain('tire-comparison-calculator');
+      expect(comparison.comparisonHref).toMatch(comparisonHrefPattern);
       expect(isValidComparisonPair('275/70R18', comparison.targetSize)).toBe(true);
     }
   });

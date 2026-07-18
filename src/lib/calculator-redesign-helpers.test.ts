@@ -95,9 +95,11 @@ describe('related tire sizes', () => {
     expect(related.length).toBeGreaterThan(0);
     expect(related.every((row) => row.size !== '275/70R18')).toBe(true);
     expect(related.some((row) => row.sameWheel)).toBe(true);
-    expect(related[0].compareHref).toContain('/calculators/tire-comparison-calculator/');
-    expect(related[0].compareHref).toContain('from=');
-    expect(related[0].compareHref).toContain('to=');
+    // Published pairs link to /compare/; unpublished pairs omit compareHref.
+    expect(
+      related[0].compareHref === null ||
+        /^\/compare\/[a-z0-9-]+-vs-[a-z0-9-]+\//.test(related[0].compareHref),
+    ).toBe(true);
     expect(related[0].href).toMatch(/tire-size|tire-size-calculator/);
   });
 

@@ -3,13 +3,10 @@
  * Avoids tire-size-products / hub imports that pull multi-MB JSON.
  */
 import { TIRE_SIZES } from '../data/tire-sizes';
+import { publishedComparePath } from './comparison-redirect';
 import { hasTireSizeGuide } from './has-tire-size-guide';
 import { getTireSpecs, parseTireSize, type TireSpecs } from './tire-math';
-import {
-  comparisonPagePathUnchecked,
-  tireSizeCalculatorPath,
-  tireSizePath,
-} from './tire-size-url';
+import { tireSizeCalculatorPath, tireSizePath } from './tire-size-url';
 import { normalizeTireSizeKey } from './tire-size-validation';
 
 export type RelatedWheelTag = 'same_wheel' | 'different_wheel';
@@ -25,7 +22,8 @@ export type RelatedSizeRole =
 export interface CalculatorRelatedSize {
   size: string;
   href: string;
-  compareHref: string;
+  /** Published `/compare/` page when available; otherwise null (never parameterized). */
+  compareHref: string | null;
   diameterDiffPercent: number;
   widthDiffMm: number;
   sidewallDiffIn: number;
@@ -125,7 +123,7 @@ function toRelated(row: Candidate, role: RelatedSizeRole, baseSize: string): Cal
   return {
     size: row.size,
     href: sizeHref(row.size),
-    compareHref: comparisonPagePathUnchecked(baseSize, row.size),
+    compareHref: publishedComparePath(baseSize, row.size),
     diameterDiffPercent: row.diameterDiffPercent,
     widthDiffMm: row.widthDiffMm,
     sidewallDiffIn: row.sidewallDiffIn,

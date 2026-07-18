@@ -32,7 +32,9 @@ function fmt(size: string): string {
 export function shortenHubIntro(intro: string, maxSentences = 3): string {
   const trimmed = intro.replace(/\s+/g, ' ').trim();
   if (!trimmed) return trimmed;
-  const parts = trimmed.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [trimmed];
+  // Split only at actual sentence boundaries. A punctuation-only matcher
+  // corrupts decimal measurements such as 24.5" into "24. 5".
+  const parts = trimmed.split(/(?<=[.!?])\s+(?=[A-Z])/);
   if (parts.length <= maxSentences) return trimmed;
   return parts.slice(0, maxSentences).join(' ').trim();
 }

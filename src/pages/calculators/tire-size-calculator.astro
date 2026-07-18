@@ -7,11 +7,7 @@ import {
   buildPageSchema,
   calculatorBreadcrumbs,
 } from '../../lib/seo/page-schemas';
-import {
-  buildOrganizationSchema,
-  buildWebApplicationSchema,
-  buildWebSiteSchema,
-} from '../../lib/seo/schema';
+import { buildWebApplicationSchema } from '../../lib/seo/schema';
 import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
 import { getVisibleTireSizeCalculatorFaqs } from '../../lib/tire-size-calculator-faqs';
 
@@ -21,8 +17,6 @@ const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Tire Size Calculator'),
   faqs: [...getVisibleTireSizeCalculatorFaqs()],
   extra: [
-    buildOrganizationSchema(),
-    buildWebSiteSchema(),
     buildWebApplicationSchema({
       name: 'Tire Size Calculator',
       description: SEO_DESCRIPTIONS.tireSizeCalculator,

@@ -7,6 +7,7 @@ import {
   SEO_DESCRIPTIONS,
   SITE_URL,
 } from './constants';
+import { resolveCanonical } from './urls';
 
 export interface FaqItem {
   question: string;
@@ -19,14 +20,6 @@ export interface BreadcrumbItem {
   item?: string;
 }
 
-export interface SchemaPersonRef {
-  name: string;
-  url: string;
-  type?: 'Organization' | 'Person';
-  image?: string;
-  id?: string;
-}
-
 export interface ArticleSchemaInput {
   headline: string;
   description: string;
@@ -36,20 +29,12 @@ export interface ArticleSchemaInput {
   type?: 'Article' | 'TechArticle';
   /** Optional PropertyValue nodes (e.g. tire load index, speed rating). */
   additionalProperty?: Array<Record<string, unknown>>;
-  /** @deprecated Prefer authorRef */
+  /** Display name for the Organization author (defaults to site name). */
   authorName?: string;
-  /** @deprecated Prefer authorRef */
-  authorType?: 'Organization' | 'Person';
-  /** @deprecated Prefer reviewerRef */
-  reviewerName?: string;
-  /** @deprecated Prefer reviewerRef */
-  reviewerType?: 'Organization' | 'Person';
-  authorRef?: SchemaPersonRef;
-  reviewerRef?: SchemaPersonRef;
 }
 
-const ORGANIZATION_ID = `${SITE_URL}/#organization`;
-const WEBSITE_ID = `${SITE_URL}/#website`;
+export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+export const WEBSITE_ID = `${SITE_URL}/#website`;
 
 function stripContext(node: Record<string, unknown>): Record<string, unknown> {
   const { '@context': _context, ...rest } = node;
@@ -115,7 +100,9 @@ export function buildBreadcrumbSchema(
       '@type': 'ListItem',
       position: index + 1,
       name: crumb.name,
-      ...(crumb.item ? { item: crumb.item.startsWith('http') ? crumb.item : `${SITE_URL}${crumb.item}` } : {}),
+      ...(crumb.item
+        ? { item: resolveCanonical(crumb.item) }
+        : {}),
     })),
   };
 }
@@ -138,13 +125,42 @@ export function buildFaqPageSchema(faqs: FaqItem[]): Record<string, unknown> | u
   };
 }
 
-function schemaPersonNode(ref: SchemaPersonRef): Record<string, unknown> {
+export interface ItemListEntry {
+  name: string;
+  url: string;
+  position?: number;
+}
+
+export interface ItemListSchemaInput {
+  name: string;
+  description?: string;
+  url: string;
+  items: ItemListEntry[];
+}
+
+/** Directory / listing schema — only for genuine visible item lists. */
+export function buildItemListSchema({
+  name,
+  description,
+  url,
+  items,
+}: ItemListSchemaInput): Record<string, unknown> | undefined {
+  if (items.length === 0) return undefined;
+
+  const pageUrl = resolveCanonical(url);
   return {
-    '@type': ref.type ?? 'Person',
-    name: ref.name,
-    url: ref.url,
-    ...(ref.id ? { '@id': ref.id } : {}),
-    ...(ref.image ? { image: ref.image } : {}),
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name,
+    ...(description ? { description } : {}),
+    url: pageUrl,
+    numberOfItems: items.length,
+    itemListElement: items.map((entry, index) => ({
+      '@type': 'ListItem',
+      position: entry.position ?? index + 1,
+      name: entry.name,
+      item: resolveCanonical(entry.url),
+    })),
   };
 }
 
@@ -157,32 +173,10 @@ export function buildArticleSchema({
   type = 'TechArticle',
   additionalProperty,
   authorName = SITE_NAME,
-  authorType = 'Organization',
-  reviewerName,
-  reviewerType = 'Organization',
-  authorRef,
-  reviewerRef,
 }: ArticleSchemaInput): Record<string, unknown> {
   const published = datePublished ?? buildDefaultPublishDate();
   const modified = dateModified ?? published;
-  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
-
-  const author = authorRef
-    ? schemaPersonNode(authorRef)
-    : {
-        '@type': authorType,
-        name: authorName,
-        url: `${SITE_URL}/`,
-      };
-
-  const contributor = reviewerRef
-    ? schemaPersonNode(reviewerRef)
-    : reviewerName
-      ? {
-          '@type': reviewerType,
-          name: reviewerName,
-        }
-      : undefined;
+  const pageUrl = resolveCanonical(url);
 
   return {
     '@context': 'https://schema.org',
@@ -192,8 +186,11 @@ export function buildArticleSchema({
     ...(additionalProperty && additionalProperty.length > 0
       ? { additionalProperty }
       : {}),
-    author,
-    ...(contributor ? { contributor } : {}),
+    author: {
+      '@type': 'Organization',
+      name: authorName,
+      url: `${SITE_URL}/`,
+    },
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
@@ -209,6 +206,7 @@ export function buildArticleSchema({
       '@type': 'WebPage',
       '@id': pageUrl,
     },
+    url: pageUrl,
     image: DEFAULT_OG_IMAGE,
   };
 }
@@ -228,7 +226,7 @@ export function buildWebPageSchema({
   description,
   url,
 }: WebPageSchemaInput): Record<string, unknown> {
-  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+  const pageUrl = resolveCanonical(url);
 
   return {
     '@context': 'https://schema.org',
@@ -260,7 +258,7 @@ export function buildWebApplicationSchema({
   dateModified,
   id = 'web-application',
 }: WebApplicationSchemaInput): Record<string, unknown> {
-  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+  const pageUrl = resolveCanonical(url);
 
   return {
     '@context': 'https://schema.org',
@@ -289,7 +287,7 @@ export function buildAboutPageSchema({
   description: string;
   url: string;
 }): Record<string, unknown> {
-  const pageUrl = url.startsWith('http') ? url : `${SITE_URL}${url}`;
+  const pageUrl = resolveCanonical(url);
 
   return {
     '@context': 'https://schema.org',

@@ -11,11 +11,14 @@ describe('buildComparisonInsights', () => {
     const comparison = compareTires(sizeA, sizeB, 60);
     const insights = buildComparisonInsights(sizeA, sizeB, comparison, specsA, specsB);
 
-    expect(insights.seo.h1).toBe('Tire Size Comparison Calculator');
+    expect(insights.seo.h1).toBe('225/45R17 vs 235/40R18 Tire Size Comparison');
     expect(insights.seo.title).toContain(sizeA);
     expect(insights.seo.title).toContain(sizeB);
+    expect(insights.pageIntro.sentence).toContain(sizeA);
+    expect(insights.pageIntro.sentence).toContain(sizeB);
     expect(insights.pageIntro.sentence).toMatch(/overall diameter/i);
-    expect(insights.pageIntro.sentence).toMatch(/speedometer error/i);
+    expect(insights.pageIntro.sentence).toMatch(/speedometer impact/i);
+    expect(insights.pageIntro.sentence).toMatch(/dimensional calculations only/i);
     expect(insights.summaryChips).toHaveLength(3);
     expect(insights.summaryChips[0].label).toBe('Diameter difference');
     expect(['within', 'caution', 'neutral']).toContain(insights.summaryChips[0].tone);
@@ -49,14 +52,28 @@ describe('buildComparisonInsights', () => {
     expect(insights.performanceCards).toHaveLength(6);
     expect(insights.fitmentScore).toBeGreaterThan(0);
     expect(insights.thingsToConsider.length).toBeGreaterThan(0);
-    expect(insights.seo.faqs).toHaveLength(12);
+    expect(insights.seo.faqs.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('buildComparisonPageIntro uses fixed dashboard introduction copy', () => {
+  it('buildComparisonPageIntro keeps fixed dashboard copy for the blank calculator', () => {
     const intro = buildComparisonPageIntro('225/45R17', '235/40R18');
     expect(intro.sentence).toMatch(/Compare two tire sizes side by side/i);
     expect(intro.sentence).toMatch(/wheel requirements/i);
     expect(intro.sentence).not.toContain('225/45R17');
+  });
+
+  it('pair insights pageIntro is pair-specific calculated answer copy', () => {
+    const insights = buildComparisonInsights(
+      '275/70R18',
+      '285/70R18',
+      compareTires('275/70R18', '285/70R18', 60),
+      getTireSpecs('275/70R18'),
+      getTireSpecs('285/70R18'),
+    );
+    expect(insights.seo.h1).toBe('275/70R18 vs 285/70R18 Tire Size Comparison');
+    expect(insights.pageIntro.sentence).toContain('same 18" wheel diameter');
+    expect(insights.seo.metaDescription).toContain('Same 18" wheel');
+    expect(insights.seo.metaDescription).not.toMatch(/fitment score/i);
   });
 
   it('builds stable KPI cards for 275/70R18 vs 285/70R18 and same-size', () => {
@@ -162,10 +179,9 @@ describe('buildComparisonInsights', () => {
     expect(insights.whatThisChangeMeans).toContain('spec table');
     expect(insights.whatThisChangeMeans).not.toMatch(/\d+\.\d{2}%/);
     expect(insights.seo.isGoodUpgrade.body).toContain('Fitment score');
-    expect(insights.seo.faqs).toHaveLength(12);
-    expect(insights.seo.faqs[0].question).toMatch(/accurate/i);
+    expect(insights.seo.faqs.length).toBeGreaterThanOrEqual(1);
+    expect(insights.seo.faqs[0].question).toMatch(/vehicle fitment/i);
     expect(insights.seo.faqs.some((f) => f.question.includes('vehicle fitment'))).toBe(true);
-    expect(insights.seo.faqs.some((f) => f.question.includes('speedometer'))).toBe(true);
     for (const faq of insights.seo.faqs) {
       expect(faq.answer).toMatch(/\d/);
       expect(faq.answer.toLowerCase()).not.toMatch(

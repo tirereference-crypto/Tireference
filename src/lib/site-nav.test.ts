@@ -16,6 +16,7 @@ describe('NAV_CALCULATORS', () => {
 describe('getActiveNavItem', () => {
   it('marks tire size hub pages', () => {
     expect(getActiveNavItem('/tire-sizes/')).toBe('tire-sizes');
+    expect(getActiveNavItem('/tire-sizes/winter/')).toBe('tire-sizes');
     expect(getActiveNavItem('/tire-size/275-70r18/')).toBe('tire-sizes');
   });
 

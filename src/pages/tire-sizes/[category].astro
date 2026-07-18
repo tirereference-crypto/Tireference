@@ -1,0 +1,542 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import HubBreadcrumb from '../../components/hub/HubBreadcrumb.astro';
+import {
+  TIRE_CATEGORY_HUBS,
+  TIRE_HUB_CATEGORY_SLUGS,
+  buildTireCategoryHubData,
+  isTireHubCategorySlug,
+  tireCategoryHubPath,
+  type TireHubCategorySlug,
+} from '../../lib/tire-category-hubs';
+import { buildPageSchema } from '../../lib/seo/page-schemas';
+import { buildItemListSchema } from '../../lib/seo/schema';
+import { formatCategoryLabel, formatSeasonLabel } from '../../lib/tire-size-products';
+
+export function getStaticPaths() {
+  return TIRE_HUB_CATEGORY_SLUGS.map((category) => ({
+    params: { category },
+    props: { category },
+  }));
+}
+
+interface Props {
+  category: TireHubCategorySlug;
+}
+
+const categoryParam = Astro.props.category ?? Astro.params.category ?? '';
+if (!isTireHubCategorySlug(categoryParam)) {
+  throw new Error(`Unknown tire category: ${categoryParam}`);
+}
+
+const hub = buildTireCategoryHubData(categoryParam);
+const otherCategories = TIRE_HUB_CATEGORY_SLUGS
+  .filter((slug) => slug !== hub.slug)
+  .map((slug) => ({
+    label: TIRE_CATEGORY_HUBS[slug].label,
+    href: tireCategoryHubPath(slug),
+  }));
+
+const schema = buildPageSchema({
+  breadcrumbs: [
+    { name: 'Home', item: '/' },
+    { name: 'Tire Sizes', item: '/tire-sizes/' },
+    { name: hub.label, item: hub.path },
+  ],
+  extra: [
+    buildItemListSchema({
+      name: `Common ${hub.label} tire sizes`,
+      description: hub.description,
+      url: hub.path,
+      items: hub.sizes.map((row) => ({
+        name: row.entry.size,
+        url: row.href,
+      })),
+    }),
+  ],
+});
+---
+
+<Layout
+  title={hub.title}
+  description={hub.description}
+  canonical={hub.path}
+  schema={schema}
+>
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <HubBreadcrumb
+      crumbs={[
+        { label: 'Home', href: '/' },
+        { label: 'Tire Sizes', href: '/tire-sizes/' },
+        { label: hub.label },
+      ]}
+    />
+
+    <header class="category-hero">
+      <p class="category-eyebrow">Tire category guide</p>
+      <h1>{hub.h1}</h1>
+      <p>{hub.introduction}</p>
+      <div class="category-hero__facts" aria-label="Category coverage">
+        <span>{hub.sizes.length} indexed sizes</span>
+        <span>{hub.products.length} featured exact-size products</span>
+        <span>Data-backed membership</span>
+      </div>
+    </header>
+
+    <div class="category-layout">
+      <main class="min-w-0 space-y-8">
+        <section class="category-card" aria-labelledby="considerations-heading">
+          <div class="category-section-head">
+            <div>
+              <p class="category-kicker">Selection guide</p>
+              <h2 id="considerations-heading">Important {hub.label} tire considerations</h2>
+            </div>
+          </div>
+          <div class="consideration-grid">
+            {hub.considerations.map((item) => (
+              <article>
+                <h3>{item.title}</h3>
+                <p>{item.detail}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section class="category-card" id="common-sizes" aria-labelledby="sizes-heading">
+          <div class="category-section-head">
+            <div>
+              <p class="category-kicker">Indexed fitments</p>
+              <h2 id="sizes-heading">Common {hub.label} tire sizes</h2>
+              <p>
+                Open a size for nominal dimensions, verified fitment examples, exact-size
+                products, alternatives, and safety limitations.
+              </p>
+            </div>
+          </div>
+          <ul class="size-grid">
+            {hub.sizes.map((row) => (
+              <li>
+                <a href={row.href}>
+                  <span>
+                    <strong>{row.entry.size}</strong>
+                    <small>{row.diameterIn.toFixed(1)} in nominal diameter</small>
+                  </span>
+                  <span class="size-grid__coverage">
+                    {row.matchingProductCount > 0
+                      ? `${row.matchingProductCount} matching product${row.matchingProductCount === 1 ? '' : 's'}`
+                      : 'Editorial category'}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p class="category-data-note">
+            Category membership comes from the size’s explicit editorial category and exact
+            product category/season metadata. It is not inferred from dimensions alone, and one
+            size may appear in multiple supported hubs.
+          </p>
+        </section>
+
+        {hub.products.length > 0 && (
+          <section class="category-card" id="products" aria-labelledby="products-heading">
+            <div class="category-section-head">
+              <div>
+                <p class="category-kicker">Manufacturer catalog coverage</p>
+                <h2 id="products-heading">Available {hub.label} tire products</h2>
+                <p>
+                  Each row is an exact product-size combination in the indexed manufacturer data.
+                </p>
+              </div>
+            </div>
+            <ul class="product-grid">
+              {hub.products.map((product) => (
+                <li>
+                  <a href={product.href}>
+                    <span class="product-grid__identity">
+                      <strong>{product.brand} {product.model}</strong>
+                      <span>{product.size}</span>
+                    </span>
+                    <span class="product-grid__meta">
+                      <span>{formatCategoryLabel(product.productCategory)}</span>
+                      {product.season && <span>{formatSeasonLabel(product.season)}</span>}
+                      <span>{product.fullSpecs ? 'Manufacturer full specs' : 'Manufacturer size listing'}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {hub.comparisons.length > 0 && (
+          <section class="category-card" id="popular-comparisons" aria-labelledby="comparisons-heading">
+            <div class="category-section-head">
+              <div>
+                <p class="category-kicker">Side-by-side research</p>
+                <h2 id="comparisons-heading">Popular {hub.label} tire comparisons</h2>
+                <p>Check diameter, width, sidewall, clearance, and speedometer changes.</p>
+              </div>
+            </div>
+            <ul class="link-grid">
+              {hub.comparisons.map((comparison) => (
+                <li><a href={comparison.href}>{comparison.label}<span aria-hidden="true">→</span></a></li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section class="category-card" id="calculators" aria-labelledby="calculators-heading">
+          <div class="category-section-head">
+            <div>
+              <p class="category-kicker">Fitment tools</p>
+              <h2 id="calculators-heading">Relevant calculators</h2>
+            </div>
+          </div>
+          <div class="resource-grid">
+            {hub.calculators.map((calculator) => (
+              <a href={calculator.href}>
+                <strong>{calculator.label}</strong>
+                <span>{calculator.description}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section class="category-card" id="guides" aria-labelledby="guides-heading">
+          <div class="category-section-head">
+            <div>
+              <p class="category-kicker">Learn before buying</p>
+              <h2 id="guides-heading">Relevant tire guides</h2>
+            </div>
+          </div>
+          <div class="resource-grid">
+            {hub.guides.map((guide) => (
+              <a href={guide.href}>
+                <strong>{guide.label}</strong>
+                <span>{guide.description}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section class="category-safety" aria-labelledby="limitations-heading">
+          <h2 id="limitations-heading">Fitment limitations</h2>
+          <p>
+            A category label describes intended use, not guaranteed vehicle fitment. Confirm the
+            door placard, approved wheel width, load index, speed rating, wheel offset, suspension
+            clearance, and manufacturer guidance before changing size or construction.
+          </p>
+        </section>
+      </main>
+
+      <aside class="category-sidebar" aria-label="Category navigation">
+        <section class="category-card">
+          <h2>Browse other categories</h2>
+          <ul class="side-links">
+            {otherCategories.map((category) => (
+              <li><a href={category.href}>{category.label}<span aria-hidden="true">→</span></a></li>
+            ))}
+          </ul>
+        </section>
+        <section class="category-card">
+          <h2>Start with your placard</h2>
+          <p class="sidebar-copy">
+            Search or calculate the exact size printed on the driver-door placard before comparing
+            alternatives.
+          </p>
+          <a class="category-button" href="/calculators/tire-size-calculator/">Open size calculator</a>
+        </section>
+      </aside>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .category-hero {
+    margin-top: 1.5rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 15%, var(--color-border));
+    border-radius: 1.25rem;
+    background:
+      radial-gradient(circle at 92% 12%, rgb(var(--color-primary-rgb) / 0.16), transparent 34%),
+      linear-gradient(135deg, var(--color-surface), color-mix(in srgb, var(--color-primary-light) 32%, var(--color-surface)));
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    box-shadow: 0 16px 45px -32px rgb(15 23 42 / 0.45);
+  }
+  .category-eyebrow,
+  .category-kicker {
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .category-hero h1 {
+    margin-top: 0.4rem;
+    max-width: 50rem;
+    color: var(--color-heading);
+    font-size: clamp(2rem, 5vw, 3.3rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+  .category-hero > p:not(.category-eyebrow) {
+    margin-top: 0.9rem;
+    max-width: 49rem;
+    color: var(--color-body);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .category-hero__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1.2rem;
+  }
+  .category-hero__facts span {
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.7);
+    padding: 0.35rem 0.7rem;
+    color: var(--color-heading);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .category-layout {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  @media (min-width: 1024px) {
+    .category-layout {
+      grid-template-columns: minmax(0, 1fr) 18rem;
+      align-items: start;
+    }
+    .category-sidebar {
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+  .category-sidebar {
+    display: grid;
+    gap: 1rem;
+  }
+  .category-card {
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    padding: clamp(1rem, 3vw, 1.5rem);
+    box-shadow: 0 4px 18px -16px rgb(15 23 42 / 0.35);
+  }
+  .category-card h2,
+  .category-safety h2 {
+    color: var(--color-heading);
+    font-size: 1.2rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+  }
+  .category-section-head p:not(.category-kicker) {
+    margin-top: 0.35rem;
+    max-width: 46rem;
+    color: var(--color-muted);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+  .consideration-grid,
+  .resource-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 640px) {
+    .consideration-grid,
+    .resource-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .consideration-grid article {
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-primary-light) 16%, var(--color-surface));
+    padding: 0.9rem;
+  }
+  .consideration-grid h3 {
+    color: var(--color-heading);
+    font-size: 0.85rem;
+    font-weight: 750;
+  }
+  .consideration-grid p {
+    margin-top: 0.3rem;
+    color: var(--color-body);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .size-grid,
+  .product-grid,
+  .link-grid,
+  .side-links {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 640px) {
+    .size-grid,
+    .link-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .size-grid a,
+  .product-grid a,
+  .link-grid a,
+  .resource-grid a,
+  .side-links a {
+    text-decoration: none;
+  }
+  .size-grid a {
+    display: flex;
+    min-height: 4.4rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem 0.85rem;
+  }
+  .size-grid a:hover,
+  .product-grid a:hover,
+  .link-grid a:hover,
+  .resource-grid a:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 38%, var(--color-border));
+  }
+  .size-grid strong {
+    display: block;
+    color: var(--color-heading);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9rem;
+  }
+  .size-grid small {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--color-muted);
+    font-size: 0.68rem;
+  }
+  .size-grid__coverage {
+    max-width: 7rem;
+    color: var(--color-primary);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-align: right;
+  }
+  .category-data-note {
+    margin-top: 0.85rem;
+    color: var(--color-muted);
+    font-size: 0.7rem;
+    line-height: 1.5;
+  }
+  .product-grid a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 0.8rem 0.9rem;
+  }
+  .product-grid__identity strong {
+    display: block;
+    color: var(--color-heading);
+    font-size: 0.84rem;
+  }
+  .product-grid__identity > span {
+    color: var(--color-primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .product-grid__meta {
+    display: flex;
+    max-width: 18rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.3rem;
+  }
+  .product-grid__meta span {
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    padding: 0.2rem 0.45rem;
+    color: var(--color-muted);
+    font-size: 0.62rem;
+    font-weight: 650;
+  }
+  .link-grid a,
+  .side-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.7rem;
+    padding: 0.7rem 0.8rem;
+    color: var(--color-heading);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .resource-grid a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 0.9rem;
+  }
+  .resource-grid strong {
+    color: var(--color-heading);
+    font-size: 0.84rem;
+  }
+  .resource-grid span {
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+  .category-safety {
+    border: 1px solid color-mix(in srgb, #d97706 28%, var(--color-border));
+    border-radius: 1rem;
+    background: color-mix(in srgb, #fef3c7 38%, var(--color-surface));
+    padding: 1.2rem 1.35rem;
+  }
+  .category-safety p,
+  .sidebar-copy {
+    margin-top: 0.45rem;
+    color: var(--color-body);
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+  .side-links {
+    margin-top: 0.65rem;
+  }
+  .side-links a {
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    padding-inline: 0;
+  }
+  .category-button {
+    display: inline-flex;
+    margin-top: 0.9rem;
+    border-radius: 0.65rem;
+    background: var(--color-primary);
+    padding: 0.55rem 0.85rem;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+  @media (max-width: 639px) {
+    .product-grid a {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .product-grid__meta {
+      justify-content: flex-start;
+    }
+  }
+</style>

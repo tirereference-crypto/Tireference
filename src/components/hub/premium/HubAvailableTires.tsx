@@ -11,10 +11,10 @@ import type { VerifiedTireModel } from '../../../lib/size-availability';
 export default function HubAvailableTires({
   displaySize,
   models,
-  detailHref = '#spec-comparison',
 }: {
   displaySize: string;
   models: VerifiedTireModel[];
+  /** @deprecated Unused — section-level links avoid duplicate destinations. */
   detailHref?: string | null;
 }) {
   if (models.length === 0) return null;
@@ -27,7 +27,7 @@ export default function HubAvailableTires({
             key={`${model.brand}|${model.model}|${model.service ?? ''}|${model.loadRange ?? ''}`}
             model={model}
             sizeLabel={displaySize}
-            detailHref={detailHref}
+            detailHref={null}
             onTrack={() => undefined}
           />
         ))}

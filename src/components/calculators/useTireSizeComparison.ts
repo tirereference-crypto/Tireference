@@ -10,6 +10,7 @@ import {
   TIRE_COMPARISON_URL_KEYS,
   tireComparisonUrlValues,
 } from '../../lib/calculator-url-state';
+import { resolveComparisonRedirect } from '../../lib/comparison-redirect';
 import {
   buildComparisonVerdict,
   formatTireComparisonResults,
@@ -189,6 +190,16 @@ export function useTireSizeComparison(options: UseTireSizeComparisonOptions = {}
   // the client (same pattern as the tire size calculator) so Compare deep-links work.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    // Fallback for dev / non-Cloudflare hosting: the Pages Function normally
+    // 301s legacy ?current/?new URLs at the edge before this code runs. Never
+    // silently render the default comparison from invalid params.
+    const redirect = resolveComparisonRedirect(params);
+    if (redirect.type === 'redirect') {
+      window.location.replace(redirect.location);
+      return;
+    }
+
     const parsed = parseTireComparisonFromSearch(params, {
       from: urlDefaults.from,
       to: urlDefaults.to,

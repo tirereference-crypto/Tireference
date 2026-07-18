@@ -10,13 +10,36 @@ import { hubPagePath } from '../../lib/tire-size-url';
 import { getTireSpecs } from '../../lib/tire-math';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema } from '../../lib/seo/page-schemas';
+import { buildItemListSchema } from '../../lib/seo/schema';
+import {
+  TIRE_CATEGORY_HUBS,
+  TIRE_HUB_CATEGORY_SLUGS,
+  buildTireCategoryHubData,
+  tireCategoryHubPath,
+} from '../../lib/tire-category-hubs';
 
 const grouped = groupSizesByCategory();
+const categoryCards = TIRE_HUB_CATEGORY_SLUGS.map((slug) => ({
+  ...TIRE_CATEGORY_HUBS[slug],
+  href: tireCategoryHubPath(slug),
+  sizeCount: buildTireCategoryHubData(slug).sizes.length,
+}));
 
 const schema = buildPageSchema({
   breadcrumbs: [
     { name: 'Home', item: '/' },
     { name: 'Tire Sizes', item: '/tire-sizes/' },
+  ],
+  extra: [
+    buildItemListSchema({
+      name: 'Tire size category directories',
+      description: SEO_DESCRIPTIONS.tireSizesIndex,
+      url: '/tire-sizes/',
+      items: categoryCards.map((category) => ({
+        name: `${category.label} tire sizes`,
+        url: category.href,
+      })),
+    }),
   ],
 });
 ---
@@ -43,6 +66,27 @@ const schema = buildPageSchema({
         {TIRE_CATEGORY_ORDER.reduce((sum, cat) => sum + (grouped[cat]?.length ?? 0), 0)} common metric sizes with diameter, equivalents, and comparison data.
       </p>
     </header>
+
+    <section class="mb-10" aria-labelledby="category-hubs-heading">
+      <h2 id="category-hubs-heading" class="mb-4 text-xl font-semibold text-heading">
+        Browse by tire category
+      </h2>
+      <ul class="grid gap-3 sm:grid-cols-2">
+        {categoryCards.map((category) => (
+          <li>
+            <a
+              href={category.href}
+              class="block rounded-xl border border-border bg-surface px-4 py-4 shadow-card transition-colors hover:border-primary/30"
+            >
+              <span class="font-semibold text-heading">{category.label} tire sizes</span>
+              <span class="mt-1 block text-sm leading-relaxed text-muted">
+                {category.sizeCount} indexed sizes · guidance, products and comparisons
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
 
     <div class="space-y-10">
       {

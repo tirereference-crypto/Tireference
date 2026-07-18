@@ -13,11 +13,11 @@ const title = 'Terms of Use';
 const description =
   'Read the Terms of Use governing access to Tire Reference, including acceptable use, intellectual property, disclaimers and limitations of liability.';
 
-const schema = buildInfoPageSchema(title, description, '/terms', 'Terms of Use');
+const schema = buildInfoPageSchema(title, description, '/terms/', 'Terms of Use');
 const updated = formatEditorialDate();
 ---
 
-<Layout title={title} description={description} canonical="/terms" schema={schema}>
+<Layout title={title} description={description} canonical="/terms/" schema={schema}>
   <div class="info-page">
     <div class="info-shell info-shell--narrow">
       <InfoPageHero

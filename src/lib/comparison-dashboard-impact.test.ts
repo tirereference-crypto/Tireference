@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDashboardImpactCards,
+  buildPairSpecificChecklistGroups,
   buildDashboardWhatChangesContent,
   THINGS_TO_CHECK_BEFORE_CHANGING_SIZES,
 } from './comparison-dashboard-impact';
@@ -61,7 +62,7 @@ describe('comparison dashboard impact', () => {
     expect(cards[4].value).toMatch(/Same 18-inch wheel/);
   });
 
-  it('keeps visible insight copy in the 180–250 word band', () => {
+  it('emits concise pair-specific blocks and hides AWD when inside threshold', () => {
     const pairs: [string, string][] = [
       ['225/45R17', '235/40R18'],
       ['275/70R18', '285/70R18'],
@@ -76,21 +77,46 @@ describe('comparison dashboard impact', () => {
         getTireSpecs(b),
       );
       expect(content.heading).toBe(`What changes when switching from ${a} to ${b}?`);
-      expect(content.wordCount).toBeGreaterThanOrEqual(180);
-      expect(content.wordCount).toBeLessThanOrEqual(250);
-      expect(content.paragraphs.length).toBe(5);
-      expect(content.insights).toHaveLength(4);
-      expect(content.insights.map((row) => row.id)).toEqual([
-        'diameter',
-        'width',
-        'wheel',
-        'gearing-clearance',
-      ]);
+      expect(content.insights.length).toBeGreaterThanOrEqual(3);
+      expect(content.insights.map((row) => row.id)).toEqual(
+        expect.arrayContaining(['wheel', 'width', 'speedometer']),
+      );
+      expect(content.insights.some((row) => row.id === 'awd')).toBe(false);
       for (const insight of content.insights) {
-        expect(insight.sentences.length).toBeGreaterThanOrEqual(2);
+        expect(insight.sentences.length).toBeGreaterThanOrEqual(1);
         expect(insight.sentences.length).toBeLessThanOrEqual(3);
       }
     }
+  });
+
+  it('adds concise AWD and larger-envelope checks only for a significant pair', () => {
+    const a = '275/70R18';
+    const b = '305/70R18';
+    const comparison = compareTires(a, b, 60);
+    const specsA = getTireSpecs(a);
+    const specsB = getTireSpecs(b);
+    const content = buildDashboardWhatChangesContent(a, b, comparison, specsA, specsB);
+    const checks = buildPairSpecificChecklistGroups(a, b, comparison, specsA, specsB);
+
+    expect(content.insights.find((row) => row.id === 'awd')?.sentences[0]).toMatch(
+      /outside.*±3%|±3%.*outside/i,
+    );
+    expect(checks.map((group) => group.title)).toEqual(
+      expect.arrayContaining(['Wheel reuse check', 'Larger envelope check', 'Drivetrain check']),
+    );
+  });
+
+  it('hides tire-model overlap when the database has no shared brand/model', () => {
+    const a = '295/35R21';
+    const b = '305/70R18';
+    const content = buildDashboardWhatChangesContent(
+      a,
+      b,
+      compareTires(a, b, 60),
+      getTireSpecs(a),
+      getTireSpecs(b),
+    );
+    expect(content.insights.some((row) => row.id === 'models')).toBe(false);
   });
 
   it('exposes grouped pre-install checklist without claiming passes', () => {

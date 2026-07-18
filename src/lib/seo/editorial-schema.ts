@@ -1,8 +1,6 @@
 import { SITE_CONTENT_UPDATED } from '../editorial';
-import { defaultEditorialSchemaRefs } from '../people';
 import {
   buildArticleSchema,
-  buildDefaultPublishDate,
   type ArticleSchemaInput,
 } from './schema';
 
@@ -13,14 +11,14 @@ type EditorialArticleInput = Pick<
   dateModified?: string;
 };
 
-/** Article/TechArticle JSON-LD with default author and reviewer Person refs. */
+/**
+ * Article/TechArticle JSON-LD with Tire Reference (Organization) as author.
+ * Individual named authors/reviewers are not used on this site.
+ */
 export function buildEditorialArticleSchema(input: EditorialArticleInput): Record<string, unknown> {
-  const refs = defaultEditorialSchemaRefs();
   return buildArticleSchema({
     ...input,
-    authorRef: refs.authorRef,
-    reviewerRef: refs.reviewerRef,
-    datePublished: input.datePublished ?? buildDefaultPublishDate(),
+    datePublished: input.datePublished ?? SITE_CONTENT_UPDATED,
     dateModified: input.dateModified ?? SITE_CONTENT_UPDATED,
     type: input.type ?? 'TechArticle',
   });

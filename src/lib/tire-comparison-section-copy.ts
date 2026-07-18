@@ -14,6 +14,10 @@ import type {
 } from './comparison-data-sources';
 import { resolveComparisonDataSources } from './comparison-data-sources';
 import type { EngineeringAnalysis } from './tire-comparison-engineering-analysis';
+import {
+  buildComparisonPairRelationships,
+} from './comparison-pair-relationships';
+import { FITMENT_DIAMETER_PCT } from './tire-comparison-fitment';
 
 import {
   fmtInQuote,
@@ -262,6 +266,7 @@ function loadSpeedSnippet(
 /**
  * Expert FAQ set for the comparison calculator.
  * Primary questions (first 8) show by default; remaining are behind “Show more questions”.
+ * Every answer cites calculated values from this pair so pages stay non-duplicative.
  */
 export function buildComparisonFaqs(
   sizeA: string,
@@ -295,6 +300,13 @@ export function buildComparisonFaqs(
       sizeB,
     });
   const { mode, publishedA, publishedB } = sources;
+  const relationship = buildComparisonPairRelationships(
+    sizeA,
+    sizeB,
+    comparison,
+    specsA,
+    specsB,
+  );
   const sameWheel = wheelDelta === 0;
   const larger = diamDiffIn > 0.05;
   const smaller = diamDiffIn < -0.05;
@@ -308,6 +320,17 @@ export function buildComparisonFaqs(
     : '';
 
   const primary: Array<{ question: string; answer: string }> = [
+    {
+      question: 'Does this comparison confirm vehicle fitment?',
+      answer: [
+        `No. It performs a dimensional comparison of ${sizeA} and ${sizeB}, not a complete vehicle fitment analysis.`,
+        `Confirmed fitment still needs model year, trim, factory tire specification, wheel width, offset, bolt pattern, hub bore, brake clearance, suspension and fender clearance, plus load and speed-rating requirements.`,
+        `What this tool can quantify from size (and published catalog fields when present): diameter difference (${fmtPct(comparison.diameterDiffPercent)}), width difference (${fmtSigned(widthDiffMm, 0, ' mm')}), and wheel diameter requirement (${specsA.wheelDiameterIn}" → ${specsB.wheelDiameterIn}").`,
+        rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
+        loadSpeedSnippet(publishedA, publishedB),
+        `A diameter change within ±${FITMENT_DIAMETER_PCT.pass}% is only a common screening guideline — not a fitment guarantee for any specific vehicle.`,
+      ].join('\n\n'),
+    },
     {
       question: 'How accurate are the comparison results?',
       answer: [
@@ -341,17 +364,6 @@ export function buildComparisonFaqs(
       ].join('\n\n'),
     },
     {
-      question: 'Does this calculator confirm vehicle fitment?',
-      answer: [
-        `No. It performs a dimensional comparison of ${sizeA} and ${sizeB}, not a complete vehicle fitment analysis.`,
-        `Confirmed fitment still needs model year, trim, factory tire specification, wheel width, offset, bolt pattern, hub bore, brake clearance, suspension and fender clearance, plus load and speed-rating requirements.`,
-        `What this tool can quantify from size (and published catalog fields when present): diameter difference (${fmtPct(comparison.diameterDiffPercent)}), width difference (${fmtSigned(widthDiffMm, 0, ' mm')}), and wheel diameter requirement (${specsA.wheelDiameterIn}" → ${specsB.wheelDiameterIn}").`,
-        rimRangeSnippet(publishedA, publishedB, sizeA, sizeB),
-        loadSpeedSnippet(publishedA, publishedB),
-        `A diameter change near ±3 percent is only a common screening guideline — it is not a fitment guarantee for any specific vehicle.`,
-      ].join('\n\n'),
-    },
-    {
       question: 'Do I need new wheels?',
       answer: sameWheel
         ? [
@@ -382,7 +394,7 @@ export function buildComparisonFaqs(
         `Clearance must be checked through the suspension and steering travel, not only when the vehicle is parked on level ground.`,
         `Inspect full steering lock, suspension compression, inner sidewall to strut or control arm, outer shoulder to fender or liner, brake and wheel-barrel clearance, and tire growth/deflection under load — plus any wheel offset or width change.`,
         `For this pair, half the overall diameter change approximates the static radius or ground-clearance shift: about ${fmtSigned(groundClearanceChangeIn, 2, ' in')} from the ${fmtPct(comparison.diameterDiffPercent)} diameter move (${fmtInQuote(specsA.overallDiameterIn)} → ${fmtInQuote(specsB.overallDiameterIn)}).`,
-        `Width increase (${fmtSigned(widthDiffMm, 0, ' mm')}) spreads around the wheel centreline only when wheel width and offset stay unchanged; a different offset moves the whole package inward or outward.`,
+        `Width change (${fmtSigned(widthDiffMm, 0, ' mm')}) spreads around the wheel centreline only when wheel width and offset stay unchanged; a different offset moves the whole package inward or outward.`,
       ].join('\n\n'),
     },
     {
@@ -413,7 +425,8 @@ export function buildComparisonFaqs(
         `Nominal figures are useful for generic size-to-size comparison; published figures are preferred for exact model-to-model analysis.`,
         sourceModeSentence(mode, sizeA, sizeB, publishedA, publishedB),
       ].join('\n\n'),
-    },    {
+    },
+    {
       question: 'How does tire size affect effective gearing?',
       answer: [
         larger
@@ -422,7 +435,7 @@ export function buildComparisonFaqs(
             ? `A smaller rolling diameter on ${sizeB} produces shorter effective gearing: more wheel revolutions per road mile and usually a small rise in engine RPM at a given true road speed.`
             : `Rolling diameter is nearly matched between ${sizeA} and ${sizeB}, so effective gearing should stay close.`,
         `${revsLabel} moves ${fmtSigned(revsDiff, unitSystem === 'metric' ? 1 : 0)} (${fmtPct(revsDiffPct)}). At ${indicatedSpeed} ${speedUnit} indicated, theoretical engine speed shifts with that circumference change — exact RPM also depends on final-drive ratio and transmission gear.`,
-        `Acceleration response can feel slightly softer with taller gearing or sharper with shorter gearing; treat those effects as directional rather than guaranteed for every powertrain.`,
+        `Acceleration response can feel slightly softer with taller gearing or sharper with shorter gearing; treat those effects as directional rather than certain for every powertrain.`,
       ].join('\n\n'),
     },
     {
@@ -434,6 +447,27 @@ export function buildComparisonFaqs(
       ].join('\n\n'),
     },
   ];
+
+  if (relationship.awdCaution) {
+    secondary.push({
+      question: 'Is this diameter difference significant for AWD or 4WD use?',
+      answer: `Yes. The ${fmtPct(
+        comparison.diameterDiffPercent,
+      )} nominal diameter difference is outside the site’s ±${
+        FITMENT_DIAMETER_PCT.pass
+      }% comparison threshold. Do not mix these sizes across driven axles unless the vehicle manufacturer specifies the combination.`,
+    });
+  }
+
+  if (mode !== 'generic_vs_generic' || publishedA || publishedB) {
+    secondary.push({
+      question: 'Are published product measurements available for this pair?',
+      answer: `${sourceModeSentence(mode, sizeA, sizeB, publishedA, publishedB)} ${loadSpeedSnippet(
+        publishedA,
+        publishedB,
+      )}`,
+    });
+  }
 
   return [...primary, ...secondary];
 }

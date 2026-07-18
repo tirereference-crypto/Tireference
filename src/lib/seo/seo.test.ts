@@ -13,6 +13,7 @@ import {
   buildBreadcrumbSchema,
   buildFaqPageSchema,
   buildHomePageSchema,
+  buildItemListSchema,
   buildOrganizationSchema,
   buildWebSiteSchema,
 } from './schema';
@@ -126,15 +127,34 @@ describe('buildWebSiteSchema', () => {
 });
 
 describe('buildBreadcrumbSchema', () => {
-  it('outputs ordered breadcrumb items', () => {
+  it('outputs ordered breadcrumb items with canonical absolute URLs', () => {
     const schema = buildBreadcrumbSchema([
       { name: 'Home', item: '/' },
-      { name: 'Tire Sizes', item: '/tire-sizes/' },
+      { name: 'Tire Sizes', item: '/tire-sizes' },
     ]);
 
-    const items = (schema.itemListElement as { position: number; name: string }[]);
-    expect(items[0]).toMatchObject({ position: 1, name: 'Home' });
-    expect(items[1]).toMatchObject({ position: 2, name: 'Tire Sizes' });
+    const items = (schema.itemListElement as { position: number; name: string; item?: string }[]);
+    expect(items[0]).toMatchObject({ position: 1, name: 'Home', item: `${SITE_URL}/` });
+    expect(items[1]).toMatchObject({
+      position: 2,
+      name: 'Tire Sizes',
+      item: `${SITE_URL}/tire-sizes/`,
+    });
+  });
+});
+
+describe('buildItemListSchema', () => {
+  it('returns undefined for empty lists and canonicalizes URLs', () => {
+    expect(buildItemListSchema({ name: 'Empty', url: '/tire-sizes/', items: [] })).toBeUndefined();
+    const schema = buildItemListSchema({
+      name: 'Categories',
+      url: '/tire-sizes',
+      items: [{ name: 'Passenger', url: '/tire-sizes/passenger' }],
+    });
+    expect(schema?.url).toBe(`${SITE_URL}/tire-sizes/`);
+    expect((schema?.itemListElement as Array<{ item: string }>)[0].item).toBe(
+      `${SITE_URL}/tire-sizes/passenger/`,
+    );
   });
 });
 

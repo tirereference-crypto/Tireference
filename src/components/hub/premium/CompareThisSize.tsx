@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { comparisonPagePath } from '../../../lib/tire-comparison-paths';
+import { crawlableComparisonPath } from '../../../lib/crawlable-links';
 import { isValidComparisonPair } from '../../../lib/tire-comparison-validation';
-import { Button } from '../../ui/Button';
 
 export interface PopularComparison {
   target: string;
@@ -30,7 +29,14 @@ export default function CompareThisSize({
   );
 
   const validPopularComparisons = useMemo(
-    () => popularComparisons.filter(({ target }) => isValidComparisonPair(currentSize, target)),
+    () =>
+      popularComparisons
+        .filter(({ target }) => isValidComparisonPair(currentSize, target))
+        .map(({ target }) => ({
+          target,
+          href: crawlableComparisonPath(currentSize, target),
+        }))
+        .filter((row): row is { target: string; href: string } => Boolean(row.href)),
     [popularComparisons, currentSize],
   );
 
@@ -56,6 +62,8 @@ export default function CompareThisSize({
     return validSizeOptions.filter((s) => s.toLowerCase().includes(q));
   }, [validSizeOptions, query]);
 
+  const selectedHref = selected ? crawlableComparisonPath(currentSize, selected) : null;
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -72,19 +80,14 @@ export default function CompareThisSize({
     setOpen(false);
   }
 
-  function handleCompare(target = selected) {
-    if (!target) return;
-    const href = comparisonPagePath(currentSize, target);
-    if (!href) return;
-    window.location.href = href;
-  }
-
   const displayCurrent = formatSizeLabel(currentSize);
+  const compareLabel = selected
+    ? `Compare ${displayCurrent} vs ${formatSizeLabel(selected)}`
+    : 'Compare tire sizes';
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2 lg:items-end">
-        {/* Locked current size */}
         <div className="rounded-card border border-border bg-surface-subtle/70 p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-primary">
@@ -107,7 +110,6 @@ export default function CompareThisSize({
           </p>
         </div>
 
-        {/* Compare against selector */}
         <div ref={containerRef} className="relative">
           <label htmlFor={`${listId}-input`} className="mb-2 flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-primary">
@@ -173,34 +175,42 @@ export default function CompareThisSize({
         </div>
       </div>
 
-      <Button
-        type="button"
-        onClick={() => handleCompare()}
-        disabled={!selected}
-        className="w-full py-3 text-base font-semibold shadow-sm sm:w-auto sm:min-w-[12rem]"
-      >
-        Compare Sizes
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <path strokeLinecap="round" d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
-      </Button>
+      {selectedHref ? (
+        <a
+          href={selectedHref}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto sm:min-w-[12rem]"
+        >
+          {compareLabel}
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path strokeLinecap="round" d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      ) : (
+        <span
+          className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-primary/40 px-4 py-3 text-base font-semibold text-white sm:w-auto sm:min-w-[12rem]"
+          aria-disabled="true"
+        >
+          {selected
+            ? `No published comparison for ${displayCurrent} vs ${formatSizeLabel(selected)}`
+            : 'Select a size to compare'}
+        </span>
+      )}
 
       {validPopularComparisons.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">Popular Comparisons</p>
           <div className="mt-2.5 flex flex-wrap gap-2">
-            {validPopularComparisons.map(({ target }) => (
-              <button
+            {validPopularComparisons.map(({ target, href }) => (
+              <a
                 key={target}
-                type="button"
-                onClick={() => handleCompare(target)}
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-heading shadow-card transition-all hover:border-primary/30 hover:bg-primary-light/50 hover:text-primary hover:shadow-card-hover"
+                href={href}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-heading shadow-card transition-all hover:border-primary/30 hover:bg-primary-light/50 hover:text-primary hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 <svg className="h-3.5 w-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
                   <path strokeLinecap="round" d="M7 7h10v10H7z" />
                 </svg>
                 {displayCurrent} vs {formatSizeLabel(target)}
-              </button>
+              </a>
             ))}
           </div>
         </div>

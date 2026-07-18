@@ -3,7 +3,8 @@ import {
   formatDiameterDiff,
   type TireDiameterMatch,
 } from '../../../lib/tire-diameter-search';
-import { comparisonPagePathCurrent, tireSizeCalculatorPath } from '../../../lib/tire-size-url';
+import { preferredSizeCompareLink } from '../../../lib/crawlable-links';
+import { tireSizeCalculatorPath } from '../../../lib/tire-size-url';
 import { hasTireSizeGuide } from '../../../lib/has-tire-size-guide';
 import { getDatabaseProductionLabel } from '../../../lib/size-production-status';
 import {
@@ -172,6 +173,7 @@ export function ClosestDiameterMatch({
   const withinRange = Math.abs(match.diameterDiffIn) <= toleranceIn + 1e-9;
   const toleranceLabel = `±${toleranceIn.toFixed(1)} in`;
   const useHref = tireSizeCalculatorPath(match.size);
+  const compareLink = preferredSizeCompareLink(match.size);
 
   const modelsLine =
     uniqueModelCount > 0
@@ -282,8 +284,8 @@ export function ClosestDiameterMatch({
           >
             Use {match.size}
           </a>
-          <a className="dia-btn dia-btn--outline" href={comparisonPagePathCurrent(match.size)}>
-            Compare With Another Size
+          <a className="dia-btn dia-btn--outline" href={compareLink.href}>
+            {compareLink.label}
           </a>
           {uniqueModelCount > 0 && onViewTiresAvailable ? (
             <button
@@ -294,11 +296,11 @@ export function ClosestDiameterMatch({
               View Tires Available
             </button>
           ) : null}
-          {guide ? (
-            <a className="dia-closest__guide-link" href={match.hubHref}>
-              View Tire Guide
-            </a>
-          ) : null}
+              {guide ? (
+                <a className="dia-closest__guide-link" href={match.hubHref}>
+                  {`Open ${match.size} tire guide`}
+                </a>
+              ) : null}
         </div>
       </div>
 

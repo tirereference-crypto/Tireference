@@ -30,7 +30,7 @@ import {
   getProductsForTireSize,
   groupProductsByUseCase,
 } from '../../../lib/tire-size-products';
-import { comparisonPagePathCurrent } from '../../../lib/tire-size-url';
+import { preferredSizeCompareLink } from '../../../lib/crawlable-links';
 
 interface Props {
   hub: TireSizeHubData;
@@ -53,7 +53,9 @@ const allProducts = getProductsForTireSize(hub.entry.size);
 const topProducts = getTopProductsForTireSize(hub.entry.size, 6);
 const fullSpecProducts = getFullSpecProductsForTireSize(hub.entry.size);
 const useCaseBuckets = groupProductsByUseCase(topProducts, 2);
-const compareHref = comparisonPagePathCurrent(hub.entry.size);
+const compareLink = preferredSizeCompareLink(hub.entry.size);
+const compareHref = compareLink.href;
+const compareLabel = compareLink.label;
 ---
 
 <div class="ref-275">
@@ -394,6 +396,7 @@ const compareHref = comparisonPagePathCurrent(hub.entry.size);
       upgradeCards={upgrades}
       coverage={coverage}
       compareHref={compareHref}
+      compareLabel={compareLabel}
     />
   </div>
 </div>

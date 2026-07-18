@@ -16,7 +16,7 @@ import {
   type TireSpecs,
 } from './tire-math';
 import { hubPagePath } from './tire-size-url';
-import { comparisonPagePath } from './tire-comparison-paths';
+import { crawlableComparisonPath } from './crawlable-links';
 import { isValidComparisonPair } from './tire-comparison-validation';
 import { resolveTireRatings, type ResolvedTireRatings } from './tire-ratings';
 import type { StatDisplay } from './calculator-types';
@@ -197,7 +197,7 @@ function suggestionsToUpgradePaths(
   return suggestions.map((s, idx) => {
     const cmp = compareTires(baseSize, s.size, 60);
     const comparisonHref = isValidComparisonPair(baseSize, s.size)
-      ? comparisonPagePath(baseSize, s.size)
+      ? crawlableComparisonPath(baseSize, s.size)
       : null;
     return {
       tier: TIER_ORDER[Math.min(idx, TIER_ORDER.length - 1)],
@@ -330,7 +330,7 @@ export function buildTireSizeHubData(size: string): TireSizeHubData | null {
         widthMm: s.specs.widthMm,
         speedoErrorPercent: cmp.speedometer.errorPercent,
         href: hubPagePath(s.entry.size),
-        comparisonHref: comparisonPagePath(entry.size, s.entry.size),
+        comparisonHref: crawlableComparisonPath(entry.size, s.entry.size),
       };
     })
     .sort(

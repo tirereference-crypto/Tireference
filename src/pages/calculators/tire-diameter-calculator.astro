@@ -9,7 +9,7 @@ import {
 import { searchTiresByDiameter, WHEEL_DIAMETER_OPTIONS } from '../../lib/tire-diameter-search';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
-import { buildOrganizationSchema, buildWebApplicationSchema } from '../../lib/seo/schema';
+import { buildWebApplicationSchema } from '../../lib/seo/schema';
 import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
 
 const parsed = parseTireDiameterFromSearch(Astro.url.searchParams, {
@@ -50,7 +50,6 @@ const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Tire Diameter Calculator'),
   faqs: schemaFaqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
   extra: [
-    buildOrganizationSchema(),
     buildWebApplicationSchema({
       name: title,
       description,

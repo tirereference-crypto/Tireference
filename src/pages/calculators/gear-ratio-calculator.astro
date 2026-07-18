@@ -5,18 +5,32 @@ import { parseGearRatioFromSearch } from '../../lib/calculator-url-state';
 import { GEAR_FAQS } from '../../lib/gear-ratio-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
+import { buildWebApplicationSchema } from '../../lib/seo/schema';
+import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
 
 const initialFields = parseGearRatioFromSearch(Astro.url.searchParams);
+
+const title = 'Gear Ratio Calculator – Tire Size & RPM';
+const description = SEO_DESCRIPTIONS.gearRatioCalculator;
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Gear Ratio Calculator'),
   faqs: GEAR_FAQS.map((faq) => ({ question: faq.question, answer: faq.answer })),
+  extra: [
+    buildWebApplicationSchema({
+      name: 'Gear Ratio Calculator',
+      description,
+      url: '/calculators/gear-ratio-calculator/',
+      dateModified: CALCULATION_LOGIC_UPDATED,
+      id: 'gear-ratio-calculator',
+    }),
+  ],
 });
 ---
 
 <Layout
-  title="Gear Ratio Calculator – Tire Size & RPM"
-  description={SEO_DESCRIPTIONS.gearRatioCalculator}
+  title={title}
+  description={description}
   canonical="/calculators/gear-ratio-calculator/"
   schema={schema}
 >

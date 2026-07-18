@@ -5,7 +5,7 @@ import { ABOUT_AUDIENCE, ABOUT_BUILD_CARDS, CONTACT_EMAIL } from '../lib/info-pa
 import { DATA_STANDARDS_PATH, REPORT_ISSUE_PATH } from '../lib/eeat-metadata';
 import { SITE_NAME } from '../lib/site-brand';
 import { buildPageSchema } from '../lib/seo/page-schemas';
-import { buildAboutPageSchema, buildOrganizationSchema } from '../lib/seo/schema';
+import { buildAboutPageSchema } from '../lib/seo/schema';
 import '../styles/info-pages.css';
 
 const title = `About ${SITE_NAME}`;
@@ -17,7 +17,6 @@ const schema = buildPageSchema({
     { name: 'About', item: '/about/' },
   ],
   extra: [
-    buildOrganizationSchema(),
     buildAboutPageSchema({
       name: title,
       description,

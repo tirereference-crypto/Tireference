@@ -9,6 +9,7 @@ import {
 } from './calculator-related-sizes';
 import { fmtPct, fmtSigned } from './tire-comparison-format';
 import type { UnitSystem } from './calculator-types';
+import { getTireSpecs } from './tire-math';
 
 export interface AlternativeComparisonPathCard {
   id: string;
@@ -54,6 +55,8 @@ function toCard(
 ): AlternativeComparisonPathCard | null {
   const roleLabel = ROLE_LABELS[row.role];
   if (!roleLabel) return null;
+  // Prefer published compare; fall back to the size guide/calculator (never parameterized).
+  const compareHref = row.compareHref ?? row.href;
   return {
     id: `${row.role}-${row.size}`,
     roleLabel,
@@ -62,8 +65,12 @@ function toCard(
     widthDiff: formatWidthDiff(row.widthDiffMm, unitSystem),
     wheelDiameter: `${row.rimIn}"`,
     wheelBadge: row.sameWheel ? 'Same Wheel' : 'Different Wheel',
-    compareHref: row.compareHref,
+    compareHref,
   };
+}
+
+function normalizeSizeKey(size: string): string {
+  return size.toLocaleLowerCase().replace(/\s+/g, '');
 }
 
 /**
@@ -74,8 +81,12 @@ export function buildAlternativeComparisonPaths(
   baseSize: string,
   unitSystem: UnitSystem = 'imperial',
   limit = 5,
+  excludeSize?: string,
 ): AlternativeComparisonPathCard[] {
-  const related = getCalculatorRelatedSizes(baseSize, 8);
+  const excludedKey = excludeSize ? normalizeSizeKey(excludeSize) : null;
+  const related = getCalculatorRelatedSizes(baseSize, 8).filter(
+    (row) => !excludedKey || normalizeSizeKey(row.size) !== excludedKey,
+  );
   const byRole = new Map<RelatedSizeRole, CalculatorRelatedSize>();
   for (const row of related) {
     if (!byRole.has(row.role)) byRole.set(row.role, row);
@@ -96,4 +107,48 @@ export function buildAlternativeComparisonPaths(
   }
 
   return cards;
+}
+
+/**
+ * Same-wheel alternatives whose absolute diameter delta is smaller than the
+ * pair currently being compared. Returns no cards when none qualify.
+ */
+export function buildCloserSameWheelAlternatives(
+  baseSize: string,
+  comparedSize: string,
+  unitSystem: UnitSystem = 'imperial',
+  limit = 4,
+): AlternativeComparisonPathCard[] {
+  let targetAbsDiameterPct: number;
+  try {
+    const base = getTireSpecs(baseSize);
+    const compared = getTireSpecs(comparedSize);
+    targetAbsDiameterPct = Math.abs(
+      ((compared.overallDiameterIn - base.overallDiameterIn) / base.overallDiameterIn) * 100,
+    );
+  } catch {
+    return [];
+  }
+
+  if (targetAbsDiameterPct < 0.01) return [];
+
+  const normalizedCompared = normalizeSizeKey(comparedSize);
+  return getCalculatorRelatedSizes(baseSize, Math.max(12, limit * 4))
+    .filter(
+      (row) =>
+        row.sameWheel &&
+        normalizeSizeKey(row.size) !== normalizedCompared &&
+        Math.abs(row.diameterDiffPercent) + 1e-9 < targetAbsDiameterPct,
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(a.diameterDiffPercent) - Math.abs(b.diameterDiffPercent) ||
+        Math.abs(a.widthDiffMm) - Math.abs(b.widthDiffMm),
+    )
+    .slice(0, limit)
+    .map((row) => {
+      const card = toCard(row, unitSystem);
+      return card ? { ...card, roleLabel: 'Closer same-wheel match' } : null;
+    })
+    .filter((card): card is AlternativeComparisonPathCard => card !== null);
 }

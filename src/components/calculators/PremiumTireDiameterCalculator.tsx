@@ -3,7 +3,6 @@ import '../../styles/calculator-diameter.css';
 import '../../styles/tire-size-calculator-page.css';
 import { useStickyAnalyzeButton } from '../../hooks/useStickyAnalyzeButton';
 import { CALCULATOR_PATHS } from '../../lib/calculator-links';
-import { buildDiameterSeoContent } from '../../lib/tire-diameter-insights';
 import {
   formatDiameterInputValue,
   inchesFromUnit,
@@ -107,18 +106,6 @@ export default function PremiumTireDiameterCalculator({
   const cardsWheel: WheelDiameterOption =
     wheelSelection === 'any' ? 18 : wheelSelection;
   const verifiedTiresRef = useRef<HTMLDivElement>(null);
-
-  const seo = useMemo(() => {
-    if (!targetDiameterIn || matches.length === 0 || wheelSelection === 'any') return null;
-    return buildDiameterSeoContent(targetDiameterIn, wheelSelection, matches);
-  }, [targetDiameterIn, wheelSelection, matches]);
-
-  useEffect(() => {
-    if (!seo) return;
-    document.title = seo.title;
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', seo.metaDescription);
-  }, [seo]);
 
   const scrollToResults = useCallback(() => {
     requestAnimationFrame(() => {

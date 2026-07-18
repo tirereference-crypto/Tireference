@@ -83,13 +83,15 @@ export function RelatedTireSizes({ sizeLabel }: { sizeLabel: string }) {
               </dl>
             </a>
 
-            <a
-              href={row.compareHref}
-              className="tsc-related__compare"
-              onClick={() => trackRelated(row.size, 'compare')}
-            >
-              Compare
-            </a>
+            {row.compareHref ? (
+              <a
+                href={row.compareHref}
+                className="tsc-related__compare"
+                onClick={() => trackRelated(row.size, 'compare')}
+              >
+                {`Compare ${sizeLabel} vs ${row.size}`}
+              </a>
+            ) : null}
           </article>
         ))}
       </TscSectionCarousel>

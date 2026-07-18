@@ -1,31 +1,9 @@
 /**
- * Single source of truth for site-wide trust / E-E-A-T signals.
+ * Single source of truth for site-wide trust / methodology signals.
  *
- * Author and reviewer profiles live in `src/data/people.ts`. This module
- * re-exports the default editorial credits used by trust components and schema.
+ * Article pages credit Tire Reference (Organization) as publisher/author in
+ * structured data. Visible bylines no longer name individual people.
  */
-
-import {
-  getDefaultAuthorEditorial,
-  getDefaultReviewerEditorial,
-} from './people';
-
-export interface EditorialPerson {
-  /** Profile slug — links to /author/[slug]. */
-  slug?: string;
-  /** Display name. */
-  name: string;
-  /** Short role/title shown under the name. */
-  role: string;
-  /** One-line description used in expanded contexts. */
-  bio: string;
-  /** Uppercase initials for the avatar fallback. */
-  initials: string;
-  /** Where the name links to (author/reviewer profile). */
-  profileUrl: string;
-  /** Optional headshot — site-relative or absolute URL. */
-  photoUrl?: string;
-}
 
 export interface EditorialStep {
   title: string;
@@ -38,12 +16,6 @@ export interface DataSource {
   /** Optional outbound reference; omitted when we don't link out. */
   url?: string;
 }
-
-/** Default author credited on guides, comparisons, and calculators. */
-export const EDITORIAL_AUTHOR: EditorialPerson = getDefaultAuthorEditorial();
-
-/** Default technical reviewer credited on published content. */
-export const EDITORIAL_REVIEWER: EditorialPerson = getDefaultReviewerEditorial();
 
 export const METHODOLOGY: { intro: string; steps: EditorialStep[] } = {
   intro:

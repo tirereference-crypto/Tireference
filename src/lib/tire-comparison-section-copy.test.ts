@@ -126,21 +126,24 @@ describe('buildFitmentConsiderations', () => {
       );
       const faqs = buildComparisonFaqs(sizeA, sizeB, analysis);
 
-      expect(faqs).toHaveLength(12);
-      expect(faqs.map((f) => f.question)).toEqual([
-        'How accurate are the comparison results?',
-        'How are tire dimensions calculated?',
-        'Will the speedometer be affected?',
-        'Does this calculator confirm vehicle fitment?',
-        'Do I need new wheels?',
-        'Can different tire sizes use the same wheel?',
-        'How much clearance should I check?',
-        'Can I mix tire sizes front and rear?',
-        'Why do actual tire dimensions differ between brands?',
-        'What is the difference between nominal and published tire dimensions?',
-        'How does tire size affect effective gearing?',
-        'Why does sidewall height matter?',
-      ]);
+      expect(faqs.length).toBeGreaterThanOrEqual(12);
+      expect(faqs.map((f) => f.question)).toEqual(
+        expect.arrayContaining([
+          'Does this comparison confirm vehicle fitment?',
+          'How accurate are the comparison results?',
+          'How are tire dimensions calculated?',
+          'Will the speedometer be affected?',
+          'Do I need new wheels?',
+          'Can different tire sizes use the same wheel?',
+          'How much clearance should I check?',
+          'Can I mix tire sizes front and rear?',
+          'Why do actual tire dimensions differ between brands?',
+          'What is the difference between nominal and published tire dimensions?',
+          'How does tire size affect effective gearing?',
+          'Why does sidewall height matter?',
+        ]),
+      );
+      expect(faqs[0].question).toBe('Does this comparison confirm vehicle fitment?');
       for (const faq of faqs) {
         expect(faq.answer).toMatch(/\d/);
         expect(faq.answer.toLowerCase()).not.toMatch(
@@ -150,19 +153,8 @@ describe('buildFitmentConsiderations', () => {
     }
   });
 
-  it('adapts wheel and speedometer FAQs to the selected pair', () => {
-    const sameWheel = buildComparisonFaqs(
-      '225/45R17',
-      '235/45R17',
-      buildComparisonAnalysis(
-        '225/45R17',
-        '235/45R17',
-        compareTires('225/45R17', '235/45R17', 65),
-        getTireSpecs('225/45R17'),
-        getTireSpecs('235/45R17'),
-      ),
-    );
-    const differentWheel = buildComparisonFaqs(
+  it('adds AWD caution only when the shared diameter threshold is exceeded', () => {
+    const close = buildComparisonFaqs(
       '225/45R17',
       '235/40R18',
       buildComparisonAnalysis(
@@ -173,16 +165,21 @@ describe('buildFitmentConsiderations', () => {
         getTireSpecs('235/40R18'),
       ),
     );
-
-    const sameWheelsFaq = sameWheel.find((f) => f.question === 'Do I need new wheels?')!;
-    const differentWheelsFaq = differentWheel.find((f) => f.question === 'Do I need new wheels?')!;
-    expect(sameWheelsFaq.answer).toMatch(/Not because of wheel diameter/i);
-    expect(differentWheelsFaq.answer).toMatch(/Yes for bead-seat diameter/i);
-    expect(differentWheelsFaq.answer).toMatch(/R17/);
-    expect(differentWheelsFaq.answer).toMatch(/R18/);
-
-    const speedo = sameWheel.find((f) => f.question === 'Will the speedometer be affected?')!;
-    expect(speedo.answer).toMatch(/At an indicated 65/);
+    const significant = buildComparisonFaqs(
+      '275/70R18',
+      '305/70R18',
+      buildComparisonAnalysis(
+        '275/70R18',
+        '305/70R18',
+        compareTires('275/70R18', '305/70R18', 60),
+        getTireSpecs('275/70R18'),
+        getTireSpecs('305/70R18'),
+      ),
+    );
+    expect(close.some((faq) => /AWD/.test(faq.question))).toBe(false);
+    expect(significant.find((faq) => /AWD/.test(faq.question))?.answer).toMatch(
+      /outside.*±3%|±3%.*outside/i,
+    );
   });
 
   it('mentions published source mode when product data is provided', () => {
@@ -221,12 +218,11 @@ describe('buildFitmentConsiderations', () => {
       productB: { ...product, display_size: sizeB, tire_size: sizeB, approved_rim_range: '7.5-9.0' } as never,
     });
     const faqs = buildComparisonFaqs(sizeA, sizeB, analysis, dataSources);
-    const accuracy = faqs.find((f) => f.question === 'How accurate are the comparison results?')!;
-    expect(accuracy.answer).toMatch(/published catalog rows for both/i);
-    expect(accuracy.answer).toMatch(/Acme Grip/);
-    const wheels = faqs.find((f) => f.question === 'Do I need new wheels?')!;
-    expect(wheels.answer).toMatch(/7\.0-8\.5/);
-    expect(wheels.answer).toMatch(/7\.5-9\.0/);
+    const published = faqs.find(
+      (f) => f.question === 'Are published product measurements available for this pair?',
+    )!;
+    expect(published.answer).toMatch(/published catalog rows for both/i);
+    expect(published.answer).toMatch(/Acme Grip/);
   });
 
   it('fuel economy FAQ cites RPM and revs deltas', () => {

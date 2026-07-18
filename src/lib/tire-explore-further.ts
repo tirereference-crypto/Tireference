@@ -2,17 +2,18 @@ import { TIRE_SIZES, inferTireCategory, type TireCategory } from '../data/tire-s
 import { getPopularTireModels, type PopularTireModel } from '../data/tire-popular-models';
 import { compareTires, getTireSpecs, type TireSpecs } from './tire-math';
 import { isValidComparisonPair } from './tire-comparison-links';
+import { crawlableComparisonPath, crawlableTireSizeGuidePath } from './crawlable-links';
 import {
   rankComparisonCandidates,
   type ComparisonCandidateInput,
 } from './tire-comparison-relevance';
-import { comparisonPagePath } from './tire-comparison-paths';
 
 export interface UpgradePathSuggestion {
   size: string;
   diameterChangeIn: number;
   diameterChangePercent: number;
   fitmentNote: string;
+  /** Crawlable destination: published compare, else size guide. */
   comparisonHref: string;
 }
 
@@ -180,7 +181,9 @@ function buildUpgradePaths(
   return picks
     .slice(0, 3)
     .map((item) => {
-      const comparisonHref = comparisonPagePath(baseSize, item.size);
+      const comparisonHref =
+        crawlableComparisonPath(baseSize, item.size) ??
+        crawlableTireSizeGuidePath(item.size);
       if (!comparisonHref) return null;
       return {
         size: item.size,
@@ -215,7 +218,9 @@ function buildComparisons(
 
   return rankComparisonCandidates(baseSize, inputs, 3)
     .map(({ target: targetSize }) => {
-      const comparisonHref = comparisonPagePath(baseSize, targetSize);
+      const comparisonHref =
+        crawlableComparisonPath(baseSize, targetSize) ??
+        crawlableTireSizeGuidePath(targetSize);
       if (!comparisonHref) return null;
 
       const cmp = compareTires(baseSize, targetSize, INDICATED_SPEED);

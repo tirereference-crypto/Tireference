@@ -7,6 +7,7 @@ import {
 import { parseTireSize } from './tire-math';
 import { parseFullSizeToFields, type TireSizeInputFields } from './tire-size-input';
 import { normalizeTireSizeInput } from './tire-size-validation';
+import { normalizeTireSize } from './tire-size-primitives';
 
 /** True when the string parses as metric or flotation tire size. */
 function isParsableTireSize(size: string): boolean {
@@ -140,17 +141,17 @@ export function parseTireComparisonFromSearch(
   const toRaw = params.get('to') ?? params.get('new');
   const thirdRaw = params.get('third');
 
-  const from = fromRaw ? normalizeTireSizeInput(fromRaw) : defaults.from;
-  const to = toRaw ? normalizeTireSizeInput(toRaw) : defaults.to;
+  const from = fromRaw ? normalizeTireSize(fromRaw) : defaults.from;
+  const to = toRaw ? normalizeTireSize(toRaw) : defaults.to;
 
   const result: { from: string; to: string; third?: string } = {
-    from: parseFullSizeToFields(from) ? from : defaults.from,
-    to: parseFullSizeToFields(to) ? to : defaults.to,
+    from: from && parseFullSizeToFields(from) ? from : defaults.from,
+    to: to && parseFullSizeToFields(to) ? to : defaults.to,
   };
 
   if (thirdRaw?.trim()) {
-    const third = normalizeTireSizeInput(thirdRaw);
-    if (parseFullSizeToFields(third)) result.third = third;
+    const third = normalizeTireSize(thirdRaw);
+    if (third && parseFullSizeToFields(third)) result.third = third;
   } else if (defaults.third && parseFullSizeToFields(defaults.third)) {
     result.third = defaults.third;
   }
@@ -163,12 +164,18 @@ export function tireComparisonUrlValues(
   to: string | null | undefined,
   third?: string | null | undefined,
 ): Record<string, string | null> {
-  if (!from || !to || !parseFullSizeToFields(from) || !parseFullSizeToFields(to)) {
+  const normalizedFrom = normalizeTireSize(from);
+  const normalizedTo = normalizeTireSize(to);
+  const normalizedThird = normalizeTireSize(third);
+  if (!normalizedFrom || !normalizedTo) {
     return { from: null, to: null, third: null };
   }
 
-  const values: Record<string, string | null> = { from, to };
-  if (third && parseFullSizeToFields(third)) values.third = third;
+  const values: Record<string, string | null> = {
+    from: normalizedFrom,
+    to: normalizedTo,
+  };
+  if (normalizedThird) values.third = normalizedThird;
   else values.third = null;
   return values;
 }

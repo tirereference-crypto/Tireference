@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TIRE_SIZES } from '../src/data/tire-sizes.ts';
 import { getAllComparisonSlugs } from '../src/lib/tire-comparison-links.ts';
@@ -26,15 +26,29 @@ async function main() {
     tireCount++;
   }
 
+  const expectedCompareFiles = new Set<string>();
   for (const { slug, current, new: newSize } of getAllComparisonSlugs()) {
     const data = buildCompareOgData(current, newSize);
     if (!data) continue;
     const png = await renderCompareOgPng(data);
     writeFileSync(join(COMPARE_DIR, `${slug}.png`), Buffer.from(png));
+    expectedCompareFiles.add(`${slug}.png`);
     compareCount++;
   }
 
-  console.info(`Generated ${tireCount} tire OG images and ${compareCount} comparison OG images.`);
+  // Remove images for slugs that no longer exist (e.g. reversed duplicates
+  // eliminated by canonical pair ordering) so they never ship in dist.
+  let staleCount = 0;
+  for (const file of readdirSync(COMPARE_DIR)) {
+    if (!file.endsWith('.png') || expectedCompareFiles.has(file)) continue;
+    rmSync(join(COMPARE_DIR, file));
+    staleCount++;
+  }
+
+  console.info(
+    `Generated ${tireCount} tire OG images and ${compareCount} comparison OG images.` +
+      (staleCount ? ` Removed ${staleCount} stale comparison OG images.` : ''),
+  );
 }
 
 main().catch((error) => {

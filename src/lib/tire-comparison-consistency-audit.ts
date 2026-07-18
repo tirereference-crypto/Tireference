@@ -1,8 +1,8 @@
 import {
   buildCuratedPopularComparisons,
-  comparisonSlugFromSizes,
   getAllComparisonSlugs,
 } from './tire-comparison-links';
+import { canonicalComparisonPath } from './comparison-url';
 import { buildComparisonInsights } from './tire-comparison-insights';
 import { compareTires, getTireSpecs } from './tire-math';
 import {
@@ -47,7 +47,9 @@ function expectedStarRating(fitmentScore: number): number {
 export function auditComparisonConsistency(): ComparisonConsistencyIssue[] {
   const issues: ComparisonConsistencyIssue[] = [];
   const publishedHrefs = new Set(
-    getAllComparisonSlugs().map(({ slug }) => `/compare/${slug}`),
+    getAllComparisonSlugs().map(({ current, new: newSize }) =>
+      canonicalComparisonPath(current, newSize),
+    ),
   );
 
   for (const { current, new: newSize } of getAllComparisonSlugs()) {
@@ -181,7 +183,7 @@ export function auditComparisonConsistency(): ComparisonConsistencyIssue[] {
       }
     }
 
-    const selfHref = `/compare/${comparisonSlugFromSizes(current, newSize)}`;
+    const selfHref = canonicalComparisonPath(current, newSize);
     const pageHrefs = new Set<string>();
     for (const link of insights.popularComparisons) {
       if (!publishedHrefs.has(link.href)) {

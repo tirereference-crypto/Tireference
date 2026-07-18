@@ -2,11 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
 import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
+import { getAllComparisonSlugs } from '../../lib/tire-comparison-links';
 import {
+  canonicalComparisonPath,
   comparisonSlugFromSizes,
-  getAllComparisonSlugs,
+  formatComparisonTireSize,
   parseComparisonSlug,
-} from '../../lib/tire-comparison-links';
+} from '../../lib/comparison-url';
+import { buildComparisonSeoBundle } from '../../lib/comparison-seo';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import {
   buildPageSchema,
@@ -27,36 +30,44 @@ export function getStaticPaths() {
 const { slug } = Astro.params;
 const props = Astro.props as { current?: string; newSize?: string };
 const parsed = slug ? parseComparisonSlug(slug) : null;
-const current = props.current ?? parsed?.current;
-const newSize = props.newSize ?? parsed?.new;
+const current = props.current ?? parsed?.canonical.current;
+const newSize = props.newSize ?? parsed?.canonical.new;
 
 if (!current || !newSize) {
   throw new Error(`Unknown comparison slug: ${slug}`);
 }
 
-let title = `${current} vs ${newSize} Tire Size Comparison`;
+const displayCurrent = formatComparisonTireSize(current) ?? current;
+const displayNew = formatComparisonTireSize(newSize) ?? newSize;
+
+let title = `${displayCurrent} vs ${displayNew} Tire Size Comparison`;
 let description = SEO_DESCRIPTIONS.comparison;
+let pageHeading = title;
+let pageAnswer: string | undefined;
 let faqs: { question: string; answer: string }[] = [];
 
 try {
   const specsA = getTireSpecs(current);
   const specsB = getTireSpecs(newSize);
   const comparison = compareTires(current, newSize, 60);
+  const seo = buildComparisonSeoBundle(current, newSize, comparison, specsA, specsB);
   const insights = buildComparisonInsights(current, newSize, comparison, specsA, specsB);
-  title = insights.seo.title.replace(' | Tire Reference', '');
-  description = insights.seo.metaDescription;
+  title = seo.title;
+  description = seo.metaDescription;
+  pageHeading = seo.h1;
+  pageAnswer = seo.answer;
   faqs = insights.seo.faqs;
 } catch {
   /* keep defaults for invalid pairs filtered at build time */
 }
 
 const canonicalSlug = comparisonSlugFromSizes(current, newSize);
-const canonical = `/compare/${canonicalSlug}`;
+const canonical = canonicalComparisonPath(current, newSize);
 
 const ogImage = prebuiltCompareOgImageUrl(canonicalSlug);
 
 const schema = buildPageSchema({
-  breadcrumbs: comparisonBreadcrumbs(current, newSize, canonicalSlug),
+  breadcrumbs: comparisonBreadcrumbs(current, newSize),
   faqs,
   extra: [
     buildEditorialArticleSchema({
@@ -80,5 +91,8 @@ const schema = buildPageSchema({
     client:load
     initialCurrent={current}
     initialNew={newSize}
+    pageHeading={pageHeading}
+    pageAnswer={pageAnswer}
+    showCalculatorHeading
   />
 </Layout>

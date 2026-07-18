@@ -8,16 +8,19 @@ import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildTireSizeHubPageTitle } from '../../lib/seo/format';
 import {
   buildArticleSchema,
-  buildDefaultPublishDate,
 } from '../../lib/seo/schema';
 import {
   buildPageSchema,
   hubBreadcrumbs,
 } from '../../lib/seo/page-schemas';
 import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
-import { defaultEditorialSchemaRefs } from '../../lib/people';
 import { prebuiltTireOgImageUrl } from '../../lib/og/og-image-url';
 import { buildTireSizeGuideData } from '../../lib/tire-size-guide';
+import {
+  TIRE_CATEGORY_HUBS,
+  getPrimaryTireSizeHubCategory,
+  tireCategoryHubPath,
+} from '../../lib/tire-category-hubs';
 
 export function getStaticPaths() {
   return TIRE_SIZES.map((entry) => ({
@@ -36,12 +39,11 @@ const pageFaqs = guide.faq;
 
 const { displaySize, specs } = hub;
 const pagePath = hubPagePath(hub.entry.size);
+const primaryCategory = getPrimaryTireSizeHubCategory(hub.entry);
 
 const metaDescription = `${displaySize} tire size: ${specs.overallDiameterIn.toFixed(2)} in overall diameter, ${specs.sectionWidthIn.toFixed(2)} in width, ${specs.sidewallIn.toFixed(2)} in sidewall, ${Math.round(specs.revsPerMile)} revs/mile. Compare equivalents, fitment & alternatives.`;
 
 const pageTitle = buildTireSizeHubPageTitle(displaySize);
-
-const publishDate = buildDefaultPublishDate();
 
 const ratingProperties: Array<Record<string, unknown>> = [];
 if (hub.ratings) {
@@ -65,22 +67,21 @@ if (hub.ratings) {
   }
 }
 
-const editorialRefs = defaultEditorialSchemaRefs();
-
 const schema = buildPageSchema({
-  breadcrumbs: hubBreadcrumbs(displaySize, pagePath),
+  breadcrumbs: hubBreadcrumbs(displaySize, pagePath, {
+    name: TIRE_CATEGORY_HUBS[primaryCategory].label,
+    item: tireCategoryHubPath(primaryCategory),
+  }),
   faqs: pageFaqs,
   extra: [
     buildArticleSchema({
       headline: `${displaySize} Tire Size — Diameter, Specs & Fitment`,
       description: metaDescription,
       url: pagePath,
-      datePublished: publishDate,
+      datePublished: SITE_CONTENT_UPDATED,
       dateModified: SITE_CONTENT_UPDATED,
       type: 'TechArticle',
       additionalProperty: ratingProperties,
-      authorRef: editorialRefs.authorRef,
-      reviewerRef: editorialRefs.reviewerRef,
     }),
   ],
 });

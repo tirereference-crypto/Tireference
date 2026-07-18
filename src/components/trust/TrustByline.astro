@@ -1,18 +1,13 @@
 ---
-import Author from './Author.astro';
-import ReviewedBy from './ReviewedBy.astro';
 import LastUpdated from './LastUpdated.astro';
-import type { EditorialPerson } from '../../lib/editorial';
 
 interface Props {
-  author?: EditorialPerson;
-  reviewer?: EditorialPerson;
   /** ISO date; defaults to the site-wide review date inside LastUpdated. */
   updated?: string;
   class?: string;
 }
 
-const { author, reviewer, updated, class: className = '' } = Astro.props;
+const { updated, class: className = '' } = Astro.props;
 ---
 
 <div
@@ -21,9 +16,5 @@ const { author, reviewer, updated, class: className = '' } = Astro.props;
     className,
   ]}
 >
-  <Author person={author} variant="inline" />
-  <span class="hidden h-4 w-px bg-border sm:block" aria-hidden="true"></span>
-  <ReviewedBy person={reviewer} variant="inline" />
-  <span class="hidden h-4 w-px bg-border sm:block" aria-hidden="true"></span>
-  <LastUpdated date={updated} class="ml-auto" />
+  <LastUpdated date={updated} label="Content last reviewed" />
 </div>

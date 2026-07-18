@@ -137,8 +137,7 @@ export function PopularTiresBySize({
       className="tsc-popular__view-all"
       onClick={trackViewAll}
     >
-      View all {result.totalModelCount} unique tire model
-      {result.totalModelCount === 1 ? '' : 's'}
+      {`Open ${displaySize} guide · ${result.totalModelCount} unique model${result.totalModelCount === 1 ? '' : 's'}`}
     </a>
   ) : guideAvailable ? (
     <a
@@ -146,7 +145,7 @@ export function PopularTiresBySize({
       className="tsc-popular__view-all"
       onClick={trackViewAll}
     >
-      View size guide
+      {`Open ${displaySize} tire guide`}
     </a>
   ) : null;
 

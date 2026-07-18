@@ -3,13 +3,11 @@ import Layout from '../../layouts/Layout.astro';
 import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
 import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
 import { prebuiltCompareOgImageUrl } from '../../lib/og/og-image-url';
-import { comparisonSlugFromSizes } from '../../lib/tire-comparison-links';
+import { comparisonSlugFromSizes } from '../../lib/comparison-url';
 import { parseTireComparisonFromSearch } from '../../lib/calculator-url-state';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
-import { buildEditorialArticleSchema } from '../../lib/seo/editorial-schema';
 import { buildWebApplicationSchema } from '../../lib/seo/schema';
-import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
 import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
 import { compareTires, getTireSpecs } from '../../lib/tire-math';
 
@@ -47,12 +45,6 @@ const schema = buildPageSchema({
       url: '/calculators/tire-comparison-calculator/',
       dateModified: CALCULATION_LOGIC_UPDATED,
       id: 'tire-comparison-calculator',
-    }),
-    buildEditorialArticleSchema({
-      headline: title,
-      description,
-      url: '/calculators/tire-comparison-calculator/',
-      dateModified: SITE_CONTENT_UPDATED,
     }),
   ],
 });

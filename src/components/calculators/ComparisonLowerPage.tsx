@@ -8,7 +8,10 @@ import {
   getRelatedCalculatorLinks,
   type CalculatorIcon,
 } from '../../lib/calculator-links';
-import { buildAlternativeComparisonPaths } from '../../lib/comparison-alternative-paths';
+import {
+  buildAlternativeComparisonPaths,
+  buildCloserSameWheelAlternatives,
+} from '../../lib/comparison-alternative-paths';
 import { CALCULATION_LOGIC_UPDATED, formatMonthYear, REPORT_ISSUE_PATH } from '../../lib/eeat-metadata';
 import { SITE_NAME } from '../../lib/site-brand';
 import type { UnitSystem } from '../../lib/calculator-types';
@@ -346,22 +349,37 @@ function AlternativePathsCarousel({
 
 export function ComparisonAlternativePaths({
   baseSize,
+  comparedSize,
   unitSystem,
   variant = 'default',
   limit = 8,
   onSelectSize,
 }: {
   baseSize: string;
+  /** When present, show only same-wheel options closer in diameter than this size. */
+  comparedSize?: string;
   unitSystem: UnitSystem;
   variant?: 'default' | 'compact';
   limit?: number;
   /** When set, Compare updates the calculator in place instead of a full navigation. */
   onSelectSize?: (size: string) => void;
 }) {
-  const paths = useMemo(
-    () => buildAlternativeComparisonPaths(baseSize, unitSystem, limit),
-    [baseSize, unitSystem, limit],
-  );
+  const { paths, closerVariant } = useMemo(() => {
+    if (comparedSize) {
+      const closer = buildCloserSameWheelAlternatives(baseSize, comparedSize, unitSystem, limit);
+      if (closer.length > 0) return { paths: closer, closerVariant: true };
+      // No closer same-wheel option exists — fall back to general alternatives
+      // so the section is always present, excluding the pair on this page.
+      return {
+        paths: buildAlternativeComparisonPaths(baseSize, unitSystem, limit, comparedSize),
+        closerVariant: false,
+      };
+    }
+    return {
+      paths: buildAlternativeComparisonPaths(baseSize, unitSystem, limit),
+      closerVariant: false,
+    };
+  }, [baseSize, comparedSize, unitSystem, limit]);
 
   if (paths.length === 0) return null;
 
@@ -377,7 +395,9 @@ export function ComparisonAlternativePaths({
       className={sectionClass}
       aria-label="Alternative comparison paths"
     >
-      <h2 className={titleClass}>Alternative Comparison Paths</h2>
+      <h2 className={titleClass}>
+        {closerVariant ? 'Closer Same-Wheel Alternatives' : 'Alternative Comparison Paths'}
+      </h2>
       {compact ? null : (
         <p className="cmp-lower-section__lead">
           Related sizes from the Tire Reference database versus {baseSize}.

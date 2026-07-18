@@ -564,7 +564,8 @@ html.dark .home-page {
 
 @media (min-width: 1200px) {
   .home-quick-actions__grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    /* One column per calculator card so the row fills the shell with no empty slot. */
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   /* Overlap the lower edge of the hero stack by ~40px */

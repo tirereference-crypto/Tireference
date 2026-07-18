@@ -56,7 +56,7 @@ describe('comparison calculator functional QA', () => {
     const result = runPair('225/45R17', '235/40R18');
     expect(result.decision.heading.length).toBeGreaterThan(0);
     expect(result.impact).toHaveLength(6);
-    expect(result.whatChanges.insights).toHaveLength(4);
+    expect(result.whatChanges.insights.length).toBeGreaterThanOrEqual(3);
     expect(result.dataSources.mode).toBe('generic_vs_generic');
     assertFiniteTree(result.comparison);
     assertFiniteTree(result.decision.score);
@@ -111,7 +111,10 @@ describe('comparison calculator functional QA', () => {
       for (const card of paths) {
         expect(card.diameterDiff).not.toMatch(/NaN|undefined/i);
         expect(card.widthDiff).not.toMatch(/NaN|undefined/i);
-        expect(card.compareHref).toContain('/calculators/tire-comparison-calculator/');
+        // Clean /compare/ page when published, calculator prefill otherwise.
+        expect(card.compareHref).toMatch(
+          /^(\/compare\/[a-z0-9-]+-vs-[a-z0-9-]+\/|\/tire-size\/|\/calculators\/tire-size-calculator\/)/,
+        );
       }
     }
   });

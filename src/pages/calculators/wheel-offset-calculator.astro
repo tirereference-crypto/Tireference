@@ -5,8 +5,8 @@ import { parseWheelOffsetFromSearch } from '../../lib/calculator-url-state';
 import { OFFSET_FAQS } from '../../lib/wheel-offset-insights';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
-import { buildEditorialArticleSchema } from '../../lib/seo/editorial-schema';
-import { SITE_CONTENT_UPDATED } from '../../lib/editorial';
+import { buildWebApplicationSchema } from '../../lib/seo/schema';
+import { CALCULATION_LOGIC_UPDATED } from '../../lib/eeat-metadata';
 
 const { current: initialCurrent, new: initialNew } = parseWheelOffsetFromSearch(
   Astro.url.searchParams,
@@ -16,23 +16,27 @@ const { current: initialCurrent, new: initialNew } = parseWheelOffsetFromSearch(
   },
 );
 
+const title = 'Wheel Offset & Backspacing Calculator';
+const description = SEO_DESCRIPTIONS.wheelOffsetCalculator;
+
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Wheel Offset Calculator'),
   faqs: OFFSET_FAQS.map((faq) => ({ question: faq.question, answer: faq.answer })),
   extra: [
-    buildEditorialArticleSchema({
-      headline: 'Wheel Offset & Backspacing Calculator',
-      description: SEO_DESCRIPTIONS.wheelOffsetCalculator,
+    buildWebApplicationSchema({
+      name: title,
+      description,
       url: '/calculators/wheel-offset-calculator/',
-      dateModified: SITE_CONTENT_UPDATED,
+      dateModified: CALCULATION_LOGIC_UPDATED,
+      id: 'wheel-offset-calculator',
     }),
   ],
 });
 ---
 
 <Layout
-  title="Wheel Offset & Backspacing Calculator"
-  description={SEO_DESCRIPTIONS.wheelOffsetCalculator}
+  title={title}
+  description={description}
   canonical="/calculators/wheel-offset-calculator/"
   schema={schema}
 >

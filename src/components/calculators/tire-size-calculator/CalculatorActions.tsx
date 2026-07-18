@@ -1,4 +1,5 @@
-import { comparisonPagePathCurrent, tireSizePath } from '../../../lib/tire-size-url';
+import { preferredSizeCompareLink } from '../../../lib/crawlable-links';
+import { tireSizePath } from '../../../lib/tire-size-url';
 import { hasTireSizeGuide } from '../../../lib/has-tire-size-guide';
 import { CALCULATOR_NAMES, trackEvent, getSourcePage } from '../../../lib/analytics';
 
@@ -8,7 +9,7 @@ const GUIDE_VISUAL_SRC = '/images/tires/tire-side-blue.png';
 
 export function CalculatorActions({ sizeLabel }: { sizeLabel: string }) {
   const hasGuide = hasTireSizeGuide(sizeLabel);
-  const compareHref = comparisonPagePathCurrent(sizeLabel);
+  const compareLink = preferredSizeCompareLink(sizeLabel);
   const guideHref = hasGuide ? tireSizePath(sizeLabel) : '#related-tire-sizes';
 
   const trackCompare = () => {
@@ -40,8 +41,8 @@ export function CalculatorActions({ sizeLabel }: { sizeLabel: string }) {
                 See side-by-side differences in diameter, width, sidewall height and
                 speedometer effect.
               </p>
-              <a href={compareHref} className="tsc-action-card__cta" onClick={trackCompare}>
-                Compare Tire Sizes
+              <a href={compareLink.href} className="tsc-action-card__cta" onClick={trackCompare}>
+                {compareLink.label}
               </a>
             </div>
             <div className="tsc-action-card__visual" aria-hidden="true">
@@ -70,7 +71,7 @@ export function CalculatorActions({ sizeLabel }: { sizeLabel: string }) {
                     Specifications, fitment notes, popular tires and related sizes.
                   </p>
                   <a href={guideHref} className="tsc-action-card__cta" onClick={trackGuide}>
-                    View Tire Guide
+                    {`Open ${sizeLabel} tire guide`}
                   </a>
                 </>
               ) : (

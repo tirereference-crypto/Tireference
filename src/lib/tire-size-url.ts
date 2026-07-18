@@ -1,6 +1,7 @@
 /** Canonical URL helpers for tire-size hub detail pages. */
 
 import { CALCULATOR_PATHS, calculatorPathWithQuery } from './calculator-links';
+import { comparisonCalculatorPath } from './comparison-redirect';
 
 /**
  * Valid detail path: `/tire-size/275-70r18/` or `/tire-size/lt265-75r16/`
@@ -90,15 +91,12 @@ export function slugToSize(slug: string): string | null {
 
 /** Open comparison with both sizes prefilled (no hub validation — always builds URL). */
 export function comparisonPagePathUnchecked(sizeA: string, sizeB: string): string {
-  return calculatorPathWithQuery(CALCULATOR_PATHS.tireComparison, {
-    from: sizeA,
-    to: sizeB,
-  });
+  return comparisonCalculatorPath(sizeA, sizeB);
 }
 
 /** Open comparison with the selected size as the current tire. */
 export function comparisonPagePathCurrent(size: string): string {
-  return calculatorPathWithQuery(CALCULATOR_PATHS.tireComparison, { from: size });
+  return comparisonCalculatorPath(size);
 }
 
 /** Open tire size calculator with the size pre-filled. */

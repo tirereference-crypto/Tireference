@@ -51,7 +51,9 @@ describe('tire-comparison-links', () => {
   it('ranks closer same-class sizes ahead of distant alternatives', () => {
     const links = buildPopularComparisonsForSize('265/70R17');
     expect(links.length).toBeGreaterThan(0);
-    expect(links[0].new).toMatch(/285\/70R17|275\/70R18|265\/65R18/);
+    const otherSize =
+      links[0].current === '265/70R17' ? links[0].new : links[0].current;
+    expect(otherSize).toMatch(/285\/70R17|275\/70R18|265\/65R18/);
   });
 
   it('round-trips comparison slugs for valid pairs', () => {
@@ -59,7 +61,7 @@ describe('tire-comparison-links', () => {
     const newSize = '285/70R17';
     const slug = comparisonSlugFromSizes(current, newSize);
     expect(slug).toBe('265-70-r17-vs-285-70-r17');
-    expect(comparisonSlugPath(current, newSize)).toBe(`/compare/${slug}`);
+    expect(comparisonSlugPath(current, newSize)).toBe(`/compare/${slug}/`);
     expect(parseComparisonSlug(slug)).toEqual({ current, new: newSize });
   });
 

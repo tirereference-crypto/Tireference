@@ -89,7 +89,7 @@ export function VerifiedProductCard({
             onTrack(`${normalized.canonicalBrand} ${normalized.canonicalModel}`)
           }
         >
-          View Details
+          {`Open ${sizeLabel} tire guide`}
         </a>
       ) : null}
     </article>

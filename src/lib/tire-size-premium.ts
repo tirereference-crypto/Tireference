@@ -2,7 +2,7 @@ import type { TireCategory } from '../data/tire-sizes';
 import { compareTires, getTireSpecs, type TireComparison, type TireSpecs } from './tire-math';
 import type { PremiumSpecCard } from './tire-size-hub-content';
 import { hubPagePath } from './tire-size-url';
-import { comparisonPagePath } from './tire-comparison-paths';
+import { crawlableComparisonPath } from './crawlable-links';
 import type { TireSizeHubData } from './tire-size-hub';
 import {
   buildAbsoluteRideComfortCopy,
@@ -30,8 +30,10 @@ export interface PremiumUpgradeCard {
   groundClearanceGainIn: number;
   speedoErrorPercent: number;
   difficulty: 'Easy' | 'Moderate' | 'Advanced';
+  /** Crawlable destination: size guide when available, else published compare. */
   href: string;
-  comparisonHref: string;
+  /** Published `/compare/` path only; null when no indexable pair page exists. */
+  comparisonHref: string | null;
 }
 
 export interface CostTier {
@@ -68,18 +70,19 @@ function upgradeDifficulty(pct: number): PremiumUpgradeCard['difficulty'] {
 
 function buildUpgradeCard(baseSize: string, target: string): PremiumUpgradeCard | null {
   const cmp = compareTires(baseSize, target, 60);
-  const comparisonHref = comparisonPagePath(baseSize, target);
-  if (!comparisonHref) return null;
+  const comparisonHref = crawlableComparisonPath(baseSize, target);
+  const hasHub = !!getTireSizeEntry(target);
+  const href = hasHub ? hubPagePath(target) : comparisonHref;
+  if (!href) return null;
 
   const pct = cmp.diameterDiffPercent;
-  const hasHub = !!getTireSizeEntry(target);
   return {
     size: target,
     diameterDiffPercent: pct,
     groundClearanceGainIn: cmp.groundClearanceChangeIn,
     speedoErrorPercent: cmp.speedometer.errorPercent,
     difficulty: upgradeDifficulty(pct),
-    href: hasHub ? hubPagePath(target) : comparisonHref,
+    href,
     comparisonHref,
   };
 }
@@ -108,7 +111,10 @@ export function buildAftermarketUpgradeCards(hub: TireSizeHubData): PremiumUpgra
 
 export function buildPopularComparisons(hub: TireSizeHubData): { target: string }[] {
   return buildPopularComparisonsForSize(hub.entry.size, 3).map((link) => ({
-    target: link.new,
+    target:
+      link.current === hub.entry.size
+        ? link.new
+        : link.current,
   }));
 }
 

@@ -150,9 +150,9 @@ export function buildRideComfortImpactCopy(
 
   if (isSidewallRideUnchanged(sidewallPct)) {
     return {
-      measurement: `Sidewall height stays ${fmtInQuote(specsA.sidewallIn)} (${specsA.aspectRatio}% aspect) on both sizes — a ${Math.abs(sidewallDiffMm).toFixed(0)} mm difference.`,
+      measurement: `Sidewall height stays ${fmtInQuote(specsA.sidewallIn)} (${specsA.aspectRatio}-series aspect ratio) on both sizes — a ${Math.abs(sidewallDiffMm).toFixed(0)} mm difference.`,
       engineering: `Air-spring volume in the sidewall is essentially unchanged, so vertical deflection before the tread contacts the rim remains similar.`,
-      practical: `Impact absorption over potholes and expansion joints should feel familiar to ${sizeA}.`,
+      practical: `With only a ${Math.abs(sidewallDiffMm).toFixed(0)} mm sidewall-height change, impact absorption over potholes and expansion joints should feel familiar to ${sizeA}.`,
     };
   }
 
