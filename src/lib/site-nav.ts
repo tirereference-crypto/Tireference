@@ -31,11 +31,6 @@ const NAV_CALCULATOR_META: readonly Omit<NavCalculatorItem, 'href'>[] = [
     description: 'Visualize wheel position and fitment.',
   },
   {
-    emoji: '⏱️',
-    label: 'Speedometer Error Calculator',
-    description: 'See how tire-size changes affect indicated speed.',
-  },
-  {
     emoji: '⚙️',
     label: 'Gear Ratio Calculator',
     description: 'Calculate ideal axle gearing after changing tire sizes.',

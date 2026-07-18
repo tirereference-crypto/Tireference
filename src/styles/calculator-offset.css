@@ -1419,9 +1419,13 @@
   .wof-fitment-viz__setup-meta--new {
     text-align: left;
   }
-  .wof-fitment-viz__diagram-wrap {
+  /* Include the .wof-viz-card--full variant so this single-column rule wins
+     over the desktop 3-column rule (which has two-class specificity). */
+  .wof-fitment-viz__diagram-wrap,
+  .wof-viz-card--full .wof-fitment-viz__diagram-wrap {
     grid-template-columns: 1fr;
     gap: 1rem;
+    padding: 0.85rem 0.75rem;
   }
   .wof-fitment-viz__wheel-panel:first-of-type {
     order: 1;
@@ -1434,6 +1438,19 @@
   }
   .wof-fitment-viz__callout-spacer {
     display: none;
+  }
+  /* Stacked callout cards: readable text sizes on a full-width card */
+  .wof-fitment-viz__callout {
+    padding: 0.75rem 0.85rem;
+  }
+  .wof-fitment-viz__callout-value {
+    font-size: 1rem;
+  }
+  .wof-fitment-viz__callout-label {
+    font-size: 0.75rem;
+  }
+  .wof-fitment-viz__callout-sub {
+    font-size: 0.6875rem;
   }
   .wof-metrics__grid {
     grid-template-columns: 1fr;

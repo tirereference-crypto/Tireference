@@ -5,7 +5,6 @@ export const CALCULATOR_NAMES = {
   tireDiameter: 'tire_diameter',
   tireComparison: 'tire_comparison',
   wheelOffset: 'wheel_offset',
-  speedometerError: 'speedometer_error',
   gearRatio: 'gear_ratio',
 } as const;
 
@@ -122,7 +121,6 @@ export function calculatorNameFromHref(href: string): CalculatorName | undefined
   if (href.includes('tire-comparison-calculator')) return CALCULATOR_NAMES.tireComparison;
   if (href.includes('tire-diameter-calculator')) return CALCULATOR_NAMES.tireDiameter;
   if (href.includes('wheel-offset-calculator')) return CALCULATOR_NAMES.wheelOffset;
-  if (href.includes('speedometer-error-calculator')) return CALCULATOR_NAMES.speedometerError;
   if (href.includes('gear-ratio-calculator')) return CALCULATOR_NAMES.gearRatio;
   return undefined;
 }

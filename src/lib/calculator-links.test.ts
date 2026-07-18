@@ -34,7 +34,6 @@ describe('related calculator registry', () => {
     expect(related.map((c) => c.href)).toEqual([
       CALCULATOR_PATHS.tireSize,
       CALCULATOR_PATHS.tireDiameter,
-      CALCULATOR_PATHS.speedometerError,
       CALCULATOR_PATHS.wheelOffset,
       CALCULATOR_PATHS.gearRatio,
     ]);

@@ -16,7 +16,6 @@ const LEGACY_CALCULATOR_REDIRECTS = {
   '/tire-size-comparison': '/calculators/tire-comparison-calculator/',
   '/tire-comparison-calculator': '/calculators/tire-comparison-calculator/',
   '/wheel-offset-calculator': '/calculators/wheel-offset-calculator/',
-  '/speedometer-error-calculator': '/calculators/speedometer-error-calculator/',
   '/gear-ratio-calculator': '/calculators/gear-ratio-calculator/',
 };
 

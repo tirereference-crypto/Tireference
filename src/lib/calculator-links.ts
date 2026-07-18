@@ -10,7 +10,6 @@ export const CALCULATOR_PATHS = {
   tireComparison: '/calculators/tire-comparison-calculator/',
   tireDiameter: '/calculators/tire-diameter-calculator/',
   wheelOffset: '/calculators/wheel-offset-calculator/',
-  speedometerError: '/calculators/speedometer-error-calculator/',
   gearRatio: '/calculators/gear-ratio-calculator/',
 } as const;
 
@@ -76,15 +75,6 @@ export const CALCULATOR_REGISTRY: readonly CalculatorRegistryEntry[] = [
     icon: 'offset',
     status: 'published',
     relatedPriority: 5,
-  },
-  {
-    id: 'speedometerError',
-    label: 'Speedometer Error Calculator',
-    description: 'See how tire-size changes affect indicated speed and odometer accuracy',
-    href: CALCULATOR_PATHS.speedometerError,
-    icon: 'speedometer',
-    status: 'published',
-    relatedPriority: 4,
   },
   {
     id: 'gearRatio',

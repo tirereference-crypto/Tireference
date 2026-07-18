@@ -6,9 +6,10 @@ import { useSingleOpenDetails } from '../../hooks/useSingleOpenDetails';
 import { CALCULATOR_PATHS } from '../../lib/calculator-links';
 import { COMPARISON_PAGE_INTRO_FALLBACK } from '../../lib/tire-comparison-insights';
 import {
-  ComparisonDecisionRail,
   ComparisonFeelPanel,
+  ComparisonFitmentPanel,
   ComparisonKpiRow,
+  ComparisonVerdictPanel,
 } from './ComparisonDashboardSections';
 import { ComparisonResultsTabs } from './ComparisonResultsTabs';
 import { ComparisonBelowDashboard } from './ComparisonBelowDashboard';
@@ -313,6 +314,15 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
   const stickyVisible = useStickyAnalyzeButton(formRef, resultsRef, { resultsReady: Boolean(ready) });
   useSingleOpenDetails(faqRef, [ready, insights?.seo.faqs.length ?? 0]);
 
+  const keySpecCards = useMemo(
+    () => (insights ? insights.kpiCards.filter((card) => !['speedo', 'revs'].includes(card.id)) : []),
+    [insights],
+  );
+  const speedoRevsCards = useMemo(
+    () => (insights ? insights.kpiCards.filter((card) => card.id === 'speedo' || card.id === 'revs') : []),
+    [insights],
+  );
+
   return (
     <div className="cmp-page tl-has-sticky-analyze">
       <div className="cmp-shell">
@@ -492,9 +502,24 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                   </div>
                 </div>
 
-                <ComparisonKpiRow cards={insights.kpiCards} />
-
+                {/*
+                  DOM order matches mobile reading order. Desktop uses grid-area
+                  placement only — never CSS order — so keyboard/AT order stays aligned.
+                */}
                 <div className="cmp-comparison-stage">
+                  <aside className="cmp-stage-verdict" aria-label="Decision support">
+                    {decisionSupport ? (
+                      <ComparisonVerdictPanel decision={decisionSupport} />
+                    ) : (
+                      <div className="cmp-panel cmp-card-level-primary">
+                        <p className="cmp-sidebar-block__title">Dimensional Verdict</p>
+                        <p className="cmp-empty-rail">
+                          Enter two tire sizes to see the verdict and fitment checks.
+                        </p>
+                      </div>
+                    )}
+                  </aside>
+
                   <div className="cmp-visual-stage">
                     {dataSources && comparison ? (
                       <ComparisonResultsTabs
@@ -515,22 +540,27 @@ export default function PremiumTireSizeComparison(props: UseTireSizeComparisonOp
                     <p className="cmp-source-note" role="note">
                       {dataSources?.note}
                     </p>
-
-                    {decisionSupport ? <ComparisonFeelPanel decision={decisionSupport} /> : null}
                   </div>
 
-                  <aside className="cmp-sidebar-right" aria-label="Decision support">
-                    {decisionSupport ? (
-                      <ComparisonDecisionRail decision={decisionSupport} />
-                    ) : (
-                      <div className="cmp-panel cmp-card-level-primary">
-                        <p className="cmp-sidebar-block__title">Dimensional Verdict</p>
-                        <p className="cmp-empty-rail">
-                          Enter two tire sizes to see the verdict and fitment checks.
-                        </p>
-                      </div>
-                    )}
+                  <div className="cmp-stage-kpis">
+                    <section className="cmp-stage-kpi" aria-label="Key specification differences">
+                      <h2 className="cmp-mobile-section-title">Key Specification Differences</h2>
+                      <ComparisonKpiRow cards={keySpecCards} />
+                    </section>
+                    <section
+                      className="cmp-stage-speedo"
+                      aria-label="Speedometer and revs-per-mile impact"
+                    >
+                      <h2 className="cmp-mobile-section-title">Speedometer &amp; Revs-per-Mile Impact</h2>
+                      <ComparisonKpiRow cards={speedoRevsCards} />
+                    </section>
+                  </div>
+
+                  <aside className="cmp-stage-fitment" aria-label="Fitment checks">
+                    {decisionSupport ? <ComparisonFitmentPanel decision={decisionSupport} /> : null}
                   </aside>
+
+                  {decisionSupport ? <ComparisonFeelPanel decision={decisionSupport} /> : null}
                 </div>
               </>
             )}

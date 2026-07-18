@@ -10,7 +10,6 @@ describe('NAV_CALCULATORS', () => {
     expect(byLabel['Tire Size Calculator']).toBe(CALCULATOR_PATHS.tireSize);
     expect(byLabel['Tire Comparison Calculator']).toBe(CALCULATOR_PATHS.tireComparison);
     expect(byLabel['Tire Diameter Calculator']).toBe(CALCULATOR_PATHS.tireDiameter);
-    expect(byLabel['Speedometer Error Calculator']).toBe(CALCULATOR_PATHS.speedometerError);
   });
 });
 

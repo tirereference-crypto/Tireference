@@ -156,7 +156,7 @@ describe('diameter related calculators registry', () => {
     const related = getRelatedCalculatorLinks(CALCULATOR_PATHS.tireDiameter, { limit: 6 });
     expect(related.every((card) => card.href !== CALCULATOR_PATHS.tireDiameter)).toBe(true);
     expect(related.some((card) => /aspect ratio/i.test(card.label))).toBe(false);
-    expect(related.some((card) => card.href === CALCULATOR_PATHS.speedometerError)).toBe(true);
+    expect(related.some((card) => card.href === CALCULATOR_PATHS.wheelOffset)).toBe(true);
     for (const card of related) {
       expect(card.href).toMatch(/^\/calculators\/.+\/$/);
     }

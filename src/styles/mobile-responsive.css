@@ -79,7 +79,12 @@
     padding: 0.75rem 1rem 2rem;
   }
 
-  /* ── Calculator layout flow (title → inputs → results → sidebars) ── */
+  /* ── Calculator layout flow ──
+     The comparison calculator's DOM is already in mobile reading order
+     (title → inputs → results). Never reorder it with CSS `order`, so
+     keyboard and screen-reader order always match the visual order.
+     The wheel-offset / gear-ratio pages still flatten their .cmp-main
+     column for their own explicit section ordering below. */
   .cmp-layout,
   .cmp-dashboard {
     display: flex;
@@ -90,90 +95,30 @@
   }
 
   .cmp-page-header--full {
-    order: 0;
     margin-bottom: 0.25rem;
   }
 
-  .cmp-layout > .cmp-comparison-workspace,
   .cmp-layout > .cmp-main {
     display: contents;
   }
 
-  .cmp-page-header {
-    order: 1;
-  }
-
-  .cmp-layout > .cmp-sidebar-left:not(.dia-sidebar-left) {
-    order: 2;
-  }
-
-  .cmp-comparison-workspace > *:not(.cmp-page-header),
-  .cmp-main > *:not(.cmp-page-header) {
-    order: 3;
-  }
-
-  .cmp-comparison-stage {
-    display: contents;
-  }
-
-  .cmp-visual-stage {
-    display: contents;
-  }
-
-  .cmp-layout > .cmp-sidebar-right,
-  .cmp-comparison-stage > .cmp-sidebar-right,
   .cmp-layout > .wof-sidebar-right {
     order: 10;
   }
 
-  /* ── Comparison page: decision-first mobile section order ──
-     Flatten the right sidebar and the two-up bottom row into the single
-     column so every section can be individually ordered. Desktop is
-     untouched (all of this lives inside the max-width: 767px query). */
+  /* Comparison page: consistent rhythm; flex gap is the single source of
+     vertical spacing between sections. */
   .cmp-page:not(.dia-page) .cmp-layout {
-    gap: 1.5rem; /* consistent 24px rhythm between every section */
+    gap: 1rem;
   }
 
-  .cmp-page:not(.dia-page) .cmp-sidebar-right,
-  .cmp-page:not(.dia-page) .cmp-comparison-stage,
-  .cmp-page:not(.dia-page) .cmp-visual-stage,
-  .cmp-page:not(.dia-page) .cmp-bottom-row {
-    display: contents;
-  }
-
-  /* Rely on the flex gap alone for section spacing (removes stray/uneven
-     top-bottom margins that made spacing feel excessive). */
   .cmp-page:not(.dia-page) .cmp-layout > .cmp-sidebar-left,
   .cmp-page:not(.dia-page) .cmp-comparison-workspace > *,
   .cmp-page:not(.dia-page) .cmp-main > *,
-  .cmp-page:not(.dia-page) .cmp-sidebar-right > *,
-  .cmp-page:not(.dia-page) .cmp-visual-stage > *,
-  .cmp-page:not(.dia-page) .cmp-bottom-row > * {
+  .cmp-page:not(.dia-page) .cmp-sidebar-right > * {
     margin-top: 0;
     margin-bottom: 0;
   }
-
-  .cmp-page .cmp-page-header { order: 1; }
-  .cmp-page .cmp-sidebar-left:not(.dia-sidebar-left) { order: 2; }
-  .cmp-page .cmp-summary-bar { order: 4; }
-  .cmp-page .cmp-kpi-row { order: 5; }
-  .cmp-page .cmp-results-tabs,
-  .cmp-page .cmp-viz-panel { order: 6; }
-  .cmp-page .cmp-source-note { order: 7; }
-  .cmp-page .cmp-verdict { order: 8; }
-  .cmp-page .cmp-sidebar-right > .cmp-panel:not(.cmp-verdict) { order: 9; }
-  .cmp-page .cmp-feel-panel { order: 10; }
-  .cmp-page .cmp-share-panel,
-  .cmp-page .cmp-rail-report,
-  .cmp-page .cmp-rail-updated { order: 11; }
-  .cmp-page .cmp-specs-table { order: 12; }
-  .cmp-page .cmp-seo-block--what-means { order: 13; }
-  .cmp-page .cmp-fitment-verdict { order: 14; }
-  .cmp-page .cmp-upgrade-paths { order: 15; }
-  .cmp-page .tsc-popular { order: 16; }
-  .cmp-page .cmp-seo-block--faq { order: 17; }
-  .cmp-page .cmp-panel--popular { order: 18; }
-  .cmp-page .cmp-panel--calc-network { order: 19; }
 
   /* Collapse the Understanding section to ~4 lines with a Read more expander. */
   .cmp-page .cmp-seo-block--understanding:not(.is-expanded) .cmp-seo-block__clampable {
@@ -367,6 +312,7 @@
   .wof-page:not(.grc-page) .wof-edu-converter-row { order: 8; }     /* offset diagram → converter */
   .wof-page:not(.grc-page) .wof-sidebar-panel--vehicles { order: 10; }
   .wof-page:not(.grc-page) .wof-sidebar-panel--guide { order: 11; }
+  .wof-page:not(.grc-page) .wof-sidebar-panel--comparisons { order: 12; }
   .wof-page:not(.grc-page) .wof-sidebar-panel--related { order: 12; }
   .wof-page:not(.grc-page) .wof-impact-card,
   .wof-page:not(.grc-page) .wof-seo-block { order: 13; }            /* Educational content */

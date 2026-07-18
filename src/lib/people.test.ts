@@ -28,7 +28,7 @@ describe('people', () => {
   it('expands credit groups for tire hubs and calculators', () => {
     const groups = getPersonCreditGroups(PEOPLE[0]!);
     expect(groups.some((group) => group.title === 'Tire size guides' && group.count > 0)).toBe(true);
-    expect(groups.some((group) => group.title === 'Interactive calculators' && group.count === 6)).toBe(
+    expect(groups.some((group) => group.title === 'Interactive calculators' && group.count === 5)).toBe(
       true,
     );
   });

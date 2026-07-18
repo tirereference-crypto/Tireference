@@ -110,8 +110,9 @@ function KpiCardIcon({ icon }: { icon: KpiCard['icon'] }) {
 }
 
 export function ComparisonKpiRow({ cards }: { cards: KpiCard[] }) {
+  if (cards.length === 0) return null;
   return (
-    <div className="cmp-kpi-row" aria-label="Key dimensional differences">
+    <div className="cmp-kpi-row">
       {cards.map((card) => (
         <article key={card.id} className="cmp-kpi cmp-card-level-secondary">
           <div className="cmp-kpi__head">
@@ -230,12 +231,8 @@ export function ComparisonFeelPanel({
   );
 }
 
-export function ComparisonDecisionRail({
-  decision,
-}: {
-  decision: DimensionalDecisionSupport;
-}) {
-  const { tireDataRows, vehicleDetailRows } = useMemo(() => {
+function useFitmentGroups(decision: DimensionalDecisionSupport) {
+  return useMemo(() => {
     const byId = new Map(decision.fitmentRows.map((row) => [row.id, row]));
     const tireData: DecisionFitmentRow[] = [];
     for (const id of TIRE_DATA_FITMENT_IDS) {
@@ -257,88 +254,115 @@ export function ComparisonDecisionRail({
     }
     return { tireDataRows: tireData, vehicleDetailRows: vehicleDetail };
   }, [decision.fitmentRows]);
+}
 
+export function ComparisonVerdictPanel({
+  decision,
+}: {
+  decision: DimensionalDecisionSupport;
+}) {
   const supportLine = verdictSupportLine(decision);
 
   return (
-    <div className="cmp-decision-rail">
-      <section
-        className={`cmp-panel cmp-verdict cmp-verdict--${decision.tone} cmp-card-level-primary`}
-        aria-label="Dimensional verdict"
-      >
-        <p className="cmp-verdict__heading">Dimensional Verdict</p>
-        <p className="cmp-verdict__title">{decision.heading}</p>
-        <p className="cmp-verdict__support">{supportLine}</p>
+    <section
+      className={`cmp-panel cmp-verdict cmp-verdict--${decision.tone} cmp-card-level-primary`}
+      aria-label="Dimensional verdict"
+    >
+      <p className="cmp-verdict__heading">Dimensional Verdict</p>
+      <p className="cmp-verdict__title">{decision.heading}</p>
+      <p className="cmp-verdict__support">{supportLine}</p>
 
-        <div className="cmp-verdict__score-block">
-          <p className="cmp-verdict__score-label">{decision.scoreTitle}</p>
-          <VerdictScoreRing score={decision.score} tone={decision.tone} />
-          <p className="cmp-verdict__score-sr-only">
-            {decision.scoreTitle}: {decision.score.toFixed(1)} out of 10
-          </p>
-          <p className="cmp-verdict__score-note">{decision.scoreDisclaimer}</p>
-        </div>
-
-        <ul className="cmp-verdict__list">
-          {decision.bullets.map((item) => (
-            <li key={item.text}>
-              <span
-                className={`cmp-verdict__icon cmp-verdict__icon--${item.kind === 'warning' ? 'consideration' : 'benefit'}`}
-                aria-hidden="true"
-              >
-                {item.kind === 'warning' ? '⚠' : '•'}
-              </span>
-              <span>{item.text}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section
-        className="cmp-panel cmp-fitment-rail-panel cmp-card-level-secondary"
-        aria-label="Essential fitment checks"
-      >
-        <p className="cmp-sidebar-block__title">Essential Fitment Checks</p>
-
-        <p className="cmp-fitment-checks__group-title">Confirmed from tire data</p>
-        <ul className="cmp-fitment-checks">
-          {tireDataRows.map((row) => (
-            <FitmentRow key={row.id} row={row} />
-          ))}
-        </ul>
-
-        <p className="cmp-fitment-checks__group-title">Requires vehicle verification</p>
-        <ul className="cmp-fitment-checks">
-          <li className="cmp-fitment-checks__row cmp-fitment-checks__row--grouped">
-            <div className="cmp-fitment-checks__grouped-copy">
-              <span className="cmp-fitment-checks__grouped-label">
-                Vehicle clearance and wheel compatibility
-              </span>
-              <span className="cmp-fitment-checks__grouped-detail">
-                Check fender, suspension, brake, hub and offset clearance for the specific vehicle.
-              </span>
-            </div>
-            <span className="cmp-fitment-checks__badge cmp-fitment-checks__badge--unknown">
-              Check required
-            </span>
-          </li>
-        </ul>
-
-        {vehicleDetailRows.length > 0 ? (
-          <details className="cmp-fitment-more">
-            <summary>View detailed vehicle-specific checks</summary>
-            <ul className="cmp-fitment-checks cmp-fitment-checks--detail">
-              {vehicleDetailRows.map((row) => (
-                <FitmentRow key={row.id} row={row} hideStatus />
-              ))}
-            </ul>
-          </details>
-        ) : null}
-
-        <p className="cmp-fitment-checks__note">
-          Clearance, offset and hub fit are vehicle-specific and never confirmed from tire size alone.
+      <div className="cmp-verdict__score-block">
+        <p className="cmp-verdict__score-label">{decision.scoreTitle}</p>
+        <VerdictScoreRing score={decision.score} tone={decision.tone} />
+        <p className="cmp-verdict__score-sr-only">
+          {decision.scoreTitle}: {decision.score.toFixed(1)} out of 10
         </p>
-      </section>
+        <p className="cmp-verdict__score-note">{decision.scoreDisclaimer}</p>
+      </div>
+
+      <ul className="cmp-verdict__list">
+        {decision.bullets.map((item) => (
+          <li key={item.text}>
+            <span
+              className={`cmp-verdict__icon cmp-verdict__icon--${item.kind === 'warning' ? 'consideration' : 'benefit'}`}
+              aria-hidden="true"
+            >
+              {item.kind === 'warning' ? '⚠' : '•'}
+            </span>
+            <span>{item.text}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function ComparisonFitmentPanel({
+  decision,
+}: {
+  decision: DimensionalDecisionSupport;
+}) {
+  const { tireDataRows, vehicleDetailRows } = useFitmentGroups(decision);
+
+  return (
+    <section
+      className="cmp-panel cmp-fitment-rail-panel cmp-card-level-secondary"
+      aria-label="Essential fitment checks"
+    >
+      <p className="cmp-sidebar-block__title">Essential Fitment Checks</p>
+
+      <p className="cmp-fitment-checks__group-title">Confirmed from tire data</p>
+      <ul className="cmp-fitment-checks">
+        {tireDataRows.map((row) => (
+          <FitmentRow key={row.id} row={row} />
+        ))}
+      </ul>
+
+      <p className="cmp-fitment-checks__group-title">Requires vehicle verification</p>
+      <ul className="cmp-fitment-checks">
+        <li className="cmp-fitment-checks__row cmp-fitment-checks__row--grouped">
+          <div className="cmp-fitment-checks__grouped-copy">
+            <span className="cmp-fitment-checks__grouped-label">
+              Vehicle clearance and wheel compatibility
+            </span>
+            <span className="cmp-fitment-checks__grouped-detail">
+              Check fender, suspension, brake, hub and offset clearance for the specific vehicle.
+            </span>
+          </div>
+          <span className="cmp-fitment-checks__badge cmp-fitment-checks__badge--unknown">
+            Check required
+          </span>
+        </li>
+      </ul>
+
+      {vehicleDetailRows.length > 0 ? (
+        <details className="cmp-fitment-more">
+          <summary>View detailed vehicle-specific checks</summary>
+          <ul className="cmp-fitment-checks cmp-fitment-checks--detail">
+            {vehicleDetailRows.map((row) => (
+              <FitmentRow key={row.id} row={row} hideStatus />
+            ))}
+          </ul>
+        </details>
+      ) : null}
+
+      <p className="cmp-fitment-checks__note">
+        Clearance, offset and hub fit are vehicle-specific and never confirmed from tire size alone.
+      </p>
+    </section>
+  );
+}
+
+export function ComparisonDecisionRail({
+  decision,
+}: {
+  decision: DimensionalDecisionSupport;
+}) {
+  return (
+    <div className="cmp-decision-rail">
+      <ComparisonVerdictPanel decision={decision} />
+      <ComparisonFitmentPanel decision={decision} />
     </div>
   );
 }

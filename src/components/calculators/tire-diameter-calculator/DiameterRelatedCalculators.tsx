@@ -10,7 +10,6 @@ import { CALCULATOR_NAMES, trackRelatedCalculatorClick } from '../../../lib/anal
 const SHORT_DESCRIPTIONS: Partial<Record<string, string>> = {
   [CALCULATOR_PATHS.tireSize]: 'Convert a size code into diameter, width, and revs/mile.',
   [CALCULATOR_PATHS.tireComparison]: 'Compare two sizes for diameter change and fitment.',
-  [CALCULATOR_PATHS.speedometerError]: 'See indicated-speed change after a diameter swap.',
   [CALCULATOR_PATHS.wheelOffset]: 'Check offset, poke, and clearance before buying wheels.',
   [CALCULATOR_PATHS.gearRatio]: 'Estimate gearing change after a diameter swap.',
 };

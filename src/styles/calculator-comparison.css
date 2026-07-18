@@ -769,7 +769,9 @@
   align-self: stretch;
 }
 
-/* Visual + decision rail: equal-height columns; verdict aligns with visual tabs */
+/* Visual + decision rail.
+   DOM order = mobile reading order (verdict → visual → KPIs → fitment → feel).
+   Desktop uses named grid areas only — never CSS order. */
 .cmp-comparison-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -779,28 +781,77 @@
   min-width: 0;
 }
 
-@media (min-width: 1100px) {
-  .cmp-comparison-stage {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
-    align-items: stretch;
-  }
-}
-
+.cmp-stage-verdict,
+.cmp-stage-fitment,
+.cmp-stage-kpis,
 .cmp-visual-stage {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
   min-width: 0;
 }
 
+.cmp-stage-kpis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.cmp-mobile-section-title {
+  display: none;
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--cmp-navy, #0f172a);
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 1099px) {
+  .cmp-mobile-section-title {
+    display: block;
+  }
+}
+
 @media (min-width: 1100px) {
-  .cmp-comparison-stage .cmp-visual-stage {
+  .cmp-comparison-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+    grid-template-areas:
+      'kpis kpis'
+      'visual verdict'
+      'feel fitment';
+    align-items: stretch;
+  }
+
+  .cmp-stage-kpis {
+    grid-area: kpis;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .cmp-stage-kpis .cmp-stage-kpi,
+  .cmp-stage-kpis .cmp-stage-speedo,
+  .cmp-stage-kpis .cmp-kpi-row {
+    display: contents;
+  }
+
+  .cmp-visual-stage {
+    grid-area: visual;
     min-height: 100%;
     height: 100%;
   }
 
-  .cmp-comparison-stage .cmp-feel-panel {
-    flex: 1 1 auto;
+  .cmp-stage-verdict {
+    grid-area: verdict;
+    align-self: stretch;
+    height: 100%;
+  }
+
+  .cmp-stage-fitment {
+    grid-area: fitment;
+    align-self: stretch;
+  }
+
+  .cmp-comparison-stage > .cmp-feel-panel {
+    grid-area: feel;
     margin-top: 0;
     display: flex;
     flex-direction: column;
@@ -813,6 +864,17 @@
   .cmp-comparison-stage .cmp-source-note {
     flex: 0 0 auto;
   }
+
+  .cmp-stage-verdict .cmp-verdict {
+    height: 100%;
+  }
+}
+
+.cmp-visual-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
 }
 
 .cmp-page-header--full {
@@ -1880,6 +1942,8 @@
 }
 
 @media (min-width: 1100px) {
+  .cmp-comparison-stage .cmp-stage-verdict,
+  .cmp-comparison-stage .cmp-stage-fitment,
   .cmp-comparison-stage .cmp-sidebar-right {
     align-self: stretch;
     height: 100%;
@@ -1895,7 +1959,8 @@
     height: 100%;
   }
 
-  .cmp-comparison-stage .cmp-decision-rail .cmp-verdict {
+  .cmp-comparison-stage .cmp-decision-rail .cmp-verdict,
+  .cmp-comparison-stage .cmp-stage-verdict .cmp-verdict {
     flex: 0 0 auto;
   }
 
@@ -1904,6 +1969,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    height: 100%;
   }
 
   .cmp-comparison-stage .cmp-fitment-rail-panel .cmp-fitment-checks__note {
@@ -4391,23 +4457,7 @@
   padding: 0 0.5rem;
 }
 
-@media (min-width: 560px) and (max-width: 899px) {
-  .cmp-enter-card__tires {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.85rem 1rem;
-  }
-
-  .cmp-enter-card__tires > .cmp-tire-input-block + .cmp-tire-input-block {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-    border-left: 1px solid var(--color-border);
-    padding-left: 1rem;
-  }
-}
-
-@media (max-width: 559px) {
+@media (max-width: 899px) {
   .cmp-enter-card__tires {
     display: flex;
     flex-direction: column;
@@ -4415,6 +4465,11 @@
 
   .cmp-enter-card__heading {
     flex-wrap: wrap;
+  }
+
+  .cmp-enter-card__tires > .cmp-tire-input-block + .cmp-tire-input-block {
+    border-left: none;
+    padding-left: 0;
   }
 }
 
@@ -4505,7 +4560,9 @@
 }
 
 @media (max-width: 1099px) {
-  .cmp-comparison-stage > .cmp-sidebar-right {
+  .cmp-comparison-stage > .cmp-sidebar-right,
+  .cmp-comparison-stage > .cmp-stage-verdict,
+  .cmp-comparison-stage > .cmp-stage-fitment {
     position: static;
     max-height: none;
     overflow: visible;
@@ -4689,8 +4746,11 @@
 }
 
 @media (max-width: 767px) {
+  /* Match the SVG viewBox ratio (800×320) exactly so the circle overlay, the
+     percentage-positioned tire images and the labels all share one coordinate
+     system — this keeps the circles perfectly on the tires at any width. */
   .cmp-viz-canvas {
-    aspect-ratio: 800 / 300;
+    aspect-ratio: 800 / 320;
     min-height: 0;
     max-height: none;
   }
@@ -4699,19 +4759,33 @@
     padding-bottom: 0;
   }
 
-  .cmp-viz-canvas__size {
-    font-size: 0.95rem;
+  /* Pin labels to the canvas top (above the circles and the difference
+     arrow) so the fixed-size HTML text never collides with the scaled SVG. */
+  .cmp-viz-canvas__label {
+    top: 2px !important;
+    max-width: 48%;
+    white-space: nowrap;
   }
 
-  .cmp-viz-canvas__label {
-    max-width: 48%;
-    white-space: normal;
+  .cmp-viz-canvas__role {
+    margin: 0;
+    font-size: 0.6rem;
+    line-height: 1.2;
+  }
+
+  .cmp-viz-canvas__size {
+    font-size: 0.8rem;
+    line-height: 1.25;
+  }
+
+  .cmp-viz-canvas__diam {
+    display: none;
   }
 }
 
 @media (max-width: 429px) {
   .cmp-results-tabs__panel--visual .cmp-viz-canvas {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 800 / 320;
     max-height: none;
   }
 }
@@ -4944,19 +5018,7 @@
   }
 }
 
-@media (max-width: 899px) {
-  .cmp-below-dashboard__left {
-    order: 1;
-  }
-
-  .cmp-below-dashboard__checklist {
-    order: unset;
-  }
-
-  .cmp-below-dashboard__explain {
-    order: 2;
-  }
-}
+/* Mobile below-dashboard keeps DOM order (no CSS order reordering). */
 
 .cmp-below-dashboard__checklist,
 .cmp-below-dashboard__explain {
@@ -6123,15 +6185,6 @@
   .cmp-page .cmp-summary-bar__size--b {
     font-size: 0.95rem;
   }
-
-  .cmp-page .cmp-tire-input-block__grid {
-    gap: 0.35rem 0.25rem;
-  }
-
-  .cmp-page .cmp-tire-input-block__grid input {
-    font-size: 0.8125rem;
-    padding: 0 0.2rem;
-  }
 }
 
 @media (max-width: 1279px), (max-height: 979px) {
@@ -6143,26 +6196,12 @@
 }
 
 @media (max-width: 1279px) {
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right {
+  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right,
+  .cmp-page .cmp-comparison-stage > .cmp-stage-verdict,
+  .cmp-page .cmp-comparison-stage > .cmp-stage-fitment {
     position: static !important;
     max-height: none !important;
     overflow: visible !important;
-  }
-}
-
-@media (min-width: 900px) and (max-width: 1099px) {
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--cmp-gap);
-    align-items: start;
-  }
-
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right > .cmp-feel-panel,
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right > .cmp-share-panel,
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right > .cmp-rail-report,
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right > .cmp-rail-updated {
-    grid-column: 1 / -1;
   }
 }
 
@@ -6175,7 +6214,9 @@
 /* Short viewports / 200% zoom: never sticky, never nested scroll */
 @media (max-height: 979px) {
   .cmp-page .cmp-dashboard > .cmp-sidebar-left > .cmp-enter-card,
-  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right {
+  .cmp-page .cmp-comparison-stage > .cmp-sidebar-right,
+  .cmp-page .cmp-comparison-stage > .cmp-stage-verdict,
+  .cmp-page .cmp-comparison-stage > .cmp-stage-fitment {
     position: static !important;
     max-height: none !important;
     overflow: visible !important;
@@ -6245,4 +6286,127 @@
 .cmp-page .cmp-dashboard > .cmp-sidebar-left > .cmp-enter-card {
   max-height: none;
   overflow: visible;
+}
+
+/* ═══════════════════════════════════════════════
+   Mobile UX — comparison calculator
+   Inputs first (DOM order), compact verdict, readable SVG
+   ═══════════════════════════════════════════════ */
+@media (max-width: 899px) {
+  .cmp-page .cmp-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .cmp-page .cmp-sidebar-left,
+  .cmp-page .cmp-comparison-workspace {
+    width: 100%;
+  }
+
+  .cmp-page .cmp-enter-card {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .cmp-page .cmp-enter-card__heading {
+    margin-bottom: 1rem;
+  }
+
+  .cmp-page .cmp-tire-input-block + .cmp-tire-input-block {
+    margin-top: 1.15rem;
+    padding-top: 1rem;
+  }
+
+  /* Width / aspect / construction / wheel — keep a readable row; wrap if needed */
+  .cmp-page .cmp-tire-input-block__grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 2.6rem minmax(0, 1.1fr);
+    gap: 0.55rem 0.4rem;
+  }
+
+  .cmp-page .cmp-tire-input-block__grid input {
+    min-height: 44px;
+    height: 44px;
+    font-size: 1rem;
+    padding: 0 0.45rem;
+  }
+
+  .cmp-page .cmp-enter-card__actions .cmp-compare-btn {
+    width: 100%;
+    min-height: 48px;
+    height: 48px;
+    font-size: 1rem;
+  }
+
+  .cmp-page .cmp-enter-card__actions {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    gap: 0.85rem;
+  }
+
+  .cmp-page .cmp-enter-card__settings {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .cmp-page .cmp-verdict {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .cmp-page .cmp-verdict__score-focal {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .cmp-page .cmp-verdict__score-value {
+    font-size: 1.35rem;
+  }
+
+  .cmp-page .cmp-verdict__list {
+    margin-top: 0.4rem;
+    gap: 0.3rem;
+  }
+
+  .cmp-page .cmp-summary-bar {
+    padding: 0.5rem 0.7rem;
+  }
+
+  .cmp-page .cmp-kpi {
+    padding: 0.6rem 0.65rem;
+  }
+
+  .cmp-page .cmp-comparison-stage {
+    gap: 0.85rem;
+  }
+
+  .cmp-page .cmp-stage-kpis {
+    gap: 1rem;
+  }
+
+  .cmp-page .cmp-stage-kpi .cmp-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cmp-page .cmp-stage-speedo .cmp-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 429px) {
+  .cmp-page .cmp-tire-input-block__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Keep construction with the size code; stack wheel on second row */
+  .cmp-page .cmp-tire-input-block__field:nth-child(3) {
+    display: none;
+  }
+}
+
+/* Short viewports: keep stage panels non-sticky */
+@media (max-height: 979px) {
+  .cmp-page .cmp-comparison-stage > .cmp-stage-verdict,
+  .cmp-page .cmp-comparison-stage > .cmp-stage-fitment {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
 }

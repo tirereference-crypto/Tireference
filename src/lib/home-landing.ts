@@ -25,13 +25,6 @@ export const HOME_QUICK_ACTIONS = [
     tone: 'orange' as const,
   },
   {
-    title: 'Speedometer Error Calculator',
-    description: 'See how tire-size changes affect indicated speed and odometer accuracy.',
-    href: CALCULATOR_PATHS.speedometerError,
-    icon: 'speedometer' as const,
-    tone: 'green' as const,
-  },
-  {
     title: 'Tire Diameter Calculator',
     description: 'Find tire sizes that match a target overall diameter.',
     href: CALCULATOR_PATHS.tireDiameter,
@@ -168,7 +161,7 @@ export const HOME_USE_CASES = [
   {
     title: 'Speed & Performance',
     description: 'Compare diameter and speedometer effects',
-    href: CALCULATOR_PATHS.speedometerError,
+    href: CALCULATOR_PATHS.tireDiameter,
     tone: 'speed' as const,
     imageSrc: '/images/home/use-cases/speed.jpg',
     imageAlt: 'Sports car on an open road for performance tire planning',
