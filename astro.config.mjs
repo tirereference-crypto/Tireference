@@ -8,7 +8,6 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 
 import sitemap from '@astrojs/sitemap';
-import vercel from '@astrojs/vercel';
 
 /** Permanent redirects from legacy root-level calculator routes. */
 const LEGACY_CALCULATOR_REDIRECTS = {
@@ -45,7 +44,7 @@ function sitemapXmlAlias() {
 export default defineConfig({
   site: 'https://tirereference.com',
   trailingSlash: 'always',
-  adapter: vercel(),
+  output: 'static',
   integrations: [react(), sitemap(), sitemapXmlAlias()],
   redirects: Object.fromEntries(
     Object.entries(LEGACY_CALCULATOR_REDIRECTS).map(([source, destination]) => [

@@ -1,0 +1,17 @@
+# Cloudflare Pages redirects — legacy root-level calculator routes.
+# Mirrors LEGACY_CALCULATOR_REDIRECTS in astro.config.mjs so the
+# redirects serve real 301s instead of static meta-refresh pages.
+/tire-size-calculator /calculators/tire-size-calculator/ 301
+/tire-size-calculator/ /calculators/tire-size-calculator/ 301
+/tire-diameter-calculator /calculators/tire-diameter-calculator/ 301
+/tire-diameter-calculator/ /calculators/tire-diameter-calculator/ 301
+/tire-size-comparison /calculators/tire-comparison-calculator/ 301
+/tire-size-comparison/ /calculators/tire-comparison-calculator/ 301
+/tire-comparison-calculator /calculators/tire-comparison-calculator/ 301
+/tire-comparison-calculator/ /calculators/tire-comparison-calculator/ 301
+/wheel-offset-calculator /calculators/wheel-offset-calculator/ 301
+/wheel-offset-calculator/ /calculators/wheel-offset-calculator/ 301
+/speedometer-error-calculator /calculators/speedometer-error-calculator/ 301
+/speedometer-error-calculator/ /calculators/speedometer-error-calculator/ 301
+/gear-ratio-calculator /calculators/gear-ratio-calculator/ 301
+/gear-ratio-calculator/ /calculators/gear-ratio-calculator/ 301

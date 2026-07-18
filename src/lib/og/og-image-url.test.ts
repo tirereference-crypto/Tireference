@@ -1,20 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildCompareOgData, buildTireOgData } from './og-data';
-import { compareOgImageUrl, prebuiltCompareOgImageUrl, prebuiltTireOgImageUrl, tireOgImageUrl } from './og-image-url';
+import { prebuiltCompareOgImageUrl, prebuiltTireOgImageUrl } from './og-image-url';
 
 describe('og-image-url', () => {
-  it('builds dynamic tire OG URLs', () => {
-    expect(tireOgImageUrl('275/70R18')).toBe(
-      'https://tirereference.com/og/tire.png?size=275%2F70R18',
-    );
-  });
-
-  it('builds dynamic compare OG URLs', () => {
-    expect(compareOgImageUrl('225/45R17', '235/40R18')).toBe(
-      'https://tirereference.com/og/compare.png?from=225%2F45R17&to=235%2F40R18',
-    );
-  });
-
   it('builds prebuilt tire OG URLs', () => {
     expect(prebuiltTireOgImageUrl('275-70r18')).toBe(
       'https://tirereference.com/og/prebuilt/tire/275-70r18.png',

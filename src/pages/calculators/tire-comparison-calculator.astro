@@ -2,7 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import PremiumTireSizeComparison from '../../components/calculators/PremiumTireSizeComparison';
 import { buildComparisonInsights } from '../../lib/tire-comparison-insights';
-import { compareOgImageUrl } from '../../lib/og/og-image-url';
+import { prebuiltCompareOgImageUrl } from '../../lib/og/og-image-url';
+import { comparisonSlugFromSizes } from '../../lib/tire-comparison-links';
 import { parseTireComparisonFromSearch } from '../../lib/calculator-url-state';
 import { SEO_DESCRIPTIONS } from '../../lib/seo/constants';
 import { buildPageSchema, calculatorBreadcrumbs } from '../../lib/seo/page-schemas';
@@ -34,7 +35,7 @@ try {
   /* keep defaults for invalid query params */
 }
 
-const ogImage = compareOgImageUrl(current, newSize);
+const ogImage = prebuiltCompareOgImageUrl(comparisonSlugFromSizes(current, newSize));
 
 const schema = buildPageSchema({
   breadcrumbs: calculatorBreadcrumbs('Tire Size Comparison'),
