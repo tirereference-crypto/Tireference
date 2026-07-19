@@ -10,11 +10,12 @@ import { buildPopularComparisonsForSize } from './tire-comparison-links';
 import { isValidComparisonPair } from './tire-comparison-validation';
 import { hubPagePath } from './tire-size-url';
 import { hasTireSizeGuide } from './has-tire-size-guide';
+import { SITE_URL } from './seo/constants';
 
 /** True when an href uses comparison-calculator query params. */
 export function isParameterizedComparisonUrl(href: string): boolean {
   try {
-    const url = new URL(href, 'https://tirereference.com');
+    const url = new URL(href, SITE_URL);
     if (!url.pathname.replace(/\/+$/, '').endsWith('/calculators/tire-comparison-calculator')) {
       return false;
     }

@@ -11,10 +11,6 @@ const { initialSubject = '', initialMessage = '' } = Astro.props;
 ---
 
 <form class="info-form" id="contact-form" novalidate>
-  <!--
-    No private API keys in client code. When a backend is ready, POST FormData
-    to your provider. Until then, submit opens a mailto draft as a safe fallback.
-  -->
   <div class="info-form__field">
     <label class="info-form__label" for="contact-name">Name</label>
     <input

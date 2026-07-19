@@ -168,12 +168,13 @@ export function canonicalComparisonPath(sizeA: string, sizeB: string): string {
 
 /**
  * Absolute canonical comparison URL on the supplied origin.
- * Defaults to the production site origin for existing schema/canonical callers.
+ * The pure URL layer does not own a production hostname; callers must provide
+ * the shared site origin explicitly.
  */
 export function canonicalComparisonUrl(
   sizeA: string,
   sizeB: string,
-  origin = 'https://tirereference.com',
+  origin: string,
 ): string {
   return getCanonicalComparisonPair(sizeA, sizeB, origin).url;
 }

@@ -8,7 +8,6 @@ import {
   REPORT_ISSUE_PATH,
   formatMonthYear,
 } from '../lib/eeat-metadata';
-import { hasPublishedValidationResults } from '../data/manufacturer-validation-records';
 import { SITE_NAME } from '../lib/site-brand';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
 import '../styles/info-pages.css';
@@ -17,7 +16,6 @@ const title = `Data & Calculation Standards | ${SITE_NAME}`;
 const description = `How ${SITE_NAME} calculates nominal tire dimensions, distinguishes calculator output from catalog data, and accepts corrections.`;
 
 const schema = buildInfoPageSchema(title, description, DATA_STANDARDS_PATH, 'Data & Calculation Standards');
-const showValidationRoadmap = !hasPublishedValidationResults();
 ---
 
 <Layout title={title} description={description} canonical={DATA_STANDARDS_PATH} schema={schema}>
@@ -158,21 +156,17 @@ const showValidationRoadmap = !hasPublishedValidationResults();
         </div>
       </section>
 
-      {
-        showValidationRoadmap ? (
-          <section class="info-section" aria-labelledby="ds-validation-title">
-            <h2 id="ds-validation-title" class="info-section__title">Manufacturer-spec validation</h2>
-            <div class="info-section__body">
-              <p>
-                We are building a manufacturer-specification validation dataset that compares
-                nominal calculated overall diameters with published manufacturer values. Results
-                will be published only after sufficient records have been independently checked.
-                No accuracy percentage is shown until then.
-              </p>
-            </div>
-          </section>
-        ) : null
-      }
+      <section class="info-section" aria-labelledby="ds-validation-title">
+        <h2 id="ds-validation-title" class="info-section__title">Validation limits</h2>
+        <div class="info-section__body">
+          <p>
+            Nominal dimensions are checked for consistent formula use and valid tire-size inputs.
+            They should not be treated as manufacturer measurements for a particular product.
+            Where a product-specific published value is important, confirm it with the tire
+            manufacturer.
+          </p>
+        </div>
+      </section>
     </div>
   </div>
 </Layout>

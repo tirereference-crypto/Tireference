@@ -25,6 +25,7 @@ import {
   buildTireCategoryHubData,
 } from './tire-category-hubs';
 import { isParameterizedComparisonUrl } from './crawlable-links';
+import { SITE_URL } from './seo/constants';
 
 export type ValidationSeverity = 'warning' | 'error';
 export type GeneratedPageType = 'comparison' | 'tire-size' | 'tire-category';
@@ -373,7 +374,7 @@ function validateTireSizeComparisonHref(
 
   // Blank comparison calculator (no query) is allowed as a crawlable fallback.
   try {
-    const url = new URL(href, 'https://tirereference.com');
+    const url = new URL(href, SITE_URL);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     if (
       path.endsWith('/calculators/tire-comparison-calculator') &&
@@ -690,7 +691,7 @@ export function validateRenderedComparisonPage(
   const canonical = extractCanonical(html);
   const initialCurrent = extractIslandStringProp(html, 'initialCurrent');
   const initialNew = extractIslandStringProp(html, 'initialNew');
-  const expectedCanonical = `https://tirereference.com${page}`;
+  const expectedCanonical = `${SITE_URL}${page}`;
 
   // Exact pair-specific templates: catches generic headings and any
   // title/H1 rendered in the reverse of the URL's canonical order.
@@ -796,7 +797,7 @@ function validateRenderedPages(
     const title = extractTag(html, 'title');
     const h1 = extractTag(html, 'h1');
     const canonical = extractCanonical(html);
-    const expectedCanonical = `https://tirereference.com${page}`;
+    const expectedCanonical = `${SITE_URL}${page}`;
     if (!title || !containsSize(title, entry.size)) {
       addIssue(context, 'rendered-title', `Title does not contain ${entry.size}: "${title ?? 'missing'}".`);
     }
@@ -841,7 +842,7 @@ function validateRenderedPages(
     const h1 = extractTag(html, 'h1');
     const breadcrumb = extractBreadcrumb(html);
     const canonical = extractCanonical(html);
-    const expectedCanonical = `https://tirereference.com${hub.path}`;
+    const expectedCanonical = `${SITE_URL}${hub.path}`;
 
     if (!title || !normalizeText(title).includes(hub.label)) {
       addIssue(context, 'rendered-title', `Title does not contain ${hub.label}: "${title ?? 'missing'}".`);

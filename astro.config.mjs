@@ -8,6 +8,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 
 import sitemap from '@astrojs/sitemap';
+import { PRODUCTION_ORIGIN } from './site.config.mjs';
 
 /** Permanent redirects from legacy root-level calculator routes. */
 const LEGACY_CALCULATOR_REDIRECTS = {
@@ -41,7 +42,7 @@ function sitemapXmlAlias() {
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://tirereference.com',
+  site: PRODUCTION_ORIGIN,
   trailingSlash: 'always',
   output: 'static',
   integrations: [react(), sitemap(), sitemapXmlAlias()],

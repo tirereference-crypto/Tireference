@@ -14,7 +14,8 @@
     "validate:internal-links": "tsx scripts/validate-internal-links.ts",
     "validate:metadata": "VALIDATE_DIST=1 vitest run src/lib/seo/page-metadata-schema.test.ts",
     "validate:production": "node --max-old-space-size=8192 node_modules/tsx/dist/cli.mjs scripts/validate-production.ts",
-    "build": "npm run data:comparison-slugs && npm run og:generate && astro build && npm run validate:production",
+    "validate:public-output": "node --max-old-space-size=8192 node_modules/tsx/dist/cli.mjs scripts/validate-public-output.ts",
+    "build": "npm run data:comparison-slugs && npm run og:generate && node --max-old-space-size=2048 node_modules/astro/bin/astro.mjs build && npm run validate:production && npm run validate:public-output",
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest run"

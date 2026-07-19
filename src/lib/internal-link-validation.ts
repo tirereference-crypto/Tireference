@@ -13,6 +13,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parseComparisonSlug } from './comparison-url';
 import { isParameterizedComparisonUrl } from './crawlable-links';
+import { SITE_URL } from './seo/constants';
 
 export type InternalLinkIssueKind =
   | 'broken'
@@ -130,9 +131,9 @@ function extractInternalHrefs(html: string): string[] {
 
 function resolveInternalHref(href: string, sourcePath: string): { path: string; search: string } | null {
   try {
-    const base = `https://tirereference.com${sourcePath}`;
+    const base = `${SITE_URL}${sourcePath}`;
     const url = new URL(href, base);
-    if (url.hostname !== 'tirereference.com') return null;
+    if (url.origin !== SITE_URL) return null;
     return {
       path: normalizeSitePath(url.pathname),
       search: url.search,

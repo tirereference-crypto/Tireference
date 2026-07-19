@@ -1,10 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import InfoPageHero from '../components/info/InfoPageHero.astro';
-import LegalEntityNotice from '../components/legal/LegalEntityNotice.astro';
-import LegalPlaceholderChecklist from '../components/legal/LegalPlaceholderChecklist.astro';
 import { CONTACT_EMAIL } from '../lib/info-pages';
-import { LEGAL_ENTITY } from '../data/legal-entity';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
 import { formatEditorialDate } from '../lib/editorial';
 import '../styles/info-pages.css';
@@ -25,15 +22,13 @@ const updated = formatEditorialDate();
         lead="These terms govern access to Tire Reference and use of our calculators, guides, and related content. By using the site, you agree to the terms below."
       />
 
-      <LegalEntityNotice />
-
       <article class="info-legal">
         <h2>Acceptance of terms</h2>
         <p>
           By accessing or using Tire Reference at tirereference.com, you agree to these Terms of Use and our <a href="/privacy-policy">Privacy Policy</a>. If you do not agree, please do not use the website.
         </p>
         <p>
-          These terms are a binding agreement between you and <strong>{LEGAL_ENTITY.name}</strong>.
+          Tire Reference is an independently operated informational website.
         </p>
 
         <h2>Use of calculators</h2>
@@ -56,7 +51,10 @@ const updated = formatEditorialDate();
 
         <h2>Limitation of liability</h2>
         <p>
-          To the fullest extent permitted by law, {LEGAL_ENTITY.name} and its operators, officers, employees, and agents will not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the site or reliance on calculator results — including vehicle damage, fitment issues, financial loss, or personal injury — even if we have been advised of the possibility of such damages.
+          To the fullest extent permitted by applicable law, the operator of Tire Reference will not
+          be liable for indirect, incidental, special, consequential, or punitive damages arising
+          from use of the site or reliance on calculator results, including vehicle damage, fitment
+          issues, financial loss, or personal injury.
         </p>
 
         <h2>External links</h2>
@@ -64,15 +62,11 @@ const updated = formatEditorialDate();
           The site may link to third-party websites or resources. Those links are provided for convenience only. We do not endorse and are not responsible for the content, policies, or practices of external sites.
         </p>
 
-        <h2>Governing law &amp; jurisdiction</h2>
+        <h2>Applicable rights</h2>
         <p>
-          These Terms of Use are governed by the laws of <strong>{LEGAL_ENTITY.governingLaw}</strong>, without regard to conflict-of-law principles that would require applying another jurisdiction&apos;s laws.
-        </p>
-        <p>
-          You agree that any dispute arising out of or relating to these terms or your use of Tire Reference will be brought exclusively in <strong>{LEGAL_ENTITY.venue}</strong>, and you consent to the personal jurisdiction of those courts.
-        </p>
-        <p>
-          If you access Tire Reference from outside {LEGAL_ENTITY.governingLaw}, you are responsible for compliance with local laws where applicable.
+          Nothing in these terms limits consumer or other rights that cannot lawfully be excluded.
+          You are responsible for complying with laws that apply to your use of the website and any
+          vehicle modifications you make.
         </p>
 
         <h2>Changes to terms</h2>
@@ -82,11 +76,11 @@ const updated = formatEditorialDate();
 
         <h2>Contact</h2>
         <p>
-          Questions about these terms? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, write to {LEGAL_ENTITY.address}, or use our <a href="/contact">contact form</a>.
+          Questions about these terms may be sent to{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or through the{' '}
+          <a href="/contact/">contact page</a>.
         </p>
       </article>
-
-      <LegalPlaceholderChecklist />
 
       <p class="info-updated">Last updated: {updated}</p>
     </div>

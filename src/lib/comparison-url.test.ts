@@ -15,6 +15,7 @@ import {
   parseTireSizeComparisonSlug,
   tireSizeComparisonSlug,
 } from './comparison-url';
+import { SITE_URL } from './seo/constants';
 
 describe('comparison-url shared source of truth', () => {
   it('parses, validates, normalizes, and formats metric sizes', () => {
@@ -60,21 +61,21 @@ describe('comparison-url shared source of truth', () => {
     const forward = getCanonicalComparisonPair(
       '225/45R17',
       '235/40R18',
-      'https://tirereference.com',
+      SITE_URL,
     );
     expect(forward).toEqual({
       current: '225/45R17',
       new: '235/40R18',
       slug: '225-45-r17-vs-235-40-r18',
       path: '/compare/225-45-r17-vs-235-40-r18/',
-      url: 'https://tirereference.com/compare/225-45-r17-vs-235-40-r18/',
+      url: `${SITE_URL}/compare/225-45-r17-vs-235-40-r18/`,
       wasReversed: false,
     });
 
     const reversed = getCanonicalComparisonPair(
       '235/40R18',
       '225/45R17',
-      'https://tirereference.com',
+      SITE_URL,
     );
     expect(reversed).toEqual({ ...forward, wasReversed: true });
 
@@ -85,7 +86,7 @@ describe('comparison-url shared source of truth', () => {
     const messy = getCanonicalComparisonPair(
       ' 235/40r18 ',
       '225%2F45R17',
-      'https://tirereference.com',
+      SITE_URL,
     );
     expect(messy).toEqual({ ...forward, wasReversed: true });
 
@@ -111,14 +112,14 @@ describe('comparison-url shared source of truth', () => {
   it('returns one slug, path, and absolute URL for either input order', () => {
     const expectedSlug = '225-45-r17-vs-235-40-r18';
     const expectedPath = `/compare/${expectedSlug}/`;
-    const expectedUrl = `https://tirereference.com${expectedPath}`;
+    const expectedUrl = `${SITE_URL}${expectedPath}`;
 
     expect(comparisonSlugFromSizes('225/45R17', '235/40R18')).toBe(expectedSlug);
     expect(comparisonSlugFromSizes('235/40R18', '225/45R17')).toBe(expectedSlug);
     expect(canonicalComparisonPath('225/45R17', '235/40R18')).toBe(expectedPath);
     expect(canonicalComparisonPath('235/40R18', '225/45R17')).toBe(expectedPath);
-    expect(canonicalComparisonUrl('225/45R17', '235/40R18')).toBe(expectedUrl);
-    expect(canonicalComparisonUrl('235/40R18', '225/45R17')).toBe(expectedUrl);
+    expect(canonicalComparisonUrl('225/45R17', '235/40R18', SITE_URL)).toBe(expectedUrl);
+    expect(canonicalComparisonUrl('235/40R18', '225/45R17', SITE_URL)).toBe(expectedUrl);
   });
 
   it('parses reversed slugs and reports their canonical target', () => {
@@ -152,7 +153,7 @@ describe('comparison-url shared source of truth', () => {
       '/compare/225-45-r17-vs-235-40-r18/',
     );
     expect(
-      normalizeComparisonPath('https://tirereference.com/compare/225-45-r17-vs-235-40-r18'),
+      normalizeComparisonPath(`${SITE_URL}/compare/225-45-r17-vs-235-40-r18`),
     ).toBe('/compare/225-45-r17-vs-235-40-r18/');
     expect(normalizeComparisonPath('/tire-size/225-45r17/')).toBeNull();
   });
@@ -163,8 +164,8 @@ describe('comparison-url shared source of truth', () => {
 
     const relative = canonicalComparisonPath('225/45R17', '235/40R18');
     expect(relative).toBe('/compare/225-45-r17-vs-235-40-r18/');
-    expect(canonicalComparisonUrl('225/45R17', '235/40R18')).toBe(
-      `https://tirereference.com${relative}`,
+    expect(canonicalComparisonUrl('225/45R17', '235/40R18', SITE_URL)).toBe(
+      `${SITE_URL}${relative}`,
     );
     expect(
       canonicalComparisonUrl('225/45R17', '235/40R18', 'https://example.test'),

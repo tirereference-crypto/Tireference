@@ -1,21 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import InfoPageHero from '../components/info/InfoPageHero.astro';
-import LegalEntityNotice from '../components/legal/LegalEntityNotice.astro';
-import LegalPlaceholderChecklist from '../components/legal/LegalPlaceholderChecklist.astro';
 import { CONTACT_EMAIL } from '../lib/info-pages';
-import {
-  LEGAL_ENTITY,
-  MONETIZATION_ADS_ENABLED,
-  MONETIZATION_AFFILIATES_ENABLED,
-} from '../data/legal-entity';
 import { buildInfoPageSchema } from '../lib/seo/info-page-schema';
 import { formatEditorialDate } from '../lib/editorial';
 import '../styles/info-pages.css';
 
 const title = 'Privacy Policy';
 const description =
-  'Read the Tire Reference privacy policy to understand what information we collect, how we use it, the cookies we set, and the choices you have over your data.';
+  'Read the Tire Reference privacy policy to understand what information may be collected, how it is used, and your available privacy choices.';
 
 const schema = buildInfoPageSchema(title, description, '/privacy-policy/', 'Privacy Policy');
 const updated = formatEditorialDate();
@@ -29,123 +22,71 @@ const updated = formatEditorialDate();
         lead="This policy explains what information Tire Reference may collect when you use our website, how we use it, and the choices available to you."
       />
 
-      <LegalEntityNotice />
-
       <article class="info-legal">
-        <h2>Data controller</h2>
+        <h2>Who operates this website</h2>
         <p>
-          For purposes of the EU/UK General Data Protection Regulation (GDPR) and similar laws, the data controller responsible for your personal information is <strong>{LEGAL_ENTITY.dataController}</strong>, {LEGAL_ENTITY.jurisdiction}. Privacy requests may be sent to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or the contact address listed above.
+          Tire Reference is an independently operated informational website. Legal, privacy, and
+          data enquiries may be sent through the <a href="/contact/">contact page</a> or to{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
 
         <h2>Information we collect</h2>
         <p>
-          Tire Reference is designed to work without creating an account. We may collect limited technical information when you visit the site, such as browser type, device category, approximate region, pages viewed, and referral source. If you contact us, we collect the information you choose to provide — for example your name, email address, subject line, and message content.
+          Tire Reference does not require an account. When you use the contact or issue-report
+          forms, the information you enter is used to prepare an email in your own email client.
+          The website does not receive that information unless you send the email. If you do, we
+          receive the sender details, subject, message, and any other information you choose to
+          include.
         </p>
         <p>
-          Calculator inputs are processed to deliver results in your browser session. We do not require you to submit vehicle ownership details, VINs, or purchase history to use our tools.
+          Calculator inputs are processed to provide results and do not require vehicle ownership
+          details, VINs, or purchase history. Hosting and security providers may process limited
+          technical data, such as IP address, browser information, requested pages, and timestamps,
+          to deliver and protect the website.
         </p>
 
-        <h2>Cookies</h2>
+        <h2>Cookies and analytics</h2>
         <p>
-          Cookies and similar technologies help Tire Reference remember preferences, keep the site secure, and understand how visitors use our pages. Some cookies are essential for basic site functionality. Others help us measure performance and improve the experience over time.
+          The calculators do not require advertising or affiliate cookies. Tire Reference may use
+          limited analytics to understand aggregate traffic and improve reliability. Where Google
+          Analytics is active, Google may process device and usage information and may use cookies
+          or similar technologies under its own privacy terms.
         </p>
         <p>
-          You can control cookies through your browser settings. Disabling certain cookies may affect how some features behave.
-        </p>
-
-        <h2>Analytics</h2>
-        <p>
-          We may use analytics services such as Google Analytics to understand aggregate traffic patterns — for example which calculators are most helpful and where visitors encounter errors. Analytics data is generally reported in summarized form and is used to improve content, performance, and usability.
-        </p>
-        <p>
-          Google Analytics may set its own cookies and process usage data according to Google&apos;s policies. You can learn more about Google&apos;s practices and opt-out tools through Google&apos;s documentation.
+          You can limit cookies through your browser settings and use any controls provided by the
+          analytics provider. Blocking non-essential cookies does not prevent access to the
+          calculators.
         </p>
 
         <h2>Data retention</h2>
         <p>
-          We retain personal information only for as long as necessary to fulfill the purposes described in this policy, unless a longer retention period is required or permitted by law.
-        </p>
-        <ul>
-          <li><strong>Server and security logs</strong> — typically retained for up to {LEGAL_ENTITY.logRetention}, then deleted or aggregated.</li>
-          <li><strong>Analytics data</strong> — retained according to our analytics provider&apos;s settings and internal reporting needs, generally in aggregated form.</li>
-          <li><strong>Contact and support messages</strong> — retained for up to {LEGAL_ENTITY.supportRetention} to handle follow-ups and demonstrate compliance, unless you ask us to delete them sooner.</li>
-          <li><strong>Cookie/consent records</strong> — retained as required to document choices, typically {LEGAL_ENTITY.consentRetention} after your last interaction.</li>
-        </ul>
-        <p>
-          When retention periods expire, we delete or irreversibly anonymize data where feasible.
+          Messages and support enquiries are retained only for as long as reasonably necessary to
+          respond, maintain appropriate records, prevent abuse, and meet applicable legal
+          obligations. Technical logs and analytics information are retained according to
+          operational need and the applicable service provider&apos;s settings, then deleted,
+          aggregated, or anonymized where appropriate.
         </p>
 
         <h2>Advertising</h2>
-        {
-          MONETIZATION_ADS_ENABLED ? (
-            <>
-              <p>
-                Tire Reference displays third-party advertising through <strong>Google AdSense</strong> and related Google ad services. Ad partners may use cookies, device identifiers, and similar technologies to deliver, personalize (where permitted), and measure ads based on your visits to this and other websites.
-              </p>
-              <p>
-                Google&apos;s use of advertising cookies enables it and its partners to serve ads based on your visit to Tire Reference and/or other sites on the Internet. You may opt out of personalized advertising by visiting Google&apos;s Ads Settings and the Network Advertising Initiative opt-out page.
-              </p>
-              <p class="legal-launch-note">
-                <strong>Cookie consent:</strong> A cookie-consent banner is presented before non-essential advertising and analytics cookies are set, where required by law. You can change your choices at any time through the consent controls on the site.
-              </p>
-            </>
-          ) : (
-            <>
-              <p>
-                Tire Reference does not currently display third-party advertising. If we introduce advertising in the future, this section will be updated before ads go live.
-              </p>
-              <p class="legal-dormant">
-                <strong>Before enabling ads:</strong> Set <code>MONETIZATION_ADS_ENABLED = true</code> in <code>src/data/legal-entity.ts</code>, publish an updated policy, and deploy a cookie-consent banner <em>before</em> any AdSense or similar ad tags load.
-              </p>
-            </>
-          )
-        }
-
-        <!--
-          PLACEHOLDER — present-tense advertising copy (enable with MONETIZATION_ADS_ENABLED):
-
-          Tire Reference displays third-party advertising through Google AdSense and related Google ad services.
-          Ad partners may use cookies, device identifiers, and similar technologies to deliver, personalize
-          (where permitted), and measure ads. A cookie-consent banner is presented before non-essential
-          advertising cookies are set, where required by law.
-        -->
+        <p>
+          Tire Reference does not currently display third-party advertising.
+        </p>
 
         <h2>Affiliate links</h2>
-        {
-          MONETIZATION_AFFILIATES_ENABLED ? (
-            <>
-              <p>
-                Tire Reference participates in the <strong>Amazon Associates</strong> program and similar affiliate programs. When you follow certain outbound product links and make a purchase, we may earn a commission at no additional cost to you. Affiliate partners may use cookies or similar technologies to attribute referrals according to their own policies.
-              </p>
-              <p>
-                Affiliate relationships do not change our calculator methodology or editorial standards. Affiliate links are disclosed in context where used.
-              </p>
-            </>
-          ) : (
-            <>
-              <p>
-                Tire Reference does not currently use affiliate links. If we participate in affiliate programs in the future, this section will be updated before those links go live.
-              </p>
-              <p class="legal-dormant">
-                <strong>Before enabling affiliates:</strong> Set <code>MONETIZATION_AFFILIATES_ENABLED = true</code> in <code>src/data/legal-entity.ts</code> and update this policy with your Amazon Associates (or other) disclosure.
-              </p>
-            </>
-          )
-        }
-
-        <!--
-          PLACEHOLDER — present-tense affiliate copy (enable with MONETIZATION_AFFILIATES_ENABLED):
-
-          Tire Reference participates in the Amazon Associates program. When you follow certain outbound
-          product links and make a purchase, we may earn a commission at no additional cost to you.
-        -->
+        <p>
+          Tire Reference does not currently use affiliate links or participate in affiliate
+          programs.
+        </p>
 
         <h2>Third-party services</h2>
         <p>
-          We rely on trusted infrastructure and service providers to host the site, deliver fonts, measure performance, and process contact requests when those features are enabled. These providers process data only as needed to perform services on our behalf and are expected to protect it appropriately.
+          Service providers may process limited information where needed to host, secure, and
+          measure the website or deliver email. Their handling of information is also governed by
+          their own terms and privacy policies.
         </p>
         <p>
-          Tire Reference may link to external websites — for example manufacturer documentation or retailer pages. We are not responsible for the privacy practices of third-party sites and encourage you to review their policies separately.
+          Tire Reference may link to external websites, including manufacturer documentation.
+          External websites control their own privacy practices.
         </p>
 
         <h2>How information is used</h2>
@@ -161,61 +102,29 @@ const updated = formatEditorialDate();
           We do not sell your personal information for money. See the CCPA section below for California-specific rights regarding &quot;sale&quot; and &quot;sharing&quot; as defined by California law.
         </p>
 
-        <h2>GDPR rights (EEA, UK, and Switzerland)</h2>
+        <h2>Your privacy rights</h2>
         <p>
-          If you are located in the European Economic Area, the United Kingdom, or Switzerland, you may have the following rights regarding personal data processed by {LEGAL_ENTITY.dataController}:
-        </p>
-        <ul>
-          <li><strong>Access</strong> — request a copy of personal data we hold about you.</li>
-          <li><strong>Rectification</strong> — request correction of inaccurate or incomplete data.</li>
-          <li><strong>Erasure</strong> — request deletion of your personal data in certain circumstances.</li>
-          <li><strong>Restriction</strong> — request that we limit processing in certain circumstances.</li>
-          <li><strong>Portability</strong> — receive personal data you provided in a structured, commonly used format where technically feasible.</li>
-          <li><strong>Objection</strong> — object to processing based on legitimate interests, including direct marketing where applicable.</li>
-          <li><strong>Withdraw consent</strong> — where processing is based on consent, withdraw it at any time without affecting prior lawful processing.</li>
-        </ul>
-        <p>
-          You also have the right to lodge a complaint with your local data protection authority. To exercise GDPR rights, contact <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We may need to verify your identity before responding.
+          Depending on where you live, you may have rights to request access to, correction of, or
+          deletion of personal information, to object to or restrict certain processing, or to
+          withdraw consent where consent applies.
         </p>
         <p>
-          <strong>Legal bases for processing</strong> may include consent (e.g. non-essential cookies), legitimate interests (e.g. site security and improvement), and compliance with legal obligations.
+          To make a privacy request, use the <a href="/contact/">contact page</a> or email{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We may request information
+          reasonably necessary to verify and respond to the request. You may also have the right to
+          contact your local privacy or data-protection authority.
+        </p>
+        <p>
+          Where applicable, processing may be based on consent, legitimate interests in operating
+          and securing the website, responding to requests, or compliance with legal obligations.
         </p>
 
-        <h2>California privacy rights (CCPA / CPRA)</h2>
+        <h2>Sale or sharing of personal information</h2>
         <p>
-          If you are a California resident, the California Consumer Privacy Act (CCPA), as amended by the California Privacy Rights Act (CPRA), may provide you with additional rights regarding personal information collected by {LEGAL_ENTITY.dataController}.
-        </p>
-        <ul>
-          <li><strong>Right to know</strong> — categories and specific pieces of personal information collected, sources, purposes, and disclosures.</li>
-          <li><strong>Right to delete</strong> — request deletion of personal information we collected from you, subject to legal exceptions.</li>
-          <li><strong>Right to correct</strong> — request correction of inaccurate personal information.</li>
-          <li><strong>Right to opt out of sale or sharing</strong> — see below.</li>
-          <li><strong>Right to limit use of sensitive personal information</strong> — where applicable.</li>
-          <li><strong>Non-discrimination</strong> — we will not discriminate against you for exercising these rights.</li>
-        </ul>
-
-        <h3>Do Not Sell or Share My Personal Information</h3>
-        <p>
-          We do not sell your personal information for monetary consideration. Some analytics or advertising technologies used on websites may be considered a &quot;sale&quot; or &quot;sharing&quot; of personal information under California law when they involve cross-context behavioral advertising.
-        </p>
-        {
-          MONETIZATION_ADS_ENABLED ? (
-            <p>
-              If personalized advertising is enabled, you may opt out of the sale or sharing of personal information for cross-context behavioral advertising by using our cookie-consent controls, Google&apos;s Ads Settings, and the Global Privacy Control (GPC) signal where supported.
-            </p>
-          ) : (
-            <p>
-              Because third-party advertising is not currently active, we do not sell or share personal information for cross-context behavioral advertising. If that changes, we will provide a clear opt-out mechanism before personalized ads load.
-            </p>
-          )
-        }
-        <p>
-          To submit a California privacy request, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with the subject line <strong>&quot;California Privacy Request&quot;</strong> or use our <a href="/contact">contact page</a>. We will verify your request as required by law.
-        </p>
-
-        <h2>Other U.S. state privacy rights</h2>
-        <p>
-          Residents of Virginia, Colorado, Connecticut, Utah, and other states with comprehensive privacy laws may have similar rights to access, delete, correct, and opt out of certain processing. Contact us to exercise rights available in your state.
+          Tire Reference does not sell personal information for money and does not currently use
+          third-party advertising or affiliate tracking. If applicable law treats an active
+          analytics service as a sale or sharing, you may contact us to exercise any available
+          opt-out right.
         </p>
 
         <h2>Data security</h2>
@@ -225,11 +134,11 @@ const updated = formatEditorialDate();
 
         <h2>Contact</h2>
         <p>
-          For privacy-related questions or requests, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, write to {LEGAL_ENTITY.address}, or visit our <a href="/contact">contact page</a>.
+          For privacy-related questions or requests, email{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or visit the{' '}
+          <a href="/contact/">contact page</a>.
         </p>
       </article>
-
-      <LegalPlaceholderChecklist />
 
       <p class="info-updated">Last updated: {updated}</p>
     </div>

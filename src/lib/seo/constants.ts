@@ -1,7 +1,8 @@
 import { SITE_NAME } from '../site-brand';
+import { PRODUCTION_ORIGIN } from '../../../site.config.mjs';
 
 /** Production site origin — always use for canonicals and absolute URLs. */
-export const SITE_URL = 'https://tirereference.com';
+export const SITE_URL = PRODUCTION_ORIGIN;
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 export const ORGANIZATION_LOGO_URL = `${SITE_URL}/logo.png`;

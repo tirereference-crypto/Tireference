@@ -18,10 +18,12 @@
  *                                count, title quality, OG/schema URL parity,
  *                                FAQ visibility, schema-type policy,
  *                                duplicate canonicals
- *   4. internal-links          — every <a> in dist: broken, redirecting,
+ *   4. production-hostname     — canonicals, OG, JSON-LD, sitemaps, feeds,
+ *                                and robots all use the preferred origin
+ *   5. internal-links          — every <a> in dist: broken, redirecting,
  *                                parameterized/legacy query, non-canonical or
  *                                slash-less comparison links, orphans
- *   5. sitemap                 — trailing slashes, no query strings, no
+ *   6. sitemap                 — trailing slashes, no query strings, no
  *                                legacy or reversed URLs, 1:1 parity with the
  *                                indexable page set
  *
@@ -50,6 +52,7 @@ import {
   collectIndexablePages,
 } from './seo/dist-metadata-audit';
 import { SITE_URL } from './seo/constants';
+import { validateProductionHostnames } from './seo/production-hostname-validation';
 
 export interface PipelineIssue {
   severity: 'error' | 'warning';
@@ -313,6 +316,27 @@ export function runProductionValidation(distDir: string): ProductionValidationRe
         stats: {
           pagesScanned: report.pagesScanned,
           indexablePages: report.indexablePages,
+        },
+      };
+    }),
+  );
+
+  steps.push(
+    runStep('production-hostname', 'Preferred production hostname (all public metadata)', () => {
+      const report = validateProductionHostnames(distDir);
+      return {
+        issues: report.issues.map((issue) => ({
+          severity: 'error' as const,
+          check: issue.check,
+          page: issue.file,
+          message: issue.message,
+        })),
+        stats: {
+          filesScanned: report.filesScanned,
+          htmlFiles: report.htmlFiles,
+          canonicalsChecked: report.canonicalsChecked,
+          sitemapUrlsChecked: report.sitemapUrlsChecked,
+          jsonLdUrlsChecked: report.jsonLdUrlsChecked,
         },
       };
     }),
